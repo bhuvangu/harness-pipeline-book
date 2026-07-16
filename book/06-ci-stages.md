@@ -28,7 +28,7 @@ The fundamental choice is Harness-managed versus self-managed
 
 | Option | Model | Notes |
 |---|---|---|
-| **Harness Cloud** | Each CI stage runs on a fresh, ephemeral Harness-managed VM; steps share the VM's filesystem; the VM terminates after the stage (docs/.../use-harness-cloud-build-infrastructure.md) | Linux/Windows/macOS; preinstalled toolchain; new features land here first; consumes build credits |
+| **Harness Cloud** | Each CI stage runs on a fresh, ephemeral Harness-managed VM; steps share the VM's filesystem; the VM terminates after the stage (docs/continuous-integration/use-ci/set-up-build-infrastructure/use-harness-cloud-build-infrastructure.md) | Linux/Windows/macOS; preinstalled toolchain; new features land here first; consumes build credits |
 | **Kubernetes cluster** | "Each CI stage executes in a pod, and the stage's steps share the pod's resources" | Your cluster, reached via connector + delegate |
 | **AWS/GCP/Azure VMs** | Self-managed VM fleets | More Docker freedom, native Windows; paid plans |
 | **Local (Docker) runner** | Builds on a single machine | One-off / special-hardware builds |

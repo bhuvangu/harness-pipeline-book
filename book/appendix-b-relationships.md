@@ -35,7 +35,7 @@ erDiagram
     STEP_GROUP ||--o{ STEP : owns
     PIPELINE ||--o{ INPUT_SET : owns
     PIPELINE ||--o{ OVERLAY_INPUT_SET : owns
-    OVERLAY_INPUT_SET }o--|{ INPUT_SET : references-ordered
+    OVERLAY_INPUT_SET }o--|{ INPUT_SET : "references (ordered)"
     PIPELINE ||--o{ TRIGGER : owns
     TRIGGER }o--o| INPUT_SET : "binds (or inline values)"
     TRIGGER }o--o| CONNECTOR : "webhook/artifact source"
