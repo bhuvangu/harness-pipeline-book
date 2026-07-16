@@ -30,6 +30,7 @@ structure rather than a direct statement in the sources.
 ## Topics
 
 - [Pipeline concepts](concepts/README.md)
+  - [How Harness pipelines work](concepts/how-it-works.md)
   - [Scopes: account, organization, and project](concepts/scopes.md)
   - [Identifiers and names](concepts/identifiers.md)
   - [Pipeline structure: stages and steps](concepts/pipeline-structure.md)

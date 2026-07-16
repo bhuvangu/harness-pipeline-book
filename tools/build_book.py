@@ -13,6 +13,7 @@ OUT = pathlib.Path('/tmp/claude-0/-home-user-harness-pipeline-book/'
 GUIDE = [
  ('home', 'What is the Harness pipeline offering?', 'guide/README.md', None),
  ('concepts', 'Pipeline concepts', 'guide/concepts/README.md', None),
+ ('howitworks', 'How Harness pipelines work', 'guide/concepts/how-it-works.md', 'concepts'),
  ('scopes', 'Scopes', 'guide/concepts/scopes.md', 'concepts'),
  ('identifiers', 'Identifiers and names', 'guide/concepts/identifiers.md', 'concepts'),
  ('structure', 'Pipeline structure', 'guide/concepts/pipeline-structure.md', 'concepts'),

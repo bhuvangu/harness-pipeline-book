@@ -107,7 +107,7 @@ body[data-doc="ref"] .doc-guide{display:none}
 <div class="layout">
 <nav class="sidebar" aria-label="Contents">
   <div class="docnav" data-doc="guide"><div class="tnode"><div class="trow leaf"><a href="#home">What is the Harness pipeline offering?</a></div></div>
-<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#concepts">Pipeline concepts</a></div><div class="tkids"><a class="child" href="#scopes">Scopes</a><a class="child" href="#identifiers">Identifiers and names</a><a class="child" href="#structure">Pipeline structure</a><a class="child" href="#storage">YAML and Git storage</a><a class="child" href="#apigen">The two API generations</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#concepts">Pipeline concepts</a></div><div class="tkids"><a class="child" href="#howitworks">How Harness pipelines work</a><a class="child" href="#scopes">Scopes</a><a class="child" href="#identifiers">Identifiers and names</a><a class="child" href="#structure">Pipeline structure</a><a class="child" href="#storage">YAML and Git storage</a><a class="child" href="#apigen">The two API generations</a></div></div>
 <div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#inputs">Configuring pipeline inputs</a></div><div class="tkids"><a class="child" href="#runtime">Runtime inputs and expressions</a><a class="child" href="#inputsets">Input sets and overlays</a><a class="child" href="#variables">Variables</a></div></div>
 <div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#triggers">Starting pipelines with triggers</a></div><div class="tkids"><a class="child" href="#webhook">Webhook triggers</a><a class="child" href="#cron">Scheduled triggers</a><a class="child" href="#artifact">Artifact and manifest triggers</a></div></div>
 <div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#exec">Managing executions</a></div><div class="tkids"><a class="child" href="#statuses">Statuses and the execution graph</a><a class="child" href="#failure">Failure handling</a><a class="child" href="#retry">Retrying and rerunning</a><a class="child" href="#approvals">Approvals</a></div></div>
@@ -150,6 +150,7 @@ structure rather than a direct statement in the sources.</p>
 <h2>Topics</h2>
 <ul>
 <li>Pipeline concepts</li>
+<li>How Harness pipelines work</li>
 <li>Scopes: account, organization, and project</li>
 <li>Identifiers and names</li>
 <li>Pipeline structure: stages and steps</li>
@@ -202,16 +203,264 @@ live, how they are named, how they are represented and stored, and how the
 APIs expose them. The rules described here apply to every entity in the
 pipeline offering — pipelines, services, connectors, and the rest all follow
 them.</p>
-<p>If you read only one section of this guide, read this one. Every other
-section assumes these concepts.</p>
+<p>If you read only one section of this guide, read this one — and start with
+How Harness pipelines work, which builds the whole
+system's mental model deductively, introducing every term before it is
+used. The remaining pages treat each part precisely.</p>
 <h2>Topics</h2>
 <ul>
+<li>How Harness pipelines work</li>
 <li>Scopes: account, organization, and project</li>
 <li>Identifiers and names</li>
 <li>Pipeline structure: stages and steps</li>
 <li>YAML and Git-backed storage</li>
 <li>The two API generations</li>
 </ul>
+</section>
+<section id="howitworks">
+<h1>How Harness pipelines work</h1>
+<p>This page builds the complete mental model of the pipeline system, one
+concept at a time. Every term is introduced before it is used. If you read
+nothing else in this guide, read this; every other page is a detailed
+treatment of one paragraph here.</p>
+<h2>Start from the problem</h2>
+<p>You have code in a Git repository, and you have running systems — clusters,
+servers, cloud accounts. Between the two sits repetitive work: compile the
+code, run the tests, package the result, put the new version on the systems,
+and undo it if it misbehaves. You want that work to happen automatically,
+the same way every time, with records of what happened.</p>
+<p>Everything in Harness follows from automating that sentence.</p>
+<h2>The plan: pipeline, stage, step</h2>
+<p>To automate work, you first write the work down. In Harness, that write-down
+is called a <strong>pipeline</strong>: a plain text document, in YAML format, that
+describes the work from start to finish. You can edit it as text or through
+a visual editor — both views show the same document.</p>
+<p>Work naturally divides into large phases — "build the code," "get a
+sign-off," "deploy to production." Each phase is a <strong>stage</strong> in the
+pipeline. A stage has a type, and the type says what kind of phase it is:
+a <strong>Build</strong> stage compiles and tests, a <strong>Deploy</strong> stage puts software on
+systems, an <strong>Approval</strong> stage waits for a person to say yes.</p>
+<p>Inside a stage, the actual actions — run this script, build this image,
+apply this manifest — are <strong>steps</strong>. Steps run in order, or in parallel
+where you say so.</p>
+<p>So the containment is strict and there are only three levels to remember:</p>
+<blockquote>
+<p>A pipeline contains stages. A stage contains steps. Nothing else contains
+anything.</p>
+</blockquote>
+<p>One consequence worth noting immediately: the pipeline is a <em>plan</em>, not a
+happening. Writing or editing a pipeline changes no running system.</p>
+<h2>The happening: execution</h2>
+<p>When the plan runs, Harness creates an <strong>execution</strong>: a record of that one
+run. The execution has its own identity, a copy of the values the run used,
+a start and end time, and a live status — running, waiting, failed,
+succeeded, aborted. Run the pipeline five times and you have one pipeline
+and five executions.</p>
+<p>Because the execution is a separate record, you can do things to a run
+without touching the plan: watch its progress step by step, stop it, retry
+it from the point where it failed, or run it again with the same values.</p>
+<h2>Holes in the plan: runtime inputs and input sets</h2>
+<p>A plan with every value hard-coded can only do one thing. Usually some
+values differ per run — which version to deploy, which branch to build.
+For any such value, you write the placeholder <code>&lt;+input&gt;</code> in the pipeline
+instead of a value. A placeholder written this way is called a <strong>runtime
+input</strong>, and whoever starts the run supplies the value.</p>
+<p>Typing the same values at every run gets old, so you can save a filled-in
+set of values under a name. That saved set is an <strong>input set</strong>. At run
+time you pick an input set instead of typing. You can also layer several
+input sets on top of each other — an <strong>overlay</strong> — where later sets win on
+any value defined twice.</p>
+<p>A useful way to hold all of this: the pipeline is a function, runtime
+inputs are its parameters, and input sets are saved argument lists.</p>
+<h2>Starting runs without a person: triggers</h2>
+<p>Automation isn't complete while a human clicks Run. A <strong>trigger</strong> is a
+standing rule attached to a pipeline: "when this event happens, start a run
+with these values." Three kinds of event cover practically everything:</p>
+<ul>
+<li>Your Git provider reports a change — a push or a pull request. This is a
+  <strong>webhook trigger</strong>, named after the webhook (the notification URL) your
+  Git provider calls.</li>
+<li>A clock time arrives. This is a <strong>scheduled trigger</strong>, defined with a
+  cron expression (the standard five-field schedule syntax).</li>
+<li>A new version of a built package appears in a <strong>registry</strong> — a storage
+  service for build outputs, such as Docker Hub. This is an <strong>artifact
+  trigger</strong>: <em>artifact</em> is the general word for a build output, such as a
+  container image, and Harness checks the registry for new versions about
+  once a minute.</li>
+</ul>
+<p>A trigger supplies the pipeline's runtime inputs the same way a person
+would — from an input set or from values in the event itself, such as the
+branch name in a push.</p>
+<h2>Reaching your systems: delegate, connector, secret</h2>
+<p>The steps in your plan must touch real systems: clone from your Git server,
+push images to your registry, change what runs on your cluster. Harness runs
+as a cloud service, and your systems are behind your firewall. Harness
+never opens a connection into your network. Instead, you install a small
+worker process, the <strong>delegate</strong>, inside your network. The delegate opens
+one outgoing connection to Harness, asks "any work for me?", performs the
+work against your systems from the inside, and reports back. Every action
+that touches your infrastructure is carried out by a delegate.</p>
+<p>The delegate needs to know where each external system is and how to log in.
+That bundle — one system's address plus its credentials, saved under a
+name — is a <strong>connector</strong>. You create a connector once per external system
+(one for GitHub, one for Docker Hub, one per cluster), and steps refer to
+it by name instead of repeating addresses and passwords.</p>
+<p>Connectors must not contain passwords in plain text, so sensitive values
+are stored separately as <strong>secrets</strong>. A secret is a named, encrypted value;
+YAML refers to it by name and never contains the value itself. Secrets are
+kept in a <strong>secret manager</strong> — the storage backend, either the built-in one
+or your own vault — and, critically, only the delegate inside your network
+can decrypt them. The Harness cloud service never holds your keys.</p>
+<p>The chain is always the same, and it is the security model in one line:</p>
+<blockquote>
+<p>A step names a connector; the connector's credentials are secrets; the
+secrets live in a secret manager; and a delegate inside your network is
+the only thing that opens them and touches your systems.</p>
+</blockquote>
+<h2>Building: what a Build stage adds</h2>
+<p>A Build stage runs your compile and test steps, and that raises two
+questions the plan must answer.</p>
+<p><em>Where do the steps run?</em> On a machine you choose per stage, called the
+stage's <strong>build infrastructure</strong>. Harness can supply the machine — a fresh,
+short-lived virtual machine that exists just for the stage, an option
+called <strong>Harness Cloud</strong> — or you can supply it: your Kubernetes cluster
+(each stage becomes a pod, reached through a connector and a delegate),
+your cloud virtual machines, or a single machine you run yourself. All
+steps in a stage share that one machine's filesystem, which is how one
+step's output becomes the next step's input.</p>
+<p><em>Which code do they run against?</em> The pipeline names its Git repository
+once — the repository connector plus the repository name. This
+configuration is the pipeline's <strong>codebase</strong>, and every Build stage clones
+it before running steps, at whatever branch or commit the run's inputs or
+triggering event chose.</p>
+<p>The stage's steps then do the work: run scripts, run tests, build and push
+an image. The artifacts a run produces are listed on the execution's record.
+Two optional accelerators reduce repeated effort: <strong>Test Intelligence</strong>
+runs only the tests affected by the change instead of the whole suite, and
+<strong>Cache Intelligence</strong> saves dependency downloads between runs.</p>
+<h2>Deploying: what a Deploy stage adds</h2>
+<p>To deploy, the plan must answer <em>what</em>, <em>where</em>, and <em>how</em>.</p>
+<p><strong>What</strong> you deploy is a <strong>service</strong>: a named definition of one deployable
+thing — where its manifests live (the files that describe its desired
+deployed shape, such as Kubernetes manifests or a Helm chart, reached
+through a connector) and which artifact is its executable content, with the
+version usually left as a runtime input. You define a service once and every pipeline that deploys it refers
+to it by name.</p>
+<p><strong>Where</strong> you deploy is an <strong>environment</strong> — a named target such as <code>dev</code>
+or <code>prod</code>, marked as production or non-production. An environment is
+logical; the physical details live in its <strong>infrastructure definitions</strong>,
+each naming one concrete target such as "this cluster, this namespace,"
+through a cluster connector. One environment can hold several
+infrastructure definitions; a Deploy stage picks the environment and one
+definition inside it.</p>
+<p>One service, many environments — but the settings differ per environment.
+Rather than copying the service, you attach <strong>service overrides</strong>: named
+adjustments that apply when a given service deploys into a given
+environment, replacing variables or layering configuration values.</p>
+<p><strong>How</strong> the new version replaces the old is the stage's strategy, chosen
+from three standard patterns: <strong>rolling</strong> (replace instances a few at a
+time), <strong>blue-green</strong> (stand up the new version beside the old, then switch
+traffic), and <strong>canary</strong> (send a small share of traffic to the new version,
+verify, then expand). Whatever the strategy, the stage also carries
+<strong>rollback steps</strong> — the pre-written undo — and a failure routes into them
+automatically, restoring what was there before.</p>
+<p>Two controls sit above individual stages. An <strong>approval</strong> step or stage
+pauses the run until named people (or a ticket system) say yes — put one
+before production. A <strong>freeze window</strong> is a scheduled ban on deployments —
+"no production changes over the holidays" — that stops deploy stages and
+rejects triggers for its duration while leaving builds untouched.</p>
+<h2>Sharing and scale: scopes, names, templates</h2>
+<p>Teams share things: one GitHub connector should serve every project, one
+<code>prod</code> environment definition should serve every pipeline that deploys to
+production. Harness organizes everything into three nested levels called
+<strong>scopes</strong>: the <strong>account</strong> (your company — the root), <strong>organizations</strong>
+inside it (a business unit), and <strong>projects</strong> inside those (a team's
+working space). Anything created at a higher scope is usable by everything
+below it. Pipelines themselves always live in a project; shared resources —
+connectors, secrets, services, environments, delegates — can live at any
+of the three levels.</p>
+<p>Every resource has two labels: a <strong>name</strong> you can change freely, for
+humans, and an <strong>identifier</strong> that never changes, for references. All the
+by-name references above — <code>serviceRef</code>, <code>connectorRef</code>, a trigger's
+pipeline — actually use identifiers, which is why renaming things breaks
+nothing. Identifiers are unique within their scope, and a reference to a
+higher scope says so with a prefix: <code>account.docker_hub</code> names the
+account-level connector, <code>org.bitnami</code> the organization-level one.</p>
+<p>Finally, whole chunks of plan can be shared, not just values and resources.
+A <strong>template</strong> is a step, stage, or entire pipeline published as a
+versioned, reusable unit at some scope. Pipelines link to it by identifier
+and version and supply only its declared inputs, so a platform team can fix
+or improve one template and every linked pipeline follows.</p>
+<h2>The model in one picture</h2>
+<pre class="mermaid">flowchart LR
+    subgraph plan [The plan - a project-scoped document]
+      P[Pipeline] --&gt; S[Stages] --&gt; ST[Steps]
+    end
+    TR[Triggers: webhook / schedule / new artifact] --&gt;|start with values| X
+    IS[Input sets] --&gt;|fill runtime inputs| X[Execution - one record per run]
+    P -.-&gt;|compiled per run| X
+    ST --&gt;|by identifier| C[Connectors]
+    C --&gt; SEC[Secrets in a secret manager]
+    D[Delegate - in your network] --&gt;|performs all work| SYS[(Your Git, registries, clusters)]
+    C -.-&gt; D
+    subgraph deploy [Deploy stages reference]
+      SV[Service - what] --- EN[Environment + infrastructure definition - where]
+      OV[Overrides - per-environment adjustments]
+    end
+    ST -.-&gt; SV
+</pre>
+<h2>Rules you can reason with</h2>
+<p>Four invariants carry almost every question you'll face:</p>
+<ol>
+<li><strong>The pipeline is a plan; the execution is a record of one run.</strong>
+   Editing the plan never changes a running system; only executions do
+   things, and every happening leaves an execution to inspect.</li>
+<li><strong>Anything that varies has one designated home.</strong> Varies per run → a
+   runtime input, filled by a person, an input set, or a trigger. Varies
+   per environment → a service override. Shared across pipelines or teams →
+   a resource at the right scope, referenced by identifier.</li>
+<li><strong>Harness never reaches into your network; your delegate reaches out.</strong>
+   Every touch on your systems goes step → connector → secret → delegate,
+   and decryption happens only on the delegate.</li>
+<li><strong>Undo is declared in advance.</strong> Rollback steps, failure strategies,
+   approvals, and freeze windows are all part of the plan — safety is
+   written down, not improvised during an incident.</li>
+</ol>
+<p>When something puzzles you, find which rule it falls under, then open the
+section of this guide that covers it: the plan's anatomy in
+Pipeline structure, holes and values in
+Configuring pipeline inputs, events in
+Starting pipelines with triggers, runs in
+Managing executions, building in
+CI stages, deploying in CD stages,
+reach and credentials in
+Connecting to your infrastructure, and sharing in
+Scopes and Templates.</p>
+<hr />
+<p><strong>Sources:</strong> This page synthesizes the pages it links to; each claim is
+sourced on the page that treats it. Core grounding:
+docs/platform/pipelines/harness-yaml-quickstart.md (pipeline/stage/step
+YAML); docs/platform/pipelines/add-a-stage.md (stage types);
+docs/platform/variables-and-expressions/runtime-inputs.md and
+docs/platform/pipelines/input-sets.md (runtime inputs, input sets,
+overlays); docs/platform/triggers/triggering-pipelines.md and
+docs/platform/triggers/trigger-on-a-new-artifact.md (trigger kinds);
+corpus/entity_schemas.md (PipelineExecutionSummary — execution record and
+statuses); docs/platform/delegates/delegate-concepts/delegate-overview.md
+(delegate model);
+docs/platform/secrets/secrets-management/harness-secret-manager-overview.md
+(secret managers, delegate-only decryption);
+docs/continuous-integration/use-ci/set-up-build-infrastructure/which-build-infrastructure-is-right-for-me.md
+and use-harness-cloud-build-infrastructure.md (build infrastructure);
+docs/continuous-integration/use-ci/codebase-configuration/create-and-configure-a-codebase.md
+(codebase); docs/continuous-delivery/x-platform-cd-features/services/services-overview.md,
+environments/environment-overview.md, environments/service-overrides.md
+(service/environment/override);
+docs/continuous-delivery/manage-deployments/deployment-concepts.md
+(strategies); docs/continuous-delivery/manage-deployments/deployment-freeze.md
+(freeze); docs/platform/templates/template.md (templates);
+docs/continuous-delivery/x-platform-cd-features/environments/create-environment-groups.md
+(scope prefixes).</p>
 </section>
 <section id="scopes">
 <h1>Scopes: account, organization, and project</h1>
