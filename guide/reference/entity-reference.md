@@ -1,7 +1,6 @@
-# Appendix A. Entity reference
+# Entity reference
 
-This appendix is the precise backing for the narrative chapters, in the spirit
-of an AWS API Reference behind a User Guide. Each entity section follows the
+This reference is the precise backing for the guide pages. Each entity section follows the
 same template:
 
 - **Definition** — what it is, in one or two sentences.
@@ -33,12 +32,12 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - Uniqueness is per scope container: an identifier must be unique within the
   account/org/project it lives in; the same identifier can exist at different
   scopes, which is why cross-scope references need `org.` / `account.`
-  prefixes (see Chapter 1). **INFERRED** from the reference-prefix design in
+  prefixes (see [Scopes](../concepts/scopes.md)). **INFERRED** from the reference-prefix design in
   docs/continuous-delivery/x-platform-cd-features/environments/create-environment-groups.md.
 
 ---
 
-## A.1 Account
+## Account
 
 - **Definition.** The root scope of everything in Harness. Every resource
   belongs to exactly one account; account-scope resources are shared downward.
@@ -57,7 +56,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   the `account.` prefix, e.g. `connectorRef: account.Harness_DockerHub`
   (docs/continuous-delivery/x-platform-cd-features/services/services-overview.md YAML).
 
-## A.2 Organization
+## Organization
 
 - **Definition.** A grouping scope under Account, typically a business unit
   or product line; owns Projects and org-scope shared resources.
@@ -77,7 +76,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   `org.` prefix, e.g. `connectorRef: org.bitnami`
   (docs/continuous-delivery/x-platform-cd-features/services/services-overview.md).
 
-## A.3 Project
+## Project
 
 - **Definition.** The working scope where day-to-day pipeline work happens.
   Pipelines, Input Sets, and Triggers exist only at project scope in this
@@ -99,12 +98,12 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   Environments, there is no account/org-level pipeline. **INFERRED** from
   the absence of such paths in path_tree.txt.
 
-## A.4 Pipeline
+## Pipeline
 
 - **Definition.** The YAML-defined workflow entity; the aggregate root of
   Pipeline > Stage > Step. "Harness pipeline YAML lets you model your release
   process declaratively" (docs/platform/pipelines/harness-yaml-quickstart.md).
-- **Scopes.** Project only (see A.3 gotcha).
+- **Scopes.** Project only (see the Project entry above).
 - **Identity.** `identifier` pattern `^[a-zA-Z_][0-9a-zA-Z_$]{0,127}$`,
   maxLen 128; `name` pattern `^[a-zA-Z_][0-9a-zA-Z-_ ]{0,127}$`; both required
   along with `pipeline_yaml` (`entity_schemas.md`: PipelineCreateRequestBody).
@@ -130,8 +129,8 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
     orgIdentifier: default
     tags: {}
     stages:
-      - stage: ...            # owned children, see A.5
-    variables: []             # pipeline-scope variables, see A.31
+      - stage: ...            # owned children, see Stage below
+    variables: []             # pipeline-scope variables, see Variable below
   ```
 
 - **API surface.**
@@ -139,7 +138,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   | Operation | v1 beta | legacy NG |
   |---|---|---|
   | CRUD | `/v1/orgs/{org}/projects/{project}/pipelines[/{pipeline}]` | `/pipeline/api/pipelines[/{pipelineIdentifier}]`, `/pipeline/api/pipelines/v2` |
-  | Run | `.../pipelines/{pipeline}/execute` (+ `/stages`, `/rerun/{execution-id}`, `/retry/{execution-id}`) | `/pipeline/api/pipeline/execute/...` (execution subtree, A.8) |
+  | Run | `.../pipelines/{pipeline}/execute` (+ `/stages`, `/rerun/{execution-id}`, `/retry/{execution-id}`) | `/pipeline/api/pipeline/execute/...` (execution subtree; see Execution) |
   | Inputs schema | `.../pipelines/{pipeline}/inputs` | `/pipeline/api/inputSets/template` |
   | Import from Git | `.../pipelines/{pipeline}/import` | `/pipeline/api/pipelines/import/{pipelineIdentifier}` |
   | Validate | `.../pipelines/validate/{uuid}` | — |
@@ -154,7 +153,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   are still Harness entities — Git is a storage backend selected per entity,
   not a different entity type.
 
-## A.5 Stage
+## Stage
 
 - **Definition.** "A stage is a part of a pipeline that contains the logic to
   perform a major segment of a larger workflow" (docs/platform/pipelines/add-a-stage.md).
@@ -201,9 +200,9 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   `<+pipeline.stages.STAGE_ID.variables.NAME>` (add-a-stage.md). Stage
   variable YAML documents `type: String ## String or Secret`
   (add-a-stage.md) — contrast with the account/org/project Variable entity,
-  whose API enum is `String` only (A.31, Appendix D#7).
+  whose API enum is `String` only (see the entity reference, Known issues and open questions).
 
-## A.6 Step
+## Step
 
 - **Definition.** The atomic unit of work inside a stage; typed, with the
   catalog determined by the stage type (Run, ShellScript, HarnessApproval,
@@ -241,7 +240,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   strategy and conditional execution
   (docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps.md).
 
-## A.7 Step Group
+## Step Group
 
 - **Definition.** A named grouping of steps inside a stage that shares
   settings; in CD it can be containerized so its steps run in a shared
@@ -266,7 +265,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - **Gotchas.** Step groups can nest `parallel:` blocks of steps
   (yaml_examples/continuous-delivery__cd-onboarding__new-user__cd-pipeline-modeling-overview.md.yaml).
 
-## A.8 Execution
+## Execution
 
 - **Definition.** One run of a pipeline: a plan (`planExecutionId`), a node
   graph, per-node statuses, and summary metadata. The runtime counterpart of
@@ -313,7 +312,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   window get the distinct status label "Aborted By Freeze"
   (docs/continuous-delivery/manage-deployments/deployment-freeze.md).
 
-## A.9 Input Set
+## Input Set
 
 - **Definition.** "Input sets are collections of runtime input values for a
   pipeline" — saved arguments for the pipeline-as-function
@@ -367,7 +366,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   input set can silently go stale — hence `isOutdated`. With triggers you can
   use an input set *or* inline runtime values, not both (input-sets.md).
 
-## A.10 Overlay Input Set
+## Overlay Input Set
 
 - **Definition.** An ordered composition of input sets: "Overlays are groups
   of input sets, which enable you to pull runtime inputs from multiple input
@@ -394,12 +393,12 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 
 - **API surface.** legacy NG: `/pipeline/api/inputSets/overlay[/{inputSetIdentifier}]`
   (path_tree.txt). No overlay-specific v1 path appears in the corpus
-  (Appendix D#9).
+  (Known issues and open questions).
 - **Gotchas.** "The setting's final value is the value assigned in the last
   input set to be resolved" (input-sets.md, "Priority in overlays") — last
   writer wins, and later sets also fill fields earlier sets left empty.
 
-## A.11 Trigger
+## Trigger
 
 - **Definition.** A rule attached to a pipeline that starts an execution when
   an event occurs — a Git webhook event, a schedule, or a new artifact/
@@ -443,7 +442,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - **API surface.** legacy NG: `/pipeline/api/triggers`,
   `.../triggers/{triggerIdentifier}[/details|/eventHistory]`,
   `.../triggers/catalog`, `.../eventHistory/...` (path_tree.txt). No v1
-  trigger CRUD path in the corpus (Appendix D#9).
+  trigger CRUD path in the corpus (Known issues and open questions).
 - **Lifecycle.** `enabled` flag; webhook `registrationStatus` enum
   `SUCCESS, FAILED, ERROR, TIMEOUT, UNAVAILABLE`
   (`entity_schemas.md`: NGTriggerDetailsResponseDTO).
@@ -456,7 +455,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   trigger's inputs or executions fail (`isPipelineInputOutdated` field;
   triggering-pipelines.md).
 
-## A.12 Webhook
+## Webhook
 
 - **Definition.** The HTTP-facing half of event-driven triggering: the
   registered endpoint in Harness plus the webhook definition in the Git
@@ -479,7 +478,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   auto-registration fails or the trigger is Custom, you copy the URL and
   register it manually (triggering-pipelines.md).
 
-## A.13 Approval
+## Approval
 
 - **Definition.** A gate that pauses execution for a human or ticket-system
   verdict. Runs as an Approval *step* (inside CD stages or Approval stages);
@@ -521,9 +520,9 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - **Gotchas.** Approvers can set variables consumed by later steps
   (using-harness-approval-steps-in-cd-stages.md). The `Approval` schema under
   `/gateway/lw/...` in the schema digest is Cloud Cost autostopping, not
-  pipeline approvals — a keyword-filter false friend (Appendix D#4).
+  pipeline approvals — a keyword-filter false friend (Known issues and open questions).
 
-## A.14 Deployment Freeze
+## Deployment Freeze
 
 - **Definition.** A time-windowed rule that blocks CD deployments for chosen
   orgs/projects/services/environments: "A freeze window is defined using one
@@ -572,7 +571,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   webhook triggers can override a freeze if their API key has the override
   permission (deployment-freeze.md).
 
-## A.15 Build Infrastructure
+## Build Infrastructure
 
 - **Definition.** Where a CI stage's steps run: Harness Cloud (Harness-managed
   machines), a self-managed Kubernetes cluster (each stage executes in a
@@ -606,7 +605,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   applicable" on Harness Cloud and unsupported on VM infra (same doc's
   feature matrix). New CI features generally land on Harness Cloud first.
 
-## A.16 Codebase
+## Codebase
 
 - **Definition.** A CI pipeline's configured Git repository: connector +
   repo + clone behavior. "When you add a Build stage to a CI pipeline, you
@@ -635,14 +634,14 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   codebase variables (`<+codebase.*>`) describe the resolved clone
   (docs/continuous-integration/use-ci/codebase-configuration/built-in-cie-codebase-variables-reference.md).
 
-## A.17 CI Step catalog
+## CI Step catalog
 
 - **Definition.** The CI-specific step types that populate Build stages. The
   step catalog groups: build & push / upload & download artifacts, run tests,
   manage dependencies (Background steps), share & cache data, run scripts
   (Run step), and plugins
   (docs/continuous-integration/use-ci/prep-ci-pipeline-components.md, "Steps").
-  Modeled here as kinds of Step (A.6), not separate entities.
+  Modeled here as kinds of Step (see the entity reference), not separate entities.
 - **Key types.**
   - **Run** — execute scripts in a container or on the host
     (docs/continuous-integration/use-ci/run-step-settings.md).
@@ -652,7 +651,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
     emulators) (docs/continuous-integration/use-ci/manage-dependencies/background-step-settings.md).
   - **Plugin** — Drone-style container plugins, incl. GitHub Actions/Bitrise
     wrappers (docs/continuous-integration/use-ci/use-drone-plugins/plugin-step-settings-reference.md).
-  - **Test (Run Tests)** — test execution with Test Intelligence (A.18)
+  - **Test (Run Tests)** — test execution with Test Intelligence (see the entity reference)
     (docs/continuous-integration/use-ci/run-tests/ti-overview.md).
 - **YAML.** Cache steps as an example of the family shape
   (yaml_examples/continuous-integration__use-ci__caching-ci-data__save-cache-in-gcs.md.yaml):
@@ -674,7 +673,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   runs are Harness Cloud only; Bitrise steps are Harness Cloud only) —
   which-build-infrastructure-is-right-for-me.md feature matrix.
 
-## A.18 Test Intelligence
+## Test Intelligence
 
 - **Definition.** "Harness Test Intelligence (TI) improves unit test time by
   running only the unit tests required to confirm the quality of the code
@@ -691,10 +690,10 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   the Git trigger must include Synchronize and merge/close events for TI's
   call graph to stay correct (ti-overview.md).
 - **Gotchas.** Unit tests only; supported for Python, Java, Ruby, C#, Kotlin,
-  Scala (JS/Kotest in beta — Appendix D#10). To ignore files, add
+  Scala (JS/Kotest in beta — Known issues and open questions). To ignore files, add
   `.ticonfig.yaml` to the codebase (ti-overview.md).
 
-## A.19 Cache Intelligence
+## Cache Intelligence
 
 - **Definition.** Automatic dependency caching for CI: "Harness automatically
   caches and restores software dependencies to speed up your builds"
@@ -724,7 +723,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   (cache-intelligence.md, "Supported tools and paths"). Enabled by default
   for newly created CI stages.
 
-## A.20 Artifact (build output)
+## Artifact (build output)
 
 - **Definition.** The image or file a CI stage produces and pushes (via Build
   and Push / upload steps), surfaced on the execution's **Artifacts** tab
@@ -749,10 +748,9 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   ```
 
 - **Gotchas.** Do not confuse with the CD *artifact source* (part of a
-  Service definition, A.21) or the Artifact Registry module (out of scope,
-  Ch 1).
+  Service definition; see Service) or the Artifact Registry module (out of scope for this guide).
 
-## A.21 Service
+## Service
 
 - **Definition.** "A Harness service represents what you're deploying." Each
   service contains a **Service Definition**: artifacts, manifests,
@@ -813,7 +811,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   lower hierarchy level" (services-overview.md). Account-level stage
   templates can reference only account-level services (same doc).
 
-## A.22 Environment
+## Environment
 
 - **Definition.** "A Harness environment represents where you are deploying
   your application", categorized prod or non-prod; it holds infrastructure
@@ -849,7 +847,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   | Operation | v1 beta | legacy NG |
   |---|---|---|
   | CRUD | `/v1/environments`, `/v1/orgs/{org}/environments`, `/v1/orgs/{org}/projects/{project}/environments[/{environment}]` | `/ng/api/environmentsV2[/{environmentIdentifier}]`, `.../upsert` |
-  | Infra children | `.../environments/{environment}/infrastructures[/{infrastructure-definition}]` | (see A.23) |
+  | Infra children | `.../environments/{environment}/infrastructures[/{infrastructure-definition}]` | (see Infrastructure Definition) |
   | Overrides (legacy) | — | `/ng/api/environmentsV2/serviceOverrides` |
 
   (path_tree.txt)
@@ -859,7 +857,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   three v1 path families (account/org/project) are the same entity at three
   scopes — don't model them separately.
 
-## A.23 Infrastructure Definition
+## Infrastructure Definition
 
 - **Definition.** The concrete deployment target inside an environment —
   "the specific VM, Kubernetes cluster, or target infrastructure where you
@@ -896,12 +894,12 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   in this corpus the legacy evidence is the `InfrastructureRequest/ResponseDTO`
   schemas (`entity_schemas.md`). The `/api/infrastructures` paths in
   path_tree.txt belong to another module (IACM/armory-style executor) —
-  keyword over-inclusion, see Appendix D#4.
+  keyword over-inclusion, see Known issues and open questions.
 - **Gotchas.** `allowSimultaneousDeployments` gates concurrent deploys into
   the same infra. Infrastructure can be scoped to specific services
   (docs/continuous-delivery/x-platform-cd-features/environments/scope-infra-to-services.md).
 
-## A.24 Environment Group
+## Environment Group
 
 - **Definition.** A named collection of environments for bulk selection in
   pipelines and governance
@@ -934,7 +932,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   of cross-scope reference prefixes (create-environment-groups.md) — the same
   syntax used for connectors, services, templates.
 
-## A.25 Service Override
+## Service Override
 
 - **Definition.** Values that replace parts of a service's configuration when
   it deploys into a particular environment (or infra/cluster): "To enable the
@@ -967,7 +965,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   "Limitations"). Helm Repo overrides must keep the same store type as the
   service.
 
-## A.26 Connector
+## Connector
 
 - **Definition.** A typed, reusable credential-plus-endpoint object for an
   external system (Git providers, cloud platforms, registries, K8s clusters,
@@ -1010,7 +1008,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   share credentials across all projects — but entities at account scope can
   only use account-scope connectors (services-overview.md).
 
-## A.27 Secret
+## Secret
 
 - **Definition.** A managed sensitive value — text, file, or SSH credential —
   stored encrypted and referenced from YAML by expression
@@ -1020,7 +1018,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - **Identity.** `identifier` pattern `^[a-zA-Z_][0-9a-zA-Z_$-]{0,127}$`
   (note: hyphen allowed — unlike Pipeline/Connector identifiers), maxLen 128;
   `name` pattern `^[0-9a-zA-Z-_ ]{0,127}$`; `spec` required
-  (`entity_schemas.md`: Secret; see Appendix D#6).
+  (`entity_schemas.md`: Secret; see Known issues and open questions).
 - **Owned by.** Scope container. **References.** Its Secret Manager
   (storage backend).
 - **Usage.** `<+secrets.getValue("secretfile")>` in step env/commands
@@ -1043,7 +1041,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   Harness sanitizes secrets out of logs
   (docs/platform/secrets/secrets-management/secrets-and-log-sanitization.md).
 
-## A.28 Secret Manager
+## Secret Manager
 
 - **Definition.** The backend that stores/encrypts secrets. Built-in default:
   "Google Cloud Key Management Service is the default Secret Manager in
@@ -1069,7 +1067,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   (except Vault). Secrets Manager configs can themselves be templated
   (docs/platform/templates/create-a-secret-manager-template.md).
 
-## A.29 Delegate
+## Delegate
 
 - **Definition.** "Harness Delegate is a service you run in your local
   network or VPC to connect your artifacts, infrastructure, collaboration,
@@ -1104,7 +1102,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   Harness Cloud build infra needs no delegate — that's the point of it
   (which-build-infrastructure-is-right-for-me.md).
 
-## A.30 Template
+## Template
 
 - **Definition.** A versioned, reusable definition of a Step, Stage, Pipeline
   (and more) that pipelines link to instead of copying
@@ -1117,7 +1115,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   MonitoredService, SecretManager`; `stable_template` boolean
   (`entity_schemas.md`: TemplateResponse / TemplateCreateRequestBody).
   Docs additionally list Step Group and Artifact Source template types
-  (template.md; see Appendix D#8).
+  (template.md; see Known issues and open questions).
 - **Owned by.** Scope container. **Referenced by.** Pipelines/stages/steps
   via `template.templateRef` + `templateInputs`
   (yaml_examples/continuous-delivery__cd-onboarding__new-user__cd-pipeline-modeling-overview.md.yaml).
@@ -1158,7 +1156,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   "Referencing objects within a scope"). Pipeline templates with chained
   pipeline stages are unsupported.
 
-## A.31 Variable
+## Variable
 
 - **Definition.** A named value defined at account, org, or project scope (or
   inline on pipelines/stages/services/environments), read via expressions
@@ -1167,7 +1165,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   environment (inline form).
 - **Identity.** `identifier`, `name`, `type` required; `type` enum: `String`
   (`entity_schemas.md`: VariableDTO). Docs show stage variables with
-  `type: String ## String or Secret` (add-a-stage.md) — see Appendix D#7.
+  `type: String ## String or Secret` (add-a-stage.md) — see Known issues and open questions.
 - **Owned by.** Scope container (or owning pipeline/stage for inline).
 - **Reference syntax.** (add-a-variable.md)
 
@@ -1182,13 +1180,13 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 
 - **API surface.** legacy NG: `/ng/api/variables[/{identifier}]`,
   `.../variables/list` (path_tree.txt). (The `/v1/backstage-env-variables`
-  paths are the IDP module — keyword noise, Appendix D#4.)
+  paths are the IDP module — keyword noise, Known issues and open questions.)
 - **Gotchas.** Higher-scope variables are visible to all lower scopes
   (add-a-variable.md). Stage variables can be overridden by later stages.
 
 ---
 
-*End of Appendix A. Relationship edges asserted here are diagrammed and
-re-verified in Appendix B; unresolved doc/spec tensions are catalogued in
-Appendix D.*
+*Relationship edges asserted here are diagrammed in
+[Relationship diagrams](relationships.md); unresolved doc/spec tensions are
+catalogued in [Known issues and open questions](open-questions.md).*
 

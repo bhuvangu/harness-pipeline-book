@@ -1,50 +1,82 @@
 import markdown, re, html, pathlib
 
-BOOK = pathlib.Path('/home/user/harness-pipeline-book/book')
+BOOK = pathlib.Path('/home/user/harness-pipeline-book/guide')
 OUT  = pathlib.Path('/tmp/claude-0/-home-user-harness-pipeline-book/f4afcf7c-faa4-5453-95da-10110d650dd6/scratchpad/harness-pipeline-book.html')
 
+# (id, nav label, path, group)  — group None = top level
 files = [
- ('intro','Start here','README.md'),
- ('ch01','1 · The resource model','01-resource-model.md'),
- ('ch02','2 · The pipeline aggregate','02-pipeline-aggregate.md'),
- ('ch03','3 · Parameterization','03-parameterization.md'),
- ('ch04','4 · Triggers and events','04-triggers-and-events.md'),
- ('ch05','5 · Execution','05-execution.md'),
- ('ch06','6 · CI stages','06-ci-stages.md'),
- ('ch07','7 · CD stages','07-cd-stages.md'),
- ('ch08','8 · The connectivity layer','08-connectivity-layer.md'),
- ('ch09','9 · Reuse','09-reuse.md'),
- ('ch10','10 · Life of a build & deployment','10-life-of-a-pipeline.md'),
- ('appa','A · Entity reference','appendix-a-entity-reference.md'),
- ('appb','B · Relationship diagrams','appendix-b-relationships.md'),
- ('appc','C · Glossary','appendix-c-glossary.md'),
- ('appd','D · Open questions','appendix-d-open-questions.md'),
+ ('home','What is the Harness pipeline offering?','README.md',None),
+ ('concepts','Pipeline concepts','concepts/README.md','Concepts'),
+ ('scopes','Scopes','concepts/scopes.md','Concepts'),
+ ('identifiers','Identifiers and names','concepts/identifiers.md','Concepts'),
+ ('structure','Pipeline structure','concepts/pipeline-structure.md','Concepts'),
+ ('storage','YAML and Git storage','concepts/yaml-and-storage.md','Concepts'),
+ ('apigen','The two API generations','concepts/api-generations.md','Concepts'),
+ ('inputs','Configuring pipeline inputs','inputs/README.md','Inputs'),
+ ('runtime','Runtime inputs and expressions','inputs/runtime-inputs.md','Inputs'),
+ ('inputsets','Input sets and overlays','inputs/input-sets.md','Inputs'),
+ ('variables','Variables','inputs/variables.md','Inputs'),
+ ('triggers','Starting pipelines with triggers','triggers/README.md','Triggers'),
+ ('webhook','Webhook triggers','triggers/webhook-triggers.md','Triggers'),
+ ('cron','Scheduled triggers','triggers/scheduled-triggers.md','Triggers'),
+ ('artifact','Artifact and manifest triggers','triggers/artifact-triggers.md','Triggers'),
+ ('exec','Managing executions','executions/README.md','Executions'),
+ ('statuses','Statuses and the execution graph','executions/statuses-and-graph.md','Executions'),
+ ('failure','Failure handling','executions/failure-handling.md','Executions'),
+ ('retry','Retrying and rerunning','executions/retry-and-rerun.md','Executions'),
+ ('approvals','Approvals','executions/approvals.md','Executions'),
+ ('ci','Building with CI stages','ci/README.md','CI'),
+ ('buildinfra','Choosing a build infrastructure','ci/build-infrastructure.md','CI'),
+ ('codebase','Configuring the codebase','ci/codebase.md','CI'),
+ ('cisteps','CI steps','ci/ci-steps.md','CI'),
+ ('ti','Test Intelligence','ci/test-intelligence.md','CI'),
+ ('cacheintel','Cache Intelligence','ci/cache-intelligence.md','CI'),
+ ('cd','Deploying with CD stages','cd/README.md','CD'),
+ ('services','Services','cd/services.md','CD'),
+ ('environments','Environments and infrastructure','cd/environments.md','CD'),
+ ('overrides','Service overrides','cd/service-overrides.md','CD'),
+ ('strategies','Strategies and rollback','cd/strategies-and-rollback.md','CD'),
+ ('freeze','Deployment freeze','cd/deployment-freeze.md','CD'),
+ ('connect','Connecting to your infrastructure','connect/README.md','Connectivity'),
+ ('delegates','Delegates','connect/delegates.md','Connectivity'),
+ ('connectors','Connectors','connect/connectors.md','Connectivity'),
+ ('secrets','Secrets and secret managers','connect/secrets.md','Connectivity'),
+ ('templates','Reusing configuration with templates','reuse/templates.md','Reuse'),
+ ('walk','Walkthroughs','walkthroughs/README.md','Walkthroughs'),
+ ('buildlife','Life of a build','walkthroughs/life-of-a-build.md','Walkthroughs'),
+ ('deploylife','Life of a deployment','walkthroughs/life-of-a-deployment.md','Walkthroughs'),
+ ('ref','Reference','reference/README.md','Reference'),
+ ('entities','Entity reference','reference/entity-reference.md','Reference'),
+ ('relationships','Relationship diagrams','reference/relationships.md','Reference'),
+ ('glossary','Glossary','reference/glossary.md','Reference'),
+ ('openq','Known issues and open questions','reference/open-questions.md','Reference'),
 ]
 
 md = markdown.Markdown(extensions=['tables','fenced_code','sane_lists'])
 
 sections = []
-for sid, label, fname in files:
+for sid, label, fname, group in files:
     text = (BOOK/fname).read_text()
     # strip links to local md files in README table -> plain text
-    text = re.sub(r'\[([^\]]+)\]\((?:[0-9a-z\-]+\.md)\)', r'\1', text)
+    text = re.sub(r'\[([^\]]+)\]\((?:\.\./)*[0-9a-zA-Z\-_/]+\.md(?:#[^)]*)?\)', r'\1', text)
     body = md.convert(text); md.reset()
     # mermaid fences -> native artifact mermaid blocks
     body = re.sub(
         r'<pre><code class="language-mermaid">(.*?)</code></pre>',
         lambda m: '<pre class="mermaid">' + m.group(1) + '</pre>',
         body, flags=re.S)
-    sections.append((sid, label, body))
+    sections.append((sid, label, body, group))
 
 navparts = []
-for sid, label, _ in sections:
-    cls = ' class="nav-app"' if sid.startswith('app') else ''
-    if sid == 'appa':
-        navparts.append('<div class="nav-label">Appendices</div>')
-    navparts.append('<a href="#%s"%s>%s</a>' % (sid, cls, html.escape(label)))
+prev_group = None
+for sid, label, _, group in sections:
+    if group != prev_group and group is not None:
+        navparts.append('<div class="nav-label">%s</div>' % html.escape(group))
+    prev_group = group
+    navparts.append('<a href="#%s">%s</a>' % (sid, html.escape(label)))
 nav = '\n'.join(navparts)
 
-content = '\n'.join(f'<section id="{sid}">\n{body}\n</section>' for sid, _, body in sections)
+content = '\n'.join(f'<section id="{sid}">\n{body}\n</section>' for sid, _, body, _g in sections)
 
 css = """
 :root{

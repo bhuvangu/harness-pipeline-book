@@ -1,4 +1,4 @@
-# Appendix B. Relationship diagrams
+# Relationship diagrams
 
 Two diagram sets — the scope hierarchy and the entity-relationship model —
 followed by the evidence table backing every edge. Solid semantics:
@@ -22,7 +22,7 @@ flowchart TD
 ```
 
 Reference direction is upward only: project → `org.X` → `account.X`
-(Ch 1.1).
+(see [Scopes](../concepts/scopes.md)).
 
 ## B.2 The pipeline aggregate and its callers
 
@@ -112,7 +112,7 @@ erDiagram
 | 25 | Delegate decrypts via Secret Manager | references | "only the Harness Delegate... has access to it" (harness-secret-manager-overview.md) |
 | 26 | Step references Connector / Secret | references | `spec.connectorRef` (yaml_examples/continuous-integration__use-ci__caching-ci-data__save-cache-in-gcs.md.yaml); `<+secrets.getValue(...)>` (yaml_examples/platform__secrets__add-use-text-secrets.md.yaml) |
 | 27 | CI stage uses Delegate only on self-managed infra | references | delegate selectors "not applicable" on Harness Cloud (docs/continuous-integration/use-ci/set-up-build-infrastructure/which-build-infrastructure-is-right-for-me.md) |
-| 28 | Shared-resource entities exist at all three scopes | scoping | services/environments/templates/variables/delegates/freezes docs cited per entity in Appendix A (§A.21, A.22, A.30, A.31, A.29, A.14) |
+| 28 | Shared-resource entities exist at all three scopes | scoping | services/environments/templates/variables/delegates/freezes docs cited per entity in the [Entity reference](entity-reference.md)  |
 
 Cardinality notes: an Environment owns 1..n Infrastructure Definitions
 ("an environment can contain multiple infrastructure definitions",
