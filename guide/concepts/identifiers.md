@@ -30,9 +30,9 @@ API schema digest:
 - Connector names do not require a leading letter: `^[0-9a-zA-Z-_ ]{0,127}$`.
 
 For the identity rules of each entity, see the
-[Entity reference](../reference/entity-reference.md). For known
+[Entity reference](../../api-reference/entity-reference.md). For known
 inconsistencies in these patterns, see
-[Known issues and open questions](../reference/open-questions.md).
+[Known issues and open questions](../../api-reference/open-questions.md).
 
 ---
 **Sources:** corpus/entity_schemas.md (PipelineCreateRequestBody, Secret,

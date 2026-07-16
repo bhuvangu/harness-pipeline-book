@@ -32,7 +32,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - Uniqueness is per scope container: an identifier must be unique within the
   account/org/project it lives in; the same identifier can exist at different
   scopes, which is why cross-scope references need `org.` / `account.`
-  prefixes (see [Scopes](../concepts/scopes.md)). **INFERRED** from the reference-prefix design in
+  prefixes (see [Scopes](../guide/concepts/scopes.md)). **INFERRED** from the reference-prefix design in
   docs/continuous-delivery/x-platform-cd-features/environments/create-environment-groups.md.
 
 ---
@@ -200,7 +200,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   `<+pipeline.stages.STAGE_ID.variables.NAME>` (add-a-stage.md). Stage
   variable YAML documents `type: String ## String or Secret`
   (add-a-stage.md) — contrast with the account/org/project Variable entity,
-  whose API enum is `String` only (see the entity reference, Known issues and open questions).
+  whose API enum is `String` only (see the Variable entry and [Known issues](open-questions.md)).
 
 ## Step
 
@@ -393,7 +393,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 
 - **API surface.** legacy NG: `/pipeline/api/inputSets/overlay[/{inputSetIdentifier}]`
   (path_tree.txt). No overlay-specific v1 path appears in the corpus
-  (Known issues and open questions).
+  (see [Known issues](open-questions.md)).
 - **Gotchas.** "The setting's final value is the value assigned in the last
   input set to be resolved" (input-sets.md, "Priority in overlays") — last
   writer wins, and later sets also fill fields earlier sets left empty.
@@ -442,7 +442,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - **API surface.** legacy NG: `/pipeline/api/triggers`,
   `.../triggers/{triggerIdentifier}[/details|/eventHistory]`,
   `.../triggers/catalog`, `.../eventHistory/...` (path_tree.txt). No v1
-  trigger CRUD path in the corpus (Known issues and open questions).
+  trigger CRUD path in the corpus (see [Known issues](open-questions.md)).
 - **Lifecycle.** `enabled` flag; webhook `registrationStatus` enum
   `SUCCESS, FAILED, ERROR, TIMEOUT, UNAVAILABLE`
   (`entity_schemas.md`: NGTriggerDetailsResponseDTO).
@@ -520,7 +520,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - **Gotchas.** Approvers can set variables consumed by later steps
   (using-harness-approval-steps-in-cd-stages.md). The `Approval` schema under
   `/gateway/lw/...` in the schema digest is Cloud Cost autostopping, not
-  pipeline approvals — a keyword-filter false friend (Known issues and open questions).
+  pipeline approvals — a keyword-filter false friend (see [Known issues](open-questions.md)).
 
 ## Deployment Freeze
 
@@ -641,7 +641,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   manage dependencies (Background steps), share & cache data, run scripts
   (Run step), and plugins
   (docs/continuous-integration/use-ci/prep-ci-pipeline-components.md, "Steps").
-  Modeled here as kinds of Step (see the entity reference), not separate entities.
+  Modeled here as kinds of Step (see the Step entry), not separate entities.
 - **Key types.**
   - **Run** — execute scripts in a container or on the host
     (docs/continuous-integration/use-ci/run-step-settings.md).
@@ -651,7 +651,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
     emulators) (docs/continuous-integration/use-ci/manage-dependencies/background-step-settings.md).
   - **Plugin** — Drone-style container plugins, incl. GitHub Actions/Bitrise
     wrappers (docs/continuous-integration/use-ci/use-drone-plugins/plugin-step-settings-reference.md).
-  - **Test (Run Tests)** — test execution with Test Intelligence (see the entity reference)
+  - **Test (Run Tests)** — test execution with Test Intelligence (see the Test Intelligence entry)
     (docs/continuous-integration/use-ci/run-tests/ti-overview.md).
 - **YAML.** Cache steps as an example of the family shape
   (yaml_examples/continuous-integration__use-ci__caching-ci-data__save-cache-in-gcs.md.yaml):
@@ -690,7 +690,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   the Git trigger must include Synchronize and merge/close events for TI's
   call graph to stay correct (ti-overview.md).
 - **Gotchas.** Unit tests only; supported for Python, Java, Ruby, C#, Kotlin,
-  Scala (JS/Kotest in beta — Known issues and open questions). To ignore files, add
+  Scala (JS/Kotest in beta; see [Known issues](open-questions.md)). To ignore files, add
   `.ticonfig.yaml` to the codebase (ti-overview.md).
 
 ## Cache Intelligence
@@ -894,7 +894,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   in this corpus the legacy evidence is the `InfrastructureRequest/ResponseDTO`
   schemas (`entity_schemas.md`). The `/api/infrastructures` paths in
   path_tree.txt belong to another module (IACM/armory-style executor) —
-  keyword over-inclusion, see Known issues and open questions.
+  keyword over-inclusion; see [Known issues](open-questions.md).
 - **Gotchas.** `allowSimultaneousDeployments` gates concurrent deploys into
   the same infra. Infrastructure can be scoped to specific services
   (docs/continuous-delivery/x-platform-cd-features/environments/scope-infra-to-services.md).
@@ -1018,7 +1018,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 - **Identity.** `identifier` pattern `^[a-zA-Z_][0-9a-zA-Z_$-]{0,127}$`
   (note: hyphen allowed — unlike Pipeline/Connector identifiers), maxLen 128;
   `name` pattern `^[0-9a-zA-Z-_ ]{0,127}$`; `spec` required
-  (`entity_schemas.md`: Secret; see Known issues and open questions).
+  (`entity_schemas.md`: Secret; see [Known issues](open-questions.md)).
 - **Owned by.** Scope container. **References.** Its Secret Manager
   (storage backend).
 - **Usage.** `<+secrets.getValue("secretfile")>` in step env/commands
@@ -1115,7 +1115,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   MonitoredService, SecretManager`; `stable_template` boolean
   (`entity_schemas.md`: TemplateResponse / TemplateCreateRequestBody).
   Docs additionally list Step Group and Artifact Source template types
-  (template.md; see Known issues and open questions).
+  (template.md; see [Known issues](open-questions.md)).
 - **Owned by.** Scope container. **Referenced by.** Pipelines/stages/steps
   via `template.templateRef` + `templateInputs`
   (yaml_examples/continuous-delivery__cd-onboarding__new-user__cd-pipeline-modeling-overview.md.yaml).
@@ -1165,7 +1165,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
   environment (inline form).
 - **Identity.** `identifier`, `name`, `type` required; `type` enum: `String`
   (`entity_schemas.md`: VariableDTO). Docs show stage variables with
-  `type: String ## String or Secret` (add-a-stage.md) — see Known issues and open questions.
+  `type: String ## String or Secret` (add-a-stage.md); see [Known issues](open-questions.md).
 - **Owned by.** Scope container (or owning pipeline/stage for inline).
 - **Reference syntax.** (add-a-variable.md)
 
@@ -1180,7 +1180,7 @@ Shared identity rules (quoted from `entity_schemas.md` unless noted):
 
 - **API surface.** legacy NG: `/ng/api/variables[/{identifier}]`,
   `.../variables/list` (path_tree.txt). (The `/v1/backstage-env-variables`
-  paths are the IDP module — keyword noise, Known issues and open questions.)
+  paths are the IDP module — keyword noise; see [Known issues](open-questions.md).)
 - **Gotchas.** Higher-scope variables are visible to all lower scopes
   (add-a-variable.md). Stage variables can be overridden by later stages.
 

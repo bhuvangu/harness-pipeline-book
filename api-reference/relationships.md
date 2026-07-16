@@ -22,7 +22,7 @@ flowchart TD
 ```
 
 Reference direction is upward only: project → `org.X` → `account.X`
-(see [Scopes](../concepts/scopes.md)).
+(see [Scopes](../guide/concepts/scopes.md)).
 
 ## B.2 The pipeline aggregate and its callers
 

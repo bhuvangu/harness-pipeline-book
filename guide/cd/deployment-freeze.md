@@ -43,6 +43,21 @@ freeze:
 - **Account admins can always bypass** freeze windows, and a Global freeze
   switch exists alongside scheduled windows.
 
+## To create a freeze window
+
+1. Go to **Account Settings**, **Organization Settings**, or **Project
+   Settings**, depending on the scope you want to freeze.
+2. Select **Freeze Windows**, and then select **New Freeze Window**.
+3. Enter a name and select **Start**.
+4. In **Coverage**, add one or more rules selecting the services,
+   environments, orgs, or projects to freeze. Rules are additive: the
+   freeze applies to the sum of all rules.
+5. In **Schedule**, set the time zone, start and end times, and any
+   recurrence, then save.
+6. Enable the freeze window. Optionally add notification rules — for
+   example, to notify a user group when a trigger invocation is rejected
+   because of the freeze.
+
 ## Managing freeze windows
 
 You cannot edit an enabled freeze window. Disable it, make your changes,

@@ -36,8 +36,18 @@ inputSet:
                   namespace: default
 ```
 
+## To create an input set
+
+1. In the Pipeline Studio header, select **Input Sets**.
+2. Select **New Input Set**.
+3. Enter a **Name**. **Description** and **Tags** are optional.
+4. Enter values for the settings that use runtime input, and then select
+   **Save**. You can't define values for settings that aren't `<+input>`,
+   and you don't have to provide a value for every input.
+
 To capture a known-good set of values quickly, run the pipeline and choose
-**Save as New Input Set** on the Run form.
+**Save as New Input Set** on the Run form. You can also import input sets
+from a Git repository.
 
 ## Overlays
 
@@ -52,6 +62,16 @@ overlayInputSet:
     - My_Input_Set      # resolved first
     - My_Input_Set_2    # resolved last; wins on conflicts
 ```
+
+### To create an overlay
+
+1. Create the input sets you want to combine.
+2. On the **Input Sets** page, select **New Input Set**, and then select
+   **Overlay Input Set**.
+3. Enter a **Name**, select the input sets to include, and select
+   **Apply Input Sets**.
+4. Drag the input sets into the order in which they should resolve, and
+   select **Save**.
 
 Input sets are resolved in order. A later set replaces values that earlier
 sets defined and fills values they left empty. The final value of any
@@ -72,7 +92,7 @@ information, see [Starting pipelines with triggers](../triggers/README.md).
 Input sets support View, Create/Edit, and Delete permissions. To run a
 pipeline with an input set, you need View on the input set and Execute on
 the pipeline. (This is feature-flagged; see
-[Known issues and open questions](../reference/open-questions.md).)
+[Known issues and open questions](../../api-reference/open-questions.md).)
 
 ---
 **Sources:** docs/platform/pipelines/input-sets.md (all behavior described);

@@ -68,8 +68,9 @@ structure rather than a direct statement in the sources.
 - [Walkthroughs](walkthroughs/README.md)
   - [Life of a build](walkthroughs/life-of-a-build.md)
   - [Life of a deployment](walkthroughs/life-of-a-deployment.md)
-- [Reference](reference/README.md)
-  - [Entity reference](reference/entity-reference.md)
-  - [Relationship diagrams](reference/relationships.md)
-  - [Glossary](reference/glossary.md)
-  - [Known issues and open questions](reference/open-questions.md)
+## Companion document
+
+Precise per-entity definitions, API tables, diagrams, and the glossary live
+in a separate document, the
+[API & Entity Reference](../api-reference/README.md) — the same split AWS
+uses between a service's User Guide and its API Reference.

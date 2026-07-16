@@ -22,7 +22,7 @@ How to read them:
 > The schema's status enum contains no `Success` value, although the UI and
 > docs clearly show successful runs. This looks like a truncation in the
 > schema digest. See
-> [Known issues and open questions](../reference/open-questions.md).
+> [Known issues and open questions](../../api-reference/open-questions.md).
 
 ## The execution graph
 
@@ -46,7 +46,7 @@ are calculated account-wide.
 An Executions Management page lists queued executions and supports single
 and bulk abort. Aborting a queued execution removes it permanently — you
 must trigger the pipeline again to run it. (Feature-flagged; see
-[Known issues and open questions](../reference/open-questions.md).)
+[Known issues and open questions](../../api-reference/open-questions.md).)
 
 ---
 **Sources:** corpus/entity_schemas.md (PipelineExecutionSummary status enum

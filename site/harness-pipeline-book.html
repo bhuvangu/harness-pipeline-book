@@ -1,4 +1,4 @@
-<title>The Harness Pipeline Book</title>
+<title>Harness Pipelines Documentation</title>
 <style>
 :root{
   --accent:#0f6674; --accent-soft:#0f66741a;
@@ -26,26 +26,46 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);
   font-family:var(--serif);font-size:17px;line-height:1.65}
-.layout{display:flex;min-height:100vh}
-nav.sidebar{width:250px;flex:0 0 250px;position:sticky;top:0;height:100vh;
-  overflow-y:auto;border-right:1px solid var(--border);background:var(--surface);
-  padding:1.5rem 0 3rem;font-family:var(--sans)}
-nav.sidebar .brand{padding:0 1.25rem 1rem;border-bottom:1px solid var(--border);margin-bottom:.75rem}
-nav.sidebar .brand strong{font-size:.95rem;letter-spacing:.01em;display:block}
-nav.sidebar .brand span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
-nav.sidebar a{display:block;padding:.34rem 1.25rem;color:var(--muted);
-  text-decoration:none;font-size:.85rem;line-height:1.35;border-left:3px solid transparent}
-nav.sidebar a:hover{color:var(--accent);background:var(--accent-soft)}
+.topbar{display:flex;align-items:center;gap:1.5rem;padding:.7rem 1.5rem;
+  border-bottom:1px solid var(--border);background:var(--surface);
+  font-family:var(--sans);position:sticky;top:0;z-index:5}
+.topbar .brand{font-weight:700;font-size:1rem;letter-spacing:-.01em}
+.topbar .brand small{display:block;font-weight:400;color:var(--muted);
+  font-size:.7rem;text-transform:uppercase;letter-spacing:.09em}
+.doctabs{display:flex;gap:.25rem;margin-left:auto}
+.doctabs button{font-family:var(--sans);font-size:.83rem;padding:.42rem .9rem;
+  border:1px solid var(--border);background:none;color:var(--muted);
+  border-radius:6px;cursor:pointer}
+.doctabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.doctabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layout{display:flex;min-height:calc(100vh - 53px)}
+nav.sidebar{width:290px;flex:0 0 290px;position:sticky;top:53px;
+  height:calc(100vh - 53px);overflow-y:auto;border-right:1px solid var(--border);
+  background:var(--surface);padding:1rem 0 3rem;font-family:var(--sans)}
+.tnode{margin:0}
+.trow{display:flex;align-items:center}
+.trow.leaf{padding-left:1.55rem}
+.tw{flex:0 0 1.55rem;height:1.9rem;border:none;background:none;cursor:pointer;
+  color:var(--muted);position:relative}
+.tw::before{content:"";position:absolute;left:.62rem;top:.72rem;
+  border-left:5px solid currentColor;border-top:4px solid transparent;
+  border-bottom:4px solid transparent;transition:transform .12s}
+@media (prefers-reduced-motion: reduce){.tw::before{transition:none}}
+.tnode.open>.trow .tw::before{transform:rotate(90deg)}
+nav.sidebar a{display:block;flex:1;padding:.34rem .9rem .34rem 0;
+  color:var(--ink);text-decoration:none;font-size:.86rem;line-height:1.35}
+nav.sidebar a.child{padding-left:2.3rem;color:var(--muted);font-size:.83rem}
+nav.sidebar a:hover{color:var(--accent)}
+nav.sidebar a.active{color:var(--accent);font-weight:600}
 nav.sidebar a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-nav.sidebar a.nav-app{font-size:.8rem}
-nav.sidebar .nav-label{padding:.9rem 1.25rem .25rem;font-size:.68rem;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.1em}
+.tkids{display:none}
+.tnode.open>.tkids{display:block}
 main{flex:1;min-width:0;padding:2.5rem 3rem 6rem}
-section{max-width:72ch;margin:0 auto 4rem;scroll-margin-top:1.5rem}
+section{max-width:72ch;margin:0 auto 4rem;scroll-margin-top:70px}
 section+section{border-top:1px solid var(--border);padding-top:3rem}
 h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;text-wrap:balance;color:var(--ink)}
 h1{font-size:1.9rem;font-weight:650;letter-spacing:-.015em;margin:0 0 1rem}
-h2{font-size:1.35rem;font-weight:650;margin:2.4rem 0 .8rem}
+h2{font-size:1.35rem;font-weight:650;margin:2.4rem 0 .8rem;scroll-margin-top:70px}
 h3{font-size:1.08rem;font-weight:650;margin:1.9rem 0 .6rem}
 p{margin:.75rem 0}
 a{color:var(--accent)}
@@ -58,84 +78,52 @@ pre code{background:none;padding:0;font-size:.8rem}
 pre.mermaid{background:var(--surface);text-align:center}
 blockquote{margin:1.5rem 0;padding:.9rem 1.2rem;background:var(--callout);
   border-left:3px solid var(--accent);border-radius:0 6px 6px 0}
-blockquote h3{margin-top:.2rem;color:var(--accent)}
 blockquote p{margin:.5rem 0}
-.table-wrap,table{max-width:100%}
 table{border-collapse:collapse;font-size:.85rem;font-family:var(--sans);
   display:block;overflow-x:auto;margin:1.1rem 0;font-variant-numeric:tabular-nums}
 th,td{border:1px solid var(--border);padding:.45rem .7rem;text-align:left;vertical-align:top}
 th{background:var(--code-bg);font-weight:650;white-space:nowrap}
 li{margin:.3rem 0}
-hr{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
-img{max-width:100%}
+hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+body[data-doc="guide"] .doc-ref{display:none}
+body[data-doc="ref"] .doc-guide{display:none}
 @media (max-width:900px){
   .layout{display:block}
-  nav.sidebar{position:static;width:auto;height:auto;border-right:none;
-    border-bottom:1px solid var(--border)}
+  nav.sidebar{position:static;width:auto;height:auto;max-height:45vh;
+    border-right:none;border-bottom:1px solid var(--border)}
   main{padding:1.5rem 1.2rem 4rem}
 }
+@media print{.topbar,nav.sidebar{display:none}main{padding:0}
+  body[data-doc="guide"] .doc-ref,body[data-doc="ref"] .doc-guide{display:block}}
 @media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth}}
 </style>
+<header class="topbar">
+  <div class="brand">Harness Pipelines<small>Documentation</small></div>
+  <div class="doctabs">
+    <button data-doc="guide" class="active">User Guide</button>
+    <button data-doc="ref">API &amp; Entity Reference</button>
+  </div>
+</header>
 <div class="layout">
-<nav class="sidebar" aria-label="Chapters">
-  <div class="brand"><span>Domain model · CI/CD</span><strong>The Harness Pipeline Book</strong></div>
-  <a href="#home">What is the Harness pipeline offering?</a>
-<div class="nav-label">Concepts</div>
-<a href="#concepts">Pipeline concepts</a>
-<a href="#scopes">Scopes</a>
-<a href="#identifiers">Identifiers and names</a>
-<a href="#structure">Pipeline structure</a>
-<a href="#storage">YAML and Git storage</a>
-<a href="#apigen">The two API generations</a>
-<div class="nav-label">Inputs</div>
-<a href="#inputs">Configuring pipeline inputs</a>
-<a href="#runtime">Runtime inputs and expressions</a>
-<a href="#inputsets">Input sets and overlays</a>
-<a href="#variables">Variables</a>
-<div class="nav-label">Triggers</div>
-<a href="#triggers">Starting pipelines with triggers</a>
-<a href="#webhook">Webhook triggers</a>
-<a href="#cron">Scheduled triggers</a>
-<a href="#artifact">Artifact and manifest triggers</a>
-<div class="nav-label">Executions</div>
-<a href="#exec">Managing executions</a>
-<a href="#statuses">Statuses and the execution graph</a>
-<a href="#failure">Failure handling</a>
-<a href="#retry">Retrying and rerunning</a>
-<a href="#approvals">Approvals</a>
-<div class="nav-label">CI</div>
-<a href="#ci">Building with CI stages</a>
-<a href="#buildinfra">Choosing a build infrastructure</a>
-<a href="#codebase">Configuring the codebase</a>
-<a href="#cisteps">CI steps</a>
-<a href="#ti">Test Intelligence</a>
-<a href="#cacheintel">Cache Intelligence</a>
-<div class="nav-label">CD</div>
-<a href="#cd">Deploying with CD stages</a>
-<a href="#services">Services</a>
-<a href="#environments">Environments and infrastructure</a>
-<a href="#overrides">Service overrides</a>
-<a href="#strategies">Strategies and rollback</a>
-<a href="#freeze">Deployment freeze</a>
-<div class="nav-label">Connectivity</div>
-<a href="#connect">Connecting to your infrastructure</a>
-<a href="#delegates">Delegates</a>
-<a href="#connectors">Connectors</a>
-<a href="#secrets">Secrets and secret managers</a>
-<div class="nav-label">Reuse</div>
-<a href="#templates">Reusing configuration with templates</a>
-<div class="nav-label">Walkthroughs</div>
-<a href="#walk">Walkthroughs</a>
-<a href="#buildlife">Life of a build</a>
-<a href="#deploylife">Life of a deployment</a>
-<div class="nav-label">Reference</div>
-<a href="#ref">Reference</a>
-<a href="#entities">Entity reference</a>
-<a href="#relationships">Relationship diagrams</a>
-<a href="#glossary">Glossary</a>
-<a href="#openq">Known issues and open questions</a>
+<nav class="sidebar" aria-label="Contents">
+  <div class="docnav" data-doc="guide"><div class="tnode"><div class="trow leaf"><a href="#home">What is the Harness pipeline offering?</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#concepts">Pipeline concepts</a></div><div class="tkids"><a class="child" href="#scopes">Scopes</a><a class="child" href="#identifiers">Identifiers and names</a><a class="child" href="#structure">Pipeline structure</a><a class="child" href="#storage">YAML and Git storage</a><a class="child" href="#apigen">The two API generations</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#inputs">Configuring pipeline inputs</a></div><div class="tkids"><a class="child" href="#runtime">Runtime inputs and expressions</a><a class="child" href="#inputsets">Input sets and overlays</a><a class="child" href="#variables">Variables</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#triggers">Starting pipelines with triggers</a></div><div class="tkids"><a class="child" href="#webhook">Webhook triggers</a><a class="child" href="#cron">Scheduled triggers</a><a class="child" href="#artifact">Artifact and manifest triggers</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#exec">Managing executions</a></div><div class="tkids"><a class="child" href="#statuses">Statuses and the execution graph</a><a class="child" href="#failure">Failure handling</a><a class="child" href="#retry">Retrying and rerunning</a><a class="child" href="#approvals">Approvals</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#ci">Building with CI stages</a></div><div class="tkids"><a class="child" href="#buildinfra">Choosing a build infrastructure</a><a class="child" href="#codebase">Configuring the codebase</a><a class="child" href="#cisteps">CI steps</a><a class="child" href="#ti">Test Intelligence</a><a class="child" href="#cacheintel">Cache Intelligence</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#cd">Deploying with CD stages</a></div><div class="tkids"><a class="child" href="#services">Services</a><a class="child" href="#environments">Environments and infrastructure</a><a class="child" href="#overrides">Service overrides</a><a class="child" href="#strategies">Strategies and rollback</a><a class="child" href="#freeze">Deployment freeze</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#connect">Connecting to your infrastructure</a></div><div class="tkids"><a class="child" href="#delegates">Delegates</a><a class="child" href="#connectors">Connectors</a><a class="child" href="#secrets">Secrets and secret managers</a></div></div>
+<div class="tnode"><div class="trow leaf"><a href="#templates">Reusing configuration with templates</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#walk">Walkthroughs</a></div><div class="tkids"><a class="child" href="#buildlife">Life of a build</a><a class="child" href="#deploylife">Life of a deployment</a></div></div></div>
+  <div class="docnav" data-doc="ref" style="display:none"><div class="tnode"><div class="trow leaf"><a href="#ref">API &amp; Entity Reference</a></div></div>
+<div class="tnode"><div class="trow"><button class="tw" aria-label="expand section"></button><a href="#entities">Entity reference</a></div><div class="tkids"><a class="child" href="#e-account">Account</a><a class="child" href="#e-organization">Organization</a><a class="child" href="#e-project">Project</a><a class="child" href="#e-pipeline">Pipeline</a><a class="child" href="#e-stage">Stage</a><a class="child" href="#e-step">Step</a><a class="child" href="#e-step-group">Step Group</a><a class="child" href="#e-execution">Execution</a><a class="child" href="#e-input-set">Input Set</a><a class="child" href="#e-overlay-input-set">Overlay Input Set</a><a class="child" href="#e-trigger">Trigger</a><a class="child" href="#e-webhook">Webhook</a><a class="child" href="#e-approval">Approval</a><a class="child" href="#e-deployment-freeze">Deployment Freeze</a><a class="child" href="#e-build-infrastructure">Build Infrastructure</a><a class="child" href="#e-codebase">Codebase</a><a class="child" href="#e-ci-step-catalog">CI Step catalog</a><a class="child" href="#e-test-intelligence">Test Intelligence</a><a class="child" href="#e-cache-intelligence">Cache Intelligence</a><a class="child" href="#e-artifact-build-output">Artifact (build output)</a><a class="child" href="#e-service">Service</a><a class="child" href="#e-environment">Environment</a><a class="child" href="#e-infrastructure-definition">Infrastructure Definition</a><a class="child" href="#e-environment-group">Environment Group</a><a class="child" href="#e-service-override">Service Override</a><a class="child" href="#e-connector">Connector</a><a class="child" href="#e-secret">Secret</a><a class="child" href="#e-secret-manager">Secret Manager</a><a class="child" href="#e-delegate">Delegate</a><a class="child" href="#e-template">Template</a><a class="child" href="#e-variable">Variable</a></div></div>
+<div class="tnode"><div class="trow leaf"><a href="#relationships">Relationship diagrams</a></div></div>
+<div class="tnode"><div class="trow leaf"><a href="#glossary">Glossary</a></div></div>
+<div class="tnode"><div class="trow leaf"><a href="#openq">Known issues and open questions</a></div></div></div>
 </nav>
 <main>
+<div class="doc-guide">
 <section id="home">
 <h1>What is the Harness pipeline offering?</h1>
 <p>Harness pipelines are the CI/CD core of the Harness platform. You define a
@@ -200,12 +188,12 @@ structure rather than a direct statement in the sources.</p>
 <li>Walkthroughs</li>
 <li>Life of a build</li>
 <li>Life of a deployment</li>
-<li>Reference</li>
-<li>Entity reference</li>
-<li>Relationship diagrams</li>
-<li>Glossary</li>
-<li>Known issues and open questions</li>
 </ul>
+<h2>Companion document</h2>
+<p>Precise per-entity definitions, API tables, diagrams, and the glossary live
+in a separate document, the
+API &amp; Entity Reference — the same split AWS
+uses between a service's User Guide and its API Reference.</p>
 </section>
 <section id="concepts">
 <h1>Pipeline concepts</h1>
@@ -648,8 +636,18 @@ input fields:</p>
                   connectorRef: Kubernetes_Quickstart
                   namespace: default
 </code></pre>
+<h2>To create an input set</h2>
+<ol>
+<li>In the Pipeline Studio header, select <strong>Input Sets</strong>.</li>
+<li>Select <strong>New Input Set</strong>.</li>
+<li>Enter a <strong>Name</strong>. <strong>Description</strong> and <strong>Tags</strong> are optional.</li>
+<li>Enter values for the settings that use runtime input, and then select
+   <strong>Save</strong>. You can't define values for settings that aren't <code>&lt;+input&gt;</code>,
+   and you don't have to provide a value for every input.</li>
+</ol>
 <p>To capture a known-good set of values quickly, run the pipeline and choose
-<strong>Save as New Input Set</strong> on the Run form.</p>
+<strong>Save as New Input Set</strong> on the Run form. You can also import input sets
+from a Git repository.</p>
 <h2>Overlays</h2>
 <p>An overlay is an ordered list of input sets:</p>
 <pre><code class="language-yaml">overlayInputSet:
@@ -660,6 +658,16 @@ input fields:</p>
     - My_Input_Set      # resolved first
     - My_Input_Set_2    # resolved last; wins on conflicts
 </code></pre>
+<h3>To create an overlay</h3>
+<ol>
+<li>Create the input sets you want to combine.</li>
+<li>On the <strong>Input Sets</strong> page, select <strong>New Input Set</strong>, and then select
+   <strong>Overlay Input Set</strong>.</li>
+<li>Enter a <strong>Name</strong>, select the input sets to include, and select
+   <strong>Apply Input Sets</strong>.</li>
+<li>Drag the input sets into the order in which they should resolve, and
+   select <strong>Save</strong>.</li>
+</ol>
 <p>Input sets are resolved in order. A later set replaces values that earlier
 sets defined and fills values they left empty. The final value of any
 setting is the value assigned by the last input set that defines it.</p>
@@ -822,6 +830,22 @@ registration status (<code>SUCCESS</code>, <code>FAILED</code>, <code>ERROR</cod
   token owner must be a repository admin and the token needs the <code>repo</code>,
   <code>user</code>, and <code>admin:repo_hook</code> scopes.</li>
 </ul>
+<h2>To add a webhook trigger to a pipeline</h2>
+<ol>
+<li>Go to your pipeline and select <strong>Triggers</strong> in the Pipeline Studio
+   header.</li>
+<li>Select <strong>New Trigger</strong>, and choose the trigger type for your SCM
+   provider. For unsupported providers, choose <strong>Custom</strong>.</li>
+<li>On the <strong>Configuration</strong> tab, enter a name, select the code repository
+   connector, and select the <strong>Event</strong> and any <strong>Actions</strong>.</li>
+<li>On the <strong>Conditions</strong> tab, add conditions to scope the trigger to the
+   events you want (see the next section).</li>
+<li>On the <strong>Pipeline Input</strong> tab, select an input set or provide runtime
+   values.</li>
+<li>Select <strong>Create Trigger</strong>. For supported providers, Harness registers
+   the webhook in your repository; verify the registration status on the
+   trigger.</li>
+</ol>
 <h2>Events and conditions</h2>
 <p>You select an event (for GitHub: PullRequest, Push, IssueComment, or
 Release) and optional actions, then add conditions on source branch, target
@@ -1338,6 +1362,17 @@ stage clones it into the build environment before running steps.</p>
 </code></pre>
 <p>For repositories in the Harness Code Repository module, use <code>repoName</code>
 instead of a connector.</p>
+<h2>To configure the default codebase</h2>
+<ol>
+<li>In the Pipeline Studio, select <strong>Add Stage</strong>, and then select <strong>Build</strong>.</li>
+<li>Enter a stage name and make sure <strong>Clone Codebase</strong> is enabled.</li>
+<li>Configure the codebase connection: select <strong>Harness Code Repository</strong>
+   and a repo, or select <strong>Third-party Git provider</strong>, a code repository
+   connector, and the repository name.</li>
+<li>Select <strong>Set Up Stage</strong>.</li>
+</ol>
+<p>To change the connector or other settings later, select <strong>Codebase</strong> in the
+Pipeline Studio's right-side panel, or edit the <code>codebase</code> section in YAML.</p>
 <h2>Controlling cloning</h2>
 <ul>
 <li>To skip the automatic clone in a stage, set <code>cloneCodebase: false</code> in the
@@ -1825,6 +1860,21 @@ example, all projects in an organization except one.</p>
 <li><strong>Account admins can always bypass</strong> freeze windows, and a Global freeze
   switch exists alongside scheduled windows.</li>
 </ul>
+<h2>To create a freeze window</h2>
+<ol>
+<li>Go to <strong>Account Settings</strong>, <strong>Organization Settings</strong>, or <strong>Project
+   Settings</strong>, depending on the scope you want to freeze.</li>
+<li>Select <strong>Freeze Windows</strong>, and then select <strong>New Freeze Window</strong>.</li>
+<li>Enter a name and select <strong>Start</strong>.</li>
+<li>In <strong>Coverage</strong>, add one or more rules selecting the services,
+   environments, orgs, or projects to freeze. Rules are additive: the
+   freeze applies to the sum of all rules.</li>
+<li>In <strong>Schedule</strong>, set the time zone, start and end times, and any
+   recurrence, then save.</li>
+<li>Enable the freeze window. Optionally add notification rules — for
+   example, to notify a user group when a trigger invocation is rejected
+   because of the freeze.</li>
+</ol>
 <h2>Managing freeze windows</h2>
 <p>You cannot edit an enabled freeze window. Disable it, make your changes,
 then enable it again. Freeze access control has three permissions: Manage
@@ -2268,17 +2318,26 @@ Deploying with CD stages,
 Approvals, and
 Connecting to your infrastructure.</p>
 </section>
+</div>
+<div class="doc-ref">
 <section id="ref">
-<h1>Reference</h1>
-<p>Precise, per-entity backing for the guide: definitions, identity rules with
-quoted regular expressions, ownership and reference edges, YAML examples,
-API tables for both generations, lifecycle states, and known sharp edges.</p>
+<h1>Harness Pipelines API &amp; Entity Reference</h1>
+<p>This is the reference companion to the User Guide. The
+User Guide teaches concepts and tasks; this document gives the precise,
+per-entity backing: definitions, identity rules with quoted regular
+expressions, ownership and reference edges, YAML examples, API tables for
+both API generations, lifecycle states, and known sharp edges.</p>
+<p>All content is derived from the frozen corpus (<code>../corpus/</code>, frozen
+2026-07-16): the filtered OpenAPI specification, the schema digest, the API
+path inventory, the documentation set, and the extracted YAML examples.
+Each entry cites its sources inline; regular expressions are quoted verbatim
+from the schema digest.</p>
 <h2>Topics</h2>
 <ul>
-<li>Entity reference</li>
-<li>Relationship diagrams</li>
-<li>Glossary</li>
-<li>Known issues and open questions</li>
+<li>Entity reference — all 31 entities, one section each</li>
+<li>Relationship diagrams — scope hierarchy, ER diagrams, and the edge evidence table</li>
+<li>Glossary — Harness terms and their nearest industry equivalents</li>
+<li>Known issues and open questions — doc-vs-spec conflicts, beta feature flags, corpus gaps</li>
 <li>Entity inventory (working checkpoint)</li>
 </ul>
 </section>
@@ -2319,7 +2378,7 @@ direct doc/spec statement.</p>
   docs/continuous-delivery/x-platform-cd-features/environments/create-environment-groups.md.</li>
 </ul>
 <hr />
-<h2>Account</h2>
+<h2 id="e-account">Account</h2>
 <ul>
 <li><strong>Definition.</strong> The root scope of everything in Harness. Every resource
   belongs to exactly one account; account-scope resources are shared downward.</li>
@@ -2338,7 +2397,7 @@ direct doc/spec statement.</p>
   the <code>account.</code> prefix, e.g. <code>connectorRef: account.Harness_DockerHub</code>
   (docs/continuous-delivery/x-platform-cd-features/services/services-overview.md YAML).</li>
 </ul>
-<h2>Organization</h2>
+<h2 id="e-organization">Organization</h2>
 <ul>
 <li><strong>Definition.</strong> A grouping scope under Account, typically a business unit
   or product line; owns Projects and org-scope shared resources.</li>
@@ -2358,7 +2417,7 @@ direct doc/spec statement.</p>
   <code>org.</code> prefix, e.g. <code>connectorRef: org.bitnami</code>
   (docs/continuous-delivery/x-platform-cd-features/services/services-overview.md).</li>
 </ul>
-<h2>Project</h2>
+<h2 id="e-project">Project</h2>
 <ul>
 <li><strong>Definition.</strong> The working scope where day-to-day pipeline work happens.
   Pipelines, Input Sets, and Triggers exist only at project scope in this
@@ -2380,7 +2439,7 @@ direct doc/spec statement.</p>
   Environments, there is no account/org-level pipeline. <strong>INFERRED</strong> from
   the absence of such paths in path_tree.txt.</li>
 </ul>
-<h2>Pipeline</h2>
+<h2 id="e-pipeline">Pipeline</h2>
 <ul>
 <li><strong>Definition.</strong> The YAML-defined workflow entity; the aggregate root of
   Pipeline &gt; Stage &gt; Step. "Harness pipeline YAML lets you model your release
@@ -2462,7 +2521,7 @@ direct doc/spec statement.</p>
   are still Harness entities — Git is a storage backend selected per entity,
   not a different entity type.</li>
 </ul>
-<h2>Stage</h2>
+<h2 id="e-stage">Stage</h2>
 <ul>
 <li><strong>Definition.</strong> "A stage is a part of a pipeline that contains the logic to
   perform a major segment of a larger workflow" (docs/platform/pipelines/add-a-stage.md).
@@ -2508,9 +2567,9 @@ direct doc/spec statement.</p>
   <code>&lt;+pipeline.stages.STAGE_ID.variables.NAME&gt;</code> (add-a-stage.md). Stage
   variable YAML documents <code>type: String ## String or Secret</code>
   (add-a-stage.md) — contrast with the account/org/project Variable entity,
-  whose API enum is <code>String</code> only (see the entity reference, Known issues and open questions).</li>
+  whose API enum is <code>String</code> only (see the Variable entry and Known issues).</li>
 </ul>
-<h2>Step</h2>
+<h2 id="e-step">Step</h2>
 <ul>
 <li><strong>Definition.</strong> The atomic unit of work inside a stage; typed, with the
   catalog determined by the stage type (Run, ShellScript, HarnessApproval,
@@ -2547,7 +2606,7 @@ direct doc/spec statement.</p>
   strategy and conditional execution
   (docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps.md).</li>
 </ul>
-<h2>Step Group</h2>
+<h2 id="e-step-group">Step Group</h2>
 <ul>
 <li><strong>Definition.</strong> A named grouping of steps inside a stage that shares
   settings; in CD it can be containerized so its steps run in a shared
@@ -2571,7 +2630,7 @@ direct doc/spec statement.</p>
 <li><strong>Gotchas.</strong> Step groups can nest <code>parallel:</code> blocks of steps
   (yaml_examples/continuous-delivery__cd-onboarding__new-user__cd-pipeline-modeling-overview.md.yaml).</li>
 </ul>
-<h2>Execution</h2>
+<h2 id="e-execution">Execution</h2>
 <ul>
 <li><strong>Definition.</strong> One run of a pipeline: a plan (<code>planExecutionId</code>), a node
   graph, per-node statuses, and summary metadata. The runtime counterpart of
@@ -2650,7 +2709,7 @@ direct doc/spec statement.</p>
   window get the distinct status label "Aborted By Freeze"
   (docs/continuous-delivery/manage-deployments/deployment-freeze.md).</li>
 </ul>
-<h2>Input Set</h2>
+<h2 id="e-input-set">Input Set</h2>
 <ul>
 <li><strong>Definition.</strong> "Input sets are collections of runtime input values for a
   pipeline" — saved arguments for the pipeline-as-function
@@ -2727,7 +2786,7 @@ direct doc/spec statement.</p>
   input set can silently go stale — hence <code>isOutdated</code>. With triggers you can
   use an input set <em>or</em> inline runtime values, not both (input-sets.md).</li>
 </ul>
-<h2>Overlay Input Set</h2>
+<h2 id="e-overlay-input-set">Overlay Input Set</h2>
 <ul>
 <li><strong>Definition.</strong> An ordered composition of input sets: "Overlays are groups
   of input sets, which enable you to pull runtime inputs from multiple input
@@ -2753,12 +2812,12 @@ direct doc/spec statement.</p>
 <ul>
 <li><strong>API surface.</strong> legacy NG: <code>/pipeline/api/inputSets/overlay[/{inputSetIdentifier}]</code>
   (path_tree.txt). No overlay-specific v1 path appears in the corpus
-  (Known issues and open questions).</li>
+  (see Known issues).</li>
 <li><strong>Gotchas.</strong> "The setting's final value is the value assigned in the last
   input set to be resolved" (input-sets.md, "Priority in overlays") — last
   writer wins, and later sets also fill fields earlier sets left empty.</li>
 </ul>
-<h2>Trigger</h2>
+<h2 id="e-trigger">Trigger</h2>
 <ul>
 <li><strong>Definition.</strong> A rule attached to a pipeline that starts an execution when
   an event occurs — a Git webhook event, a schedule, or a new artifact/
@@ -2801,7 +2860,7 @@ direct doc/spec statement.</p>
 <li><strong>API surface.</strong> legacy NG: <code>/pipeline/api/triggers</code>,
   <code>.../triggers/{triggerIdentifier}[/details|/eventHistory]</code>,
   <code>.../triggers/catalog</code>, <code>.../eventHistory/...</code> (path_tree.txt). No v1
-  trigger CRUD path in the corpus (Known issues and open questions).</li>
+  trigger CRUD path in the corpus (see Known issues).</li>
 <li><strong>Lifecycle.</strong> <code>enabled</code> flag; webhook <code>registrationStatus</code> enum
   <code>SUCCESS, FAILED, ERROR, TIMEOUT, UNAVAILABLE</code>
   (<code>entity_schemas.md</code>: NGTriggerDetailsResponseDTO).</li>
@@ -2814,7 +2873,7 @@ direct doc/spec statement.</p>
   trigger's inputs or executions fail (<code>isPipelineInputOutdated</code> field;
   triggering-pipelines.md).</li>
 </ul>
-<h2>Webhook</h2>
+<h2 id="e-webhook">Webhook</h2>
 <ul>
 <li><strong>Definition.</strong> The HTTP-facing half of event-driven triggering: the
   registered endpoint in Harness plus the webhook definition in the Git
@@ -2837,7 +2896,7 @@ direct doc/spec statement.</p>
   auto-registration fails or the trigger is Custom, you copy the URL and
   register it manually (triggering-pipelines.md).</li>
 </ul>
-<h2>Approval</h2>
+<h2 id="e-approval">Approval</h2>
 <ul>
 <li><strong>Definition.</strong> A gate that pauses execution for a human or ticket-system
   verdict. Runs as an Approval <em>step</em> (inside CD stages or Approval stages);
@@ -2878,9 +2937,9 @@ direct doc/spec statement.</p>
 <li><strong>Gotchas.</strong> Approvers can set variables consumed by later steps
   (using-harness-approval-steps-in-cd-stages.md). The <code>Approval</code> schema under
   <code>/gateway/lw/...</code> in the schema digest is Cloud Cost autostopping, not
-  pipeline approvals — a keyword-filter false friend (Known issues and open questions).</li>
+  pipeline approvals — a keyword-filter false friend (see Known issues).</li>
 </ul>
-<h2>Deployment Freeze</h2>
+<h2 id="e-deployment-freeze">Deployment Freeze</h2>
 <ul>
 <li><strong>Definition.</strong> A time-windowed rule that blocks CD deployments for chosen
   orgs/projects/services/environments: "A freeze window is defined using one
@@ -2928,7 +2987,7 @@ direct doc/spec statement.</p>
   webhook triggers can override a freeze if their API key has the override
   permission (deployment-freeze.md).</li>
 </ul>
-<h2>Build Infrastructure</h2>
+<h2 id="e-build-infrastructure">Build Infrastructure</h2>
 <ul>
 <li><strong>Definition.</strong> Where a CI stage's steps run: Harness Cloud (Harness-managed
   machines), a self-managed Kubernetes cluster (each stage executes in a
@@ -2961,7 +3020,7 @@ direct doc/spec statement.</p>
   applicable" on Harness Cloud and unsupported on VM infra (same doc's
   feature matrix). New CI features generally land on Harness Cloud first.</li>
 </ul>
-<h2>Codebase</h2>
+<h2 id="e-codebase">Codebase</h2>
 <ul>
 <li><strong>Definition.</strong> A CI pipeline's configured Git repository: connector +
   repo + clone behavior. "When you add a Build stage to a CI pipeline, you
@@ -2989,14 +3048,14 @@ direct doc/spec statement.</p>
   codebase variables (<code>&lt;+codebase.*&gt;</code>) describe the resolved clone
   (docs/continuous-integration/use-ci/codebase-configuration/built-in-cie-codebase-variables-reference.md).</li>
 </ul>
-<h2>CI Step catalog</h2>
+<h2 id="e-ci-step-catalog">CI Step catalog</h2>
 <ul>
 <li><strong>Definition.</strong> The CI-specific step types that populate Build stages. The
   step catalog groups: build &amp; push / upload &amp; download artifacts, run tests,
   manage dependencies (Background steps), share &amp; cache data, run scripts
   (Run step), and plugins
   (docs/continuous-integration/use-ci/prep-ci-pipeline-components.md, "Steps").
-  Modeled here as kinds of Step (see the entity reference), not separate entities.</li>
+  Modeled here as kinds of Step (see the Step entry), not separate entities.</li>
 <li><strong>Key types.</strong></li>
 <li><strong>Run</strong> — execute scripts in a container or on the host
     (docs/continuous-integration/use-ci/run-step-settings.md).</li>
@@ -3006,7 +3065,7 @@ direct doc/spec statement.</p>
     emulators) (docs/continuous-integration/use-ci/manage-dependencies/background-step-settings.md).</li>
 <li><strong>Plugin</strong> — Drone-style container plugins, incl. GitHub Actions/Bitrise
     wrappers (docs/continuous-integration/use-ci/use-drone-plugins/plugin-step-settings-reference.md).</li>
-<li><strong>Test (Run Tests)</strong> — test execution with Test Intelligence (see the entity reference)
+<li><strong>Test (Run Tests)</strong> — test execution with Test Intelligence (see the Test Intelligence entry)
     (docs/continuous-integration/use-ci/run-tests/ti-overview.md).</li>
 <li><strong>YAML.</strong> Cache steps as an example of the family shape
   (yaml_examples/continuous-integration__use-ci__caching-ci-data__save-cache-in-gcs.md.yaml):</li>
@@ -3027,7 +3086,7 @@ direct doc/spec statement.</p>
   runs are Harness Cloud only; Bitrise steps are Harness Cloud only) —
   which-build-infrastructure-is-right-for-me.md feature matrix.</li>
 </ul>
-<h2>Test Intelligence</h2>
+<h2 id="e-test-intelligence">Test Intelligence</h2>
 <ul>
 <li><strong>Definition.</strong> "Harness Test Intelligence (TI) improves unit test time by
   running only the unit tests required to confirm the quality of the code
@@ -3044,10 +3103,10 @@ direct doc/spec statement.</p>
   the Git trigger must include Synchronize and merge/close events for TI's
   call graph to stay correct (ti-overview.md).</li>
 <li><strong>Gotchas.</strong> Unit tests only; supported for Python, Java, Ruby, C#, Kotlin,
-  Scala (JS/Kotest in beta — Known issues and open questions). To ignore files, add
+  Scala (JS/Kotest in beta; see Known issues). To ignore files, add
   <code>.ticonfig.yaml</code> to the codebase (ti-overview.md).</li>
 </ul>
-<h2>Cache Intelligence</h2>
+<h2 id="e-cache-intelligence">Cache Intelligence</h2>
 <ul>
 <li><strong>Definition.</strong> Automatic dependency caching for CI: "Harness automatically
   caches and restores software dependencies to speed up your builds"
@@ -3076,7 +3135,7 @@ direct doc/spec statement.</p>
   (cache-intelligence.md, "Supported tools and paths"). Enabled by default
   for newly created CI stages.</li>
 </ul>
-<h2>Artifact (build output)</h2>
+<h2 id="e-artifact-build-output">Artifact (build output)</h2>
 <ul>
 <li><strong>Definition.</strong> The image or file a CI stage produces and pushes (via Build
   and Push / upload steps), surfaced on the execution's <strong>Artifacts</strong> tab
@@ -3102,7 +3161,7 @@ direct doc/spec statement.</p>
 <li><strong>Gotchas.</strong> Do not confuse with the CD <em>artifact source</em> (part of a
   Service definition; see Service) or the Artifact Registry module (out of scope for this guide).</li>
 </ul>
-<h2>Service</h2>
+<h2 id="e-service">Service</h2>
 <ul>
 <li><strong>Definition.</strong> "A Harness service represents what you're deploying." Each
   service contains a <strong>Service Definition</strong>: artifacts, manifests,
@@ -3178,7 +3237,7 @@ direct doc/spec statement.</p>
   lower hierarchy level" (services-overview.md). Account-level stage
   templates can reference only account-level services (same doc).</li>
 </ul>
-<h2>Environment</h2>
+<h2 id="e-environment">Environment</h2>
 <ul>
 <li><strong>Definition.</strong> "A Harness environment represents where you are deploying
   your application", categorized prod or non-prod; it holds infrastructure
@@ -3243,7 +3302,7 @@ direct doc/spec statement.</p>
   three v1 path families (account/org/project) are the same entity at three
   scopes — don't model them separately.</li>
 </ul>
-<h2>Infrastructure Definition</h2>
+<h2 id="e-infrastructure-definition">Infrastructure Definition</h2>
 <ul>
 <li><strong>Definition.</strong> The concrete deployment target inside an environment —
   "the specific VM, Kubernetes cluster, or target infrastructure where you
@@ -3279,12 +3338,12 @@ direct doc/spec statement.</p>
   in this corpus the legacy evidence is the <code>InfrastructureRequest/ResponseDTO</code>
   schemas (<code>entity_schemas.md</code>). The <code>/api/infrastructures</code> paths in
   path_tree.txt belong to another module (IACM/armory-style executor) —
-  keyword over-inclusion, see Known issues and open questions.</li>
+  keyword over-inclusion; see Known issues.</li>
 <li><strong>Gotchas.</strong> <code>allowSimultaneousDeployments</code> gates concurrent deploys into
   the same infra. Infrastructure can be scoped to specific services
   (docs/continuous-delivery/x-platform-cd-features/environments/scope-infra-to-services.md).</li>
 </ul>
-<h2>Environment Group</h2>
+<h2 id="e-environment-group">Environment Group</h2>
 <ul>
 <li><strong>Definition.</strong> A named collection of environments for bulk selection in
   pipelines and governance
@@ -3316,7 +3375,7 @@ direct doc/spec statement.</p>
   of cross-scope reference prefixes (create-environment-groups.md) — the same
   syntax used for connectors, services, templates.</li>
 </ul>
-<h2>Service Override</h2>
+<h2 id="e-service-override">Service Override</h2>
 <ul>
 <li><strong>Definition.</strong> Values that replace parts of a service's configuration when
   it deploys into a particular environment (or infra/cluster): "To enable the
@@ -3349,7 +3408,7 @@ direct doc/spec statement.</p>
   "Limitations"). Helm Repo overrides must keep the same store type as the
   service.</li>
 </ul>
-<h2>Connector</h2>
+<h2 id="e-connector">Connector</h2>
 <ul>
 <li><strong>Definition.</strong> A typed, reusable credential-plus-endpoint object for an
   external system (Git providers, cloud platforms, registries, K8s clusters,
@@ -3411,7 +3470,7 @@ direct doc/spec statement.</p>
   share credentials across all projects — but entities at account scope can
   only use account-scope connectors (services-overview.md).</li>
 </ul>
-<h2>Secret</h2>
+<h2 id="e-secret">Secret</h2>
 <ul>
 <li><strong>Definition.</strong> A managed sensitive value — text, file, or SSH credential —
   stored encrypted and referenced from YAML by expression
@@ -3421,7 +3480,7 @@ direct doc/spec statement.</p>
 <li><strong>Identity.</strong> <code>identifier</code> pattern <code>^[a-zA-Z_][0-9a-zA-Z_$-]{0,127}$</code>
   (note: hyphen allowed — unlike Pipeline/Connector identifiers), maxLen 128;
   <code>name</code> pattern <code>^[0-9a-zA-Z-_ ]{0,127}$</code>; <code>spec</code> required
-  (<code>entity_schemas.md</code>: Secret; see Known issues and open questions).</li>
+  (<code>entity_schemas.md</code>: Secret; see Known issues).</li>
 <li><strong>Owned by.</strong> Scope container. <strong>References.</strong> Its Secret Manager
   (storage backend).</li>
 <li><strong>Usage.</strong> <code>&lt;+secrets.getValue("secretfile")&gt;</code> in step env/commands
@@ -3460,7 +3519,7 @@ direct doc/spec statement.</p>
   Harness sanitizes secrets out of logs
   (docs/platform/secrets/secrets-management/secrets-and-log-sanitization.md).</li>
 </ul>
-<h2>Secret Manager</h2>
+<h2 id="e-secret-manager">Secret Manager</h2>
 <ul>
 <li><strong>Definition.</strong> The backend that stores/encrypts secrets. Built-in default:
   "Google Cloud Key Management Service is the default Secret Manager in
@@ -3486,7 +3545,7 @@ direct doc/spec statement.</p>
   (except Vault). Secrets Manager configs can themselves be templated
   (docs/platform/templates/create-a-secret-manager-template.md).</li>
 </ul>
-<h2>Delegate</h2>
+<h2 id="e-delegate">Delegate</h2>
 <ul>
 <li><strong>Definition.</strong> "Harness Delegate is a service you run in your local
   network or VPC to connect your artifacts, infrastructure, collaboration,
@@ -3521,7 +3580,7 @@ direct doc/spec statement.</p>
   Harness Cloud build infra needs no delegate — that's the point of it
   (which-build-infrastructure-is-right-for-me.md).</li>
 </ul>
-<h2>Template</h2>
+<h2 id="e-template">Template</h2>
 <ul>
 <li><strong>Definition.</strong> A versioned, reusable definition of a Step, Stage, Pipeline
   (and more) that pipelines link to instead of copying
@@ -3534,7 +3593,7 @@ direct doc/spec statement.</p>
   MonitoredService, SecretManager</code>; <code>stable_template</code> boolean
   (<code>entity_schemas.md</code>: TemplateResponse / TemplateCreateRequestBody).
   Docs additionally list Step Group and Artifact Source template types
-  (template.md; see Known issues and open questions).</li>
+  (template.md; see Known issues).</li>
 <li><strong>Owned by.</strong> Scope container. <strong>Referenced by.</strong> Pipelines/stages/steps
   via <code>template.templateRef</code> + <code>templateInputs</code>
   (yaml_examples/continuous-delivery__cd-onboarding__new-user__cd-pipeline-modeling-overview.md.yaml).</li>
@@ -3598,7 +3657,7 @@ direct doc/spec statement.</p>
   "Referencing objects within a scope"). Pipeline templates with chained
   pipeline stages are unsupported.</li>
 </ul>
-<h2>Variable</h2>
+<h2 id="e-variable">Variable</h2>
 <ul>
 <li><strong>Definition.</strong> A named value defined at account, org, or project scope (or
   inline on pipelines/stages/services/environments), read via expressions
@@ -3607,7 +3666,7 @@ direct doc/spec statement.</p>
   environment (inline form).</li>
 <li><strong>Identity.</strong> <code>identifier</code>, <code>name</code>, <code>type</code> required; <code>type</code> enum: <code>String</code>
   (<code>entity_schemas.md</code>: VariableDTO). Docs show stage variables with
-  <code>type: String ## String or Secret</code> (add-a-stage.md) — see Known issues and open questions.</li>
+  <code>type: String ## String or Secret</code> (add-a-stage.md); see Known issues.</li>
 <li><strong>Owned by.</strong> Scope container (or owning pipeline/stage for inline).</li>
 <li><strong>Reference syntax.</strong> (add-a-variable.md)</li>
 </ul>
@@ -3648,7 +3707,7 @@ direct doc/spec statement.</p>
 <ul>
 <li><strong>API surface.</strong> legacy NG: <code>/ng/api/variables[/{identifier}]</code>,
   <code>.../variables/list</code> (path_tree.txt). (The <code>/v1/backstage-env-variables</code>
-  paths are the IDP module — keyword noise, Known issues and open questions.)</li>
+  paths are the IDP module — keyword noise; see Known issues.)</li>
 <li><strong>Gotchas.</strong> Higher-scope variables are visible to all lower scopes
   (add-a-variable.md). Stage variables can be overridden by later stages.</li>
 </ul>
@@ -4339,5 +4398,43 @@ hierarchy is evidenced indirectly (path nesting, schema fields). No modeling
 impact, but the Account/Organization/Project entries in the entity reference cite
 structure rather than CRUD docs.</p>
 </section>
+</div>
 </main>
 </div>
+<script>
+(function(){
+  var body=document.body;
+  var docOf={};
+  document.querySelectorAll('.doc-guide section,.doc-guide h2[id]').forEach(function(e){
+    if(e.id)docOf[e.id]='guide';});
+  document.querySelectorAll('.doc-ref section,.doc-ref h2[id]').forEach(function(e){
+    if(e.id)docOf[e.id]='ref';});
+  function setDoc(d){
+    body.setAttribute('data-doc',d);
+    document.querySelectorAll('.doctabs button').forEach(function(b){
+      b.classList.toggle('active',b.dataset.doc===d);
+    });
+    document.querySelectorAll('nav.sidebar > .docnav').forEach(function(n){
+      n.style.display=(n.dataset.doc===d)?'':'none';
+    });
+  }
+  document.querySelectorAll('.doctabs button').forEach(function(b){
+    b.addEventListener('click',function(){setDoc(b.dataset.doc);window.scrollTo(0,0);});
+  });
+  document.querySelectorAll('.tw').forEach(function(t){
+    t.addEventListener('click',function(){t.closest('.tnode').classList.toggle('open');});
+  });
+  function activate(){
+    var id=location.hash.replace('#','');
+    if(id&&docOf[id]) setDoc(docOf[id]);
+    document.querySelectorAll('nav.sidebar a').forEach(function(a){
+      var on=a.getAttribute('href')==='#'+id;
+      a.classList.toggle('active',on);
+      if(on){var n=a.closest('.tnode');if(n)n.classList.add('open');}
+    });
+  }
+  window.addEventListener('hashchange',activate);
+  setDoc('guide');
+  activate();
+})();
+</script>

@@ -29,6 +29,22 @@ registration status (`SUCCESS`, `FAILED`, `ERROR`, `TIMEOUT`,
   token owner must be a repository admin and the token needs the `repo`,
   `user`, and `admin:repo_hook` scopes.
 
+## To add a webhook trigger to a pipeline
+
+1. Go to your pipeline and select **Triggers** in the Pipeline Studio
+   header.
+2. Select **New Trigger**, and choose the trigger type for your SCM
+   provider. For unsupported providers, choose **Custom**.
+3. On the **Configuration** tab, enter a name, select the code repository
+   connector, and select the **Event** and any **Actions**.
+4. On the **Conditions** tab, add conditions to scope the trigger to the
+   events you want (see the next section).
+5. On the **Pipeline Input** tab, select an input set or provide runtime
+   values.
+6. Select **Create Trigger**. For supported providers, Harness registers
+   the webhook in your repository; verify the registration status on the
+   trigger.
+
 ## Events and conditions
 
 You select an event (for GitHub: PullRequest, Push, IssueComment, or

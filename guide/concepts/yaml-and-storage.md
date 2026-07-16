@@ -42,7 +42,7 @@ properties, including a `$tag:v1.0.0` syntax for tag-based release flows.
 > The dedicated Git Experience documentation subtree is not part of this
 > guide's corpus. Storage behavior described here rests on the API fields
 > and on the pipeline, input-set, and trigger documentation. See
-> [Known issues and open questions](../reference/open-questions.md).
+> [Known issues and open questions](../../api-reference/open-questions.md).
 
 ---
 **Sources:** docs/platform/pipelines/harness-yaml-quickstart.md ("Everything

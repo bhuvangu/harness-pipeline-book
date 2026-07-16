@@ -1,84 +1,113 @@
+#!/usr/bin/env python3
+"""Build the two-document HTML site (User Guide + API & Entity Reference)
+from guide/ and api-reference/ markdown. Output: a single self-contained
+page with an AWS-docs-style collapsible tree sidebar and a doc switcher."""
 import markdown, re, html, pathlib
 
-BOOK = pathlib.Path('/home/user/harness-pipeline-book/guide')
-OUT  = pathlib.Path('/tmp/claude-0/-home-user-harness-pipeline-book/f4afcf7c-faa4-5453-95da-10110d650dd6/scratchpad/harness-pipeline-book.html')
+ROOT = pathlib.Path('/home/user/harness-pipeline-book')
+OUT = pathlib.Path('/tmp/claude-0/-home-user-harness-pipeline-book/'
+                   'f4afcf7c-faa4-5453-95da-10110d650dd6/scratchpad/'
+                   'harness-pipeline-book.html')
 
-# (id, nav label, path, group)  — group None = top level
-files = [
- ('home','What is the Harness pipeline offering?','README.md',None),
- ('concepts','Pipeline concepts','concepts/README.md','Concepts'),
- ('scopes','Scopes','concepts/scopes.md','Concepts'),
- ('identifiers','Identifiers and names','concepts/identifiers.md','Concepts'),
- ('structure','Pipeline structure','concepts/pipeline-structure.md','Concepts'),
- ('storage','YAML and Git storage','concepts/yaml-and-storage.md','Concepts'),
- ('apigen','The two API generations','concepts/api-generations.md','Concepts'),
- ('inputs','Configuring pipeline inputs','inputs/README.md','Inputs'),
- ('runtime','Runtime inputs and expressions','inputs/runtime-inputs.md','Inputs'),
- ('inputsets','Input sets and overlays','inputs/input-sets.md','Inputs'),
- ('variables','Variables','inputs/variables.md','Inputs'),
- ('triggers','Starting pipelines with triggers','triggers/README.md','Triggers'),
- ('webhook','Webhook triggers','triggers/webhook-triggers.md','Triggers'),
- ('cron','Scheduled triggers','triggers/scheduled-triggers.md','Triggers'),
- ('artifact','Artifact and manifest triggers','triggers/artifact-triggers.md','Triggers'),
- ('exec','Managing executions','executions/README.md','Executions'),
- ('statuses','Statuses and the execution graph','executions/statuses-and-graph.md','Executions'),
- ('failure','Failure handling','executions/failure-handling.md','Executions'),
- ('retry','Retrying and rerunning','executions/retry-and-rerun.md','Executions'),
- ('approvals','Approvals','executions/approvals.md','Executions'),
- ('ci','Building with CI stages','ci/README.md','CI'),
- ('buildinfra','Choosing a build infrastructure','ci/build-infrastructure.md','CI'),
- ('codebase','Configuring the codebase','ci/codebase.md','CI'),
- ('cisteps','CI steps','ci/ci-steps.md','CI'),
- ('ti','Test Intelligence','ci/test-intelligence.md','CI'),
- ('cacheintel','Cache Intelligence','ci/cache-intelligence.md','CI'),
- ('cd','Deploying with CD stages','cd/README.md','CD'),
- ('services','Services','cd/services.md','CD'),
- ('environments','Environments and infrastructure','cd/environments.md','CD'),
- ('overrides','Service overrides','cd/service-overrides.md','CD'),
- ('strategies','Strategies and rollback','cd/strategies-and-rollback.md','CD'),
- ('freeze','Deployment freeze','cd/deployment-freeze.md','CD'),
- ('connect','Connecting to your infrastructure','connect/README.md','Connectivity'),
- ('delegates','Delegates','connect/delegates.md','Connectivity'),
- ('connectors','Connectors','connect/connectors.md','Connectivity'),
- ('secrets','Secrets and secret managers','connect/secrets.md','Connectivity'),
- ('templates','Reusing configuration with templates','reuse/templates.md','Reuse'),
- ('walk','Walkthroughs','walkthroughs/README.md','Walkthroughs'),
- ('buildlife','Life of a build','walkthroughs/life-of-a-build.md','Walkthroughs'),
- ('deploylife','Life of a deployment','walkthroughs/life-of-a-deployment.md','Walkthroughs'),
- ('ref','Reference','reference/README.md','Reference'),
- ('entities','Entity reference','reference/entity-reference.md','Reference'),
- ('relationships','Relationship diagrams','reference/relationships.md','Reference'),
- ('glossary','Glossary','reference/glossary.md','Reference'),
- ('openq','Known issues and open questions','reference/open-questions.md','Reference'),
+# (id, nav label, path, parent_id or None). Parents form the tree.
+GUIDE = [
+ ('home', 'What is the Harness pipeline offering?', 'guide/README.md', None),
+ ('concepts', 'Pipeline concepts', 'guide/concepts/README.md', None),
+ ('scopes', 'Scopes', 'guide/concepts/scopes.md', 'concepts'),
+ ('identifiers', 'Identifiers and names', 'guide/concepts/identifiers.md', 'concepts'),
+ ('structure', 'Pipeline structure', 'guide/concepts/pipeline-structure.md', 'concepts'),
+ ('storage', 'YAML and Git storage', 'guide/concepts/yaml-and-storage.md', 'concepts'),
+ ('apigen', 'The two API generations', 'guide/concepts/api-generations.md', 'concepts'),
+ ('inputs', 'Configuring pipeline inputs', 'guide/inputs/README.md', None),
+ ('runtime', 'Runtime inputs and expressions', 'guide/inputs/runtime-inputs.md', 'inputs'),
+ ('inputsets', 'Input sets and overlays', 'guide/inputs/input-sets.md', 'inputs'),
+ ('variables', 'Variables', 'guide/inputs/variables.md', 'inputs'),
+ ('triggers', 'Starting pipelines with triggers', 'guide/triggers/README.md', None),
+ ('webhook', 'Webhook triggers', 'guide/triggers/webhook-triggers.md', 'triggers'),
+ ('cron', 'Scheduled triggers', 'guide/triggers/scheduled-triggers.md', 'triggers'),
+ ('artifact', 'Artifact and manifest triggers', 'guide/triggers/artifact-triggers.md', 'triggers'),
+ ('exec', 'Managing executions', 'guide/executions/README.md', None),
+ ('statuses', 'Statuses and the execution graph', 'guide/executions/statuses-and-graph.md', 'exec'),
+ ('failure', 'Failure handling', 'guide/executions/failure-handling.md', 'exec'),
+ ('retry', 'Retrying and rerunning', 'guide/executions/retry-and-rerun.md', 'exec'),
+ ('approvals', 'Approvals', 'guide/executions/approvals.md', 'exec'),
+ ('ci', 'Building with CI stages', 'guide/ci/README.md', None),
+ ('buildinfra', 'Choosing a build infrastructure', 'guide/ci/build-infrastructure.md', 'ci'),
+ ('codebase', 'Configuring the codebase', 'guide/ci/codebase.md', 'ci'),
+ ('cisteps', 'CI steps', 'guide/ci/ci-steps.md', 'ci'),
+ ('ti', 'Test Intelligence', 'guide/ci/test-intelligence.md', 'ci'),
+ ('cacheintel', 'Cache Intelligence', 'guide/ci/cache-intelligence.md', 'ci'),
+ ('cd', 'Deploying with CD stages', 'guide/cd/README.md', None),
+ ('services', 'Services', 'guide/cd/services.md', 'cd'),
+ ('environments', 'Environments and infrastructure', 'guide/cd/environments.md', 'cd'),
+ ('overrides', 'Service overrides', 'guide/cd/service-overrides.md', 'cd'),
+ ('strategies', 'Strategies and rollback', 'guide/cd/strategies-and-rollback.md', 'cd'),
+ ('freeze', 'Deployment freeze', 'guide/cd/deployment-freeze.md', 'cd'),
+ ('connect', 'Connecting to your infrastructure', 'guide/connect/README.md', None),
+ ('delegates', 'Delegates', 'guide/connect/delegates.md', 'connect'),
+ ('connectors', 'Connectors', 'guide/connect/connectors.md', 'connect'),
+ ('secrets', 'Secrets and secret managers', 'guide/connect/secrets.md', 'connect'),
+ ('templates', 'Reusing configuration with templates', 'guide/reuse/templates.md', None),
+ ('walk', 'Walkthroughs', 'guide/walkthroughs/README.md', None),
+ ('buildlife', 'Life of a build', 'guide/walkthroughs/life-of-a-build.md', 'walk'),
+ ('deploylife', 'Life of a deployment', 'guide/walkthroughs/life-of-a-deployment.md', 'walk'),
+]
+REF = [
+ ('ref', 'API & Entity Reference', 'api-reference/README.md', None),
+ ('entities', 'Entity reference', 'api-reference/entity-reference.md', None),
+ ('relationships', 'Relationship diagrams', 'api-reference/relationships.md', None),
+ ('glossary', 'Glossary', 'api-reference/glossary.md', None),
+ ('openq', 'Known issues and open questions', 'api-reference/open-questions.md', None),
 ]
 
-md = markdown.Markdown(extensions=['tables','fenced_code','sane_lists'])
+md = markdown.Markdown(extensions=['tables', 'fenced_code', 'sane_lists'])
 
-sections = []
-for sid, label, fname, group in files:
-    text = (BOOK/fname).read_text()
-    # strip links to local md files in README table -> plain text
-    text = re.sub(r'\[([^\]]+)\]\((?:\.\./)*[0-9a-zA-Z\-_/]+\.md(?:#[^)]*)?\)', r'\1', text)
-    body = md.convert(text); md.reset()
-    # mermaid fences -> native artifact mermaid blocks
-    body = re.sub(
-        r'<pre><code class="language-mermaid">(.*?)</code></pre>',
-        lambda m: '<pre class="mermaid">' + m.group(1) + '</pre>',
-        body, flags=re.S)
-    sections.append((sid, label, body, group))
+def slug(t):
+    return re.sub(r'[^a-z0-9]+', '-', t.lower()).strip('-')
 
-navparts = []
-prev_group = None
-for sid, label, _, group in sections:
-    if group != prev_group and group is not None:
-        navparts.append('<div class="nav-label">%s</div>' % html.escape(group))
-    prev_group = group
-    navparts.append('<a href="#%s">%s</a>' % (sid, html.escape(label)))
-nav = '\n'.join(navparts)
+def render(pages, docname):
+    sections, extra_children = [], {}
+    for sid, label, fname, parent in pages:
+        text = (ROOT / fname).read_text()
+        text = re.sub(r'\[([^\]]+)\]\((?:\.\./)*[0-9a-zA-Z\-_/]+\.md(?:#[^)]*)?\)', r'\1', text)
+        body = md.convert(text); md.reset()
+        body = re.sub(r'<pre><code class="language-mermaid">(.*?)</code></pre>',
+                      lambda m: '<pre class="mermaid">' + m.group(1) + '</pre>',
+                      body, flags=re.S)
+        if sid == 'entities':  # per-entity sub-navigation, AWS API-reference style
+            kids = []
+            def addid(m):
+                t = re.sub(r'<[^>]+>', '', m.group(1))
+                i = 'e-' + slug(t)
+                kids.append((i, t))
+                return f'<h2 id="{i}">{m.group(1)}</h2>'
+            body = re.sub(r'<h2>(.*?)</h2>', addid, body)
+            extra_children[sid] = kids
+        sections.append((sid, label, body, parent))
 
-content = '\n'.join(f'<section id="{sid}">\n{body}\n</section>' for sid, _, body, _g in sections)
+    parents = {p[0] for p in pages if any(q[3] == p[0] for q in pages)} | set(extra_children)
+    nav = []
+    for sid, label, _, parent in sections:
+        a = f'<a href="#{sid}">{html.escape(label)}</a>'
+        if parent is None and sid in parents:
+            kids = ''.join(
+                f'<a class="child" href="#{k}">{html.escape(l)}</a>'
+                for k, l, _b, p in sections if p == sid)
+            kids += ''.join(
+                f'<a class="child" href="#{k}">{html.escape(l)}</a>'
+                for k, l in extra_children.get(sid, []))
+            nav.append('<div class="tnode"><div class="trow">'
+                       f'<button class="tw" aria-label="expand section"></button>{a}</div>'
+                       f'<div class="tkids">{kids}</div></div>')
+        elif parent is None:
+            nav.append(f'<div class="tnode"><div class="trow leaf">{a}</div></div>')
+    content = '\n'.join(f'<section id="{sid}">\n{b}\n</section>' for sid, _, b, _p in sections)
+    return '\n'.join(nav), content
 
-css = """
+gnav, gcontent = render(GUIDE, 'guide')
+rnav, rcontent = render(REF, 'ref')
+
+CSS = """
 :root{
   --accent:#0f6674; --accent-soft:#0f66741a;
   --ink:#22313a; --muted:#5b6e77; --ground:#fafbfb; --surface:#ffffff;
@@ -105,26 +134,46 @@ css = """
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);
   font-family:var(--serif);font-size:17px;line-height:1.65}
-.layout{display:flex;min-height:100vh}
-nav.sidebar{width:250px;flex:0 0 250px;position:sticky;top:0;height:100vh;
-  overflow-y:auto;border-right:1px solid var(--border);background:var(--surface);
-  padding:1.5rem 0 3rem;font-family:var(--sans)}
-nav.sidebar .brand{padding:0 1.25rem 1rem;border-bottom:1px solid var(--border);margin-bottom:.75rem}
-nav.sidebar .brand strong{font-size:.95rem;letter-spacing:.01em;display:block}
-nav.sidebar .brand span{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
-nav.sidebar a{display:block;padding:.34rem 1.25rem;color:var(--muted);
-  text-decoration:none;font-size:.85rem;line-height:1.35;border-left:3px solid transparent}
-nav.sidebar a:hover{color:var(--accent);background:var(--accent-soft)}
+.topbar{display:flex;align-items:center;gap:1.5rem;padding:.7rem 1.5rem;
+  border-bottom:1px solid var(--border);background:var(--surface);
+  font-family:var(--sans);position:sticky;top:0;z-index:5}
+.topbar .brand{font-weight:700;font-size:1rem;letter-spacing:-.01em}
+.topbar .brand small{display:block;font-weight:400;color:var(--muted);
+  font-size:.7rem;text-transform:uppercase;letter-spacing:.09em}
+.doctabs{display:flex;gap:.25rem;margin-left:auto}
+.doctabs button{font-family:var(--sans);font-size:.83rem;padding:.42rem .9rem;
+  border:1px solid var(--border);background:none;color:var(--muted);
+  border-radius:6px;cursor:pointer}
+.doctabs button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.doctabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layout{display:flex;min-height:calc(100vh - 53px)}
+nav.sidebar{width:290px;flex:0 0 290px;position:sticky;top:53px;
+  height:calc(100vh - 53px);overflow-y:auto;border-right:1px solid var(--border);
+  background:var(--surface);padding:1rem 0 3rem;font-family:var(--sans)}
+.tnode{margin:0}
+.trow{display:flex;align-items:center}
+.trow.leaf{padding-left:1.55rem}
+.tw{flex:0 0 1.55rem;height:1.9rem;border:none;background:none;cursor:pointer;
+  color:var(--muted);position:relative}
+.tw::before{content:"";position:absolute;left:.62rem;top:.72rem;
+  border-left:5px solid currentColor;border-top:4px solid transparent;
+  border-bottom:4px solid transparent;transition:transform .12s}
+@media (prefers-reduced-motion: reduce){.tw::before{transition:none}}
+.tnode.open>.trow .tw::before{transform:rotate(90deg)}
+nav.sidebar a{display:block;flex:1;padding:.34rem .9rem .34rem 0;
+  color:var(--ink);text-decoration:none;font-size:.86rem;line-height:1.35}
+nav.sidebar a.child{padding-left:2.3rem;color:var(--muted);font-size:.83rem}
+nav.sidebar a:hover{color:var(--accent)}
+nav.sidebar a.active{color:var(--accent);font-weight:600}
 nav.sidebar a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-nav.sidebar a.nav-app{font-size:.8rem}
-nav.sidebar .nav-label{padding:.9rem 1.25rem .25rem;font-size:.68rem;color:var(--muted);
-  text-transform:uppercase;letter-spacing:.1em}
+.tkids{display:none}
+.tnode.open>.tkids{display:block}
 main{flex:1;min-width:0;padding:2.5rem 3rem 6rem}
-section{max-width:72ch;margin:0 auto 4rem;scroll-margin-top:1.5rem}
+section{max-width:72ch;margin:0 auto 4rem;scroll-margin-top:70px}
 section+section{border-top:1px solid var(--border);padding-top:3rem}
 h1,h2,h3,h4{font-family:var(--sans);line-height:1.25;text-wrap:balance;color:var(--ink)}
 h1{font-size:1.9rem;font-weight:650;letter-spacing:-.015em;margin:0 0 1rem}
-h2{font-size:1.35rem;font-weight:650;margin:2.4rem 0 .8rem}
+h2{font-size:1.35rem;font-weight:650;margin:2.4rem 0 .8rem;scroll-margin-top:70px}
 h3{font-size:1.08rem;font-weight:650;margin:1.9rem 0 .6rem}
 p{margin:.75rem 0}
 a{color:var(--accent)}
@@ -137,37 +186,88 @@ pre code{background:none;padding:0;font-size:.8rem}
 pre.mermaid{background:var(--surface);text-align:center}
 blockquote{margin:1.5rem 0;padding:.9rem 1.2rem;background:var(--callout);
   border-left:3px solid var(--accent);border-radius:0 6px 6px 0}
-blockquote h3{margin-top:.2rem;color:var(--accent)}
 blockquote p{margin:.5rem 0}
-.table-wrap,table{max-width:100%}
 table{border-collapse:collapse;font-size:.85rem;font-family:var(--sans);
   display:block;overflow-x:auto;margin:1.1rem 0;font-variant-numeric:tabular-nums}
 th,td{border:1px solid var(--border);padding:.45rem .7rem;text-align:left;vertical-align:top}
 th{background:var(--code-bg);font-weight:650;white-space:nowrap}
 li{margin:.3rem 0}
-hr{border:none;border-top:1px solid var(--border);margin:2.5rem 0}
-img{max-width:100%}
+hr{border:none;border-top:1px solid var(--border);margin:2rem 0}
+body[data-doc="guide"] .doc-ref{display:none}
+body[data-doc="ref"] .doc-guide{display:none}
 @media (max-width:900px){
   .layout{display:block}
-  nav.sidebar{position:static;width:auto;height:auto;border-right:none;
-    border-bottom:1px solid var(--border)}
+  nav.sidebar{position:static;width:auto;height:auto;max-height:45vh;
+    border-right:none;border-bottom:1px solid var(--border)}
   main{padding:1.5rem 1.2rem 4rem}
 }
+@media print{.topbar,nav.sidebar{display:none}main{padding:0}
+  body[data-doc="guide"] .doc-ref,body[data-doc="ref"] .doc-guide{display:block}}
 @media (prefers-reduced-motion: no-preference){html{scroll-behavior:smooth}}
 """
 
-page = f"""<title>The Harness Pipeline Book</title>
-<style>{css}</style>
+JS = """
+(function(){
+  var body=document.body;
+  var docOf={};
+  document.querySelectorAll('.doc-guide section,.doc-guide h2[id]').forEach(function(e){
+    if(e.id)docOf[e.id]='guide';});
+  document.querySelectorAll('.doc-ref section,.doc-ref h2[id]').forEach(function(e){
+    if(e.id)docOf[e.id]='ref';});
+  function setDoc(d){
+    body.setAttribute('data-doc',d);
+    document.querySelectorAll('.doctabs button').forEach(function(b){
+      b.classList.toggle('active',b.dataset.doc===d);
+    });
+    document.querySelectorAll('nav.sidebar > .docnav').forEach(function(n){
+      n.style.display=(n.dataset.doc===d)?'':'none';
+    });
+  }
+  document.querySelectorAll('.doctabs button').forEach(function(b){
+    b.addEventListener('click',function(){setDoc(b.dataset.doc);window.scrollTo(0,0);});
+  });
+  document.querySelectorAll('.tw').forEach(function(t){
+    t.addEventListener('click',function(){t.closest('.tnode').classList.toggle('open');});
+  });
+  function activate(){
+    var id=location.hash.replace('#','');
+    if(id&&docOf[id]) setDoc(docOf[id]);
+    document.querySelectorAll('nav.sidebar a').forEach(function(a){
+      var on=a.getAttribute('href')==='#'+id;
+      a.classList.toggle('active',on);
+      if(on){var n=a.closest('.tnode');if(n)n.classList.add('open');}
+    });
+  }
+  window.addEventListener('hashchange',activate);
+  setDoc('guide');
+  activate();
+})();
+"""
+
+page = f"""<title>Harness Pipelines Documentation</title>
+<style>{CSS}</style>
+<header class="topbar">
+  <div class="brand">Harness Pipelines<small>Documentation</small></div>
+  <div class="doctabs">
+    <button data-doc="guide" class="active">User Guide</button>
+    <button data-doc="ref">API &amp; Entity Reference</button>
+  </div>
+</header>
 <div class="layout">
-<nav class="sidebar" aria-label="Chapters">
-  <div class="brand"><span>Domain model · CI/CD</span><strong>The Harness Pipeline Book</strong></div>
-  {nav}
+<nav class="sidebar" aria-label="Contents">
+  <div class="docnav" data-doc="guide">{gnav}</div>
+  <div class="docnav" data-doc="ref" style="display:none">{rnav}</div>
 </nav>
 <main>
-{content}
+<div class="doc-guide">
+{gcontent}
+</div>
+<div class="doc-ref">
+{rcontent}
+</div>
 </main>
 </div>
+<script>{JS}</script>
 """
-# fix nav grouping wrapper (we injected a closing div without opener; simpler: remove that hack)
 OUT.write_text(page)
 print(OUT, len(page))

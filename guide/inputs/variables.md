@@ -38,7 +38,7 @@ expressions — so a variable can also serve as a declared parameter.
 > **Note**
 > The standalone variable entity's API declares only the `String` type,
 > while the stage-variable documentation shows String or Secret. See
-> [Known issues and open questions](../reference/open-questions.md).
+> [Known issues and open questions](../../api-reference/open-questions.md).
 
 ---
 **Sources:** docs/platform/variables-and-expressions/add-a-variable.md

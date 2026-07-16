@@ -35,7 +35,7 @@ custom artifacts.
 > **Note**
 > This trigger documentation is behind the `CD_TRIGGERS_REFACTOR` feature
 > flag in the corpus. See
-> [Known issues and open questions](../reference/open-questions.md).
+> [Known issues and open questions](../../api-reference/open-questions.md).
 
 ---
 **Sources:** docs/platform/triggers/trigger-on-a-new-artifact.md (all

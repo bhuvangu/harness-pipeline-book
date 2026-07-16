@@ -19,6 +19,18 @@ pipeline:
 For repositories in the Harness Code Repository module, use `repoName`
 instead of a connector.
 
+## To configure the default codebase
+
+1. In the Pipeline Studio, select **Add Stage**, and then select **Build**.
+2. Enter a stage name and make sure **Clone Codebase** is enabled.
+3. Configure the codebase connection: select **Harness Code Repository**
+   and a repo, or select **Third-party Git provider**, a code repository
+   connector, and the repository name.
+4. Select **Set Up Stage**.
+
+To change the connector or other settings later, select **Codebase** in the
+Pipeline Studio's right-side panel, or edit the `codebase` section in YAML.
+
 ## Controlling cloning
 
 - To skip the automatic clone in a stage, set `cloneCodebase: false` in the

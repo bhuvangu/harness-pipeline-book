@@ -22,7 +22,7 @@ migration in progress, not an entity boundary.
 In the v1 generation, path nesting mirrors ownership. For example,
 `/v1/environments/{environment}/infrastructures/{infrastructure-definition}`
 shows that an infrastructure definition belongs to an environment. The
-[Relationship diagrams](../reference/relationships.md) reference uses this
+[Relationship diagrams](../../api-reference/relationships.md) reference uses this
 technique, together with documentation statements, to justify every edge in
 the entity model.
 
