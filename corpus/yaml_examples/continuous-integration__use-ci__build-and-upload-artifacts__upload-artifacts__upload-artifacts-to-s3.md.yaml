@@ -1,0 +1,343 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-artifacts-to-s3.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-artifacts-to-s3)
+
+# --- example 1 ---
+- step:
+    type: S3Upload
+    name: S3Upload
+    identifier: S3Upload
+    spec:
+      connectorRef: YOUR_AWS_CONNECTOR_ID
+      region: YOUR_AWS_REGION
+      bucket: YOUR_S3_BUCKET_NAME
+      sourcePath: path/to/artifact.tar.gz
+      target: <+pipeline.name>/<+pipeline.sequenceId>
+
+# --- example 2 ---
+- step:
+    type: Plugin
+    name: publish artifact metadata
+    identifier: publish_artifact_metadata
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/artifact-metadata-publisher
+      settings:
+        file_urls: https://BUCKET.s3.REGION.amazonaws.com/TARGET/ARTIFACT_NAME_WITH_EXTENSION
+        artifact_file: artifact.txt
+
+# --- example 3 ---
+- step:
+    type: Plugin
+    name: s3-upload-publish
+    identifier: custom_plugin
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+      image: harnesscommunity/drone-s3-upload-publish ## Required.
+      settings:
+        aws_access_key_id: <+pipeline.variables.AWS_ACCESS> ## Reference to your AWS access ID.
+        aws_secret_access_key: <+pipeline.variables.AWS_SECRET> ## Reference to your AWS access key.
+        aws_default_region: ap-southeast-2 ## Set to your default AWS region.
+        aws_bucket: bucket-name ## The target S3 bucket.
+        artifact_file: artifact.txt ## Provide any '.txt' file name. Harness uses this to store the artifact URL and display it on the Artifacts tab. This value is not the name of your uploaded artifact, and it has no relationship to the artifact object itself.
+        source: path/to/target/artifact.tar.gz ## Provide the path to the file or directory that you want to upload.
+        target: <+pipeline.name>/<+pipeline.sequenceId> ## Optional. Provide a path, relative to the 'aws_bucket', where you want to store the artifact. Do not include the bucket name. If unspecified, Harness uploads the artifact to the bucket's main directory.
+      imagePullPolicy: IfNotPresent
+
+# --- example 4 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: upload artifact
+        identifier: upload_artifact
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: write file
+                  identifier: write_file
+                  spec:
+                    shell: Bash
+                    command: |-
+                      echo "some file" > myfile.txt
+                      date >> myfile.txt
+              - step:
+                  type: S3Upload
+                  name: S3Upload
+                  identifier: S3Upload
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: YOUR_AWS_REGION
+                    bucket: YOUR_S3_BUCKET
+                    sourcePath: path/to/myfile.txt
+                    target: <+pipeline.name>/<+pipeline.sequenceId>
+              - step:
+                  type: Plugin
+                  name: artifact metadata
+                  identifier: artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://BUCKET.s3.REGION.amazonaws.com/TARGET/SOURCE_PATH/myfile.txt
+                      artifact_file: artifact.txt
+
+# --- example 5 ---
+pipeline:
+  name: allure-report-upload
+  identifier: allurereportupload
+  projectIdentifier: YOUR_HARNESS_PROJECT_ID
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: write file
+                  identifier: write_file
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: alpine:latest
+                    shell: Bash
+                    command: |-
+                      echo "some file" > myfile.txt
+                      date >> myfile.txt
+              - step:
+                  type: S3Upload
+                  name: S3Upload
+                  identifier: S3Upload
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: YOUR_AWS_REGION
+                    bucket: YOUR_S3_BUCKET
+                    sourcePath: path/to/myfile.txt
+                    target: <+pipeline.name>/<+pipeline.sequenceId>
+              - step:
+                  type: Plugin
+                  name: artifact metadata
+                  identifier: artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://BUCKET.s3.REGION.amazonaws.com/TARGET/SOURCE_PATH/myfile.txt
+                      artifact_file: artifact.txt
+
+# --- example 6 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: upload artifact
+        identifier: upload_artifact
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: write file
+                  identifier: write_file
+                  spec:
+                    shell: Bash
+                    command: |-
+                      echo "some file" > myfile.txt
+                      date >> myfile.txt
+              - step:
+                  type: Plugin
+                  name: s3-upload-publish
+                  identifier: custom_plugin
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: harnesscommunity/drone-s3-upload-publish
+                    settings:
+                      aws_access_key_id: <+pipeline.variables.AWS_ACCESS>
+                      aws_secret_access_key: <+pipeline.variables.AWS_SECRET>
+                      aws_default_region: YOUR_AWS_REGION
+                      aws_bucket: YOUR_S3_BUCKET
+                      artifact_file: artifact.txt
+                      source: path/to/myfile.txt
+                      target: <+pipeline.name>/<+pipeline.sequenceId>
+                    imagePullPolicy: IfNotPresent
+
+# --- example 7 ---
+pipeline:
+  name: allure-report-upload
+  identifier: allurereportupload
+  projectIdentifier: YOUR_HARNESS_PROJECT_ID
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: write file
+                  identifier: write_file
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: alpine:latest
+                    shell: Bash
+                    command: |-
+                      echo "some file" > myfile.txt
+                      date >> myfile.txt
+              - step:
+                  type: Plugin
+                  name: s3-upload-publish
+                  identifier: custom_plugin
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: harnesscommunity/drone-s3-upload-publish
+                    settings:
+                      aws_access_key_id: <+pipeline.variables.AWS_ACCESS>
+                      aws_secret_access_key: <+pipeline.variables.AWS_SECRET>
+                      aws_default_region: YOUR_AWS_REGION
+                      aws_bucket: YOUR_S3_BUCKET
+                      artifact_file: artifact.txt
+                      source: path/to/myfile.txt
+                      target: <+pipeline.name>/<+pipeline.sequenceId>
+                    imagePullPolicy: IfNotPresent
+
+# --- example 8 ---
+- step:
+    type: Plugin
+    name: download
+    identifier: download
+    spec:
+      connectorRef: YOUR_DOCKER_CONNECTOR
+      image: plugins/s3
+      settings:
+        access_key: <+secrets.getValue("awsaccesskeyid")>
+        secret_key: <+secrets.getValue("awssecretaccesskey")>
+        region: YOUR_BUCKET_REGION
+        bucket: YOUR_BUCKET_NAME
+        source: path/to/directory/to/download
+        target: download/destination
+        download: "true"
+
+# --- example 9 ---
+- step:
+    type: Run
+    name: Setup s3fs
+    identifier: Setup_s3fs
+    spec:
+      shell: Sh
+      envVariables:
+        AWS_ACCESS_KEY_ID: <+secrets.getValue("aws_access_key_id")>
+        AWS_SECRET_ACCESS_KEY: <+secrets.getValue("aws_secret_access_key")>
+        AWS_REGION: <+input>
+        S3_BUCKET_NAME: <+input>
+        S3FS_MOUNT_DIR: <+input>
+      command: |-
+        apt-get update
+        apt-get install s3fs
+
+        s3fs $S3_BUCKET_NAME $S3FS_MOUNT_DIR \
+          -o use_cache=/tmp \
+          -o allow_other \
+          -o uid=1000 \
+          -o gid=1000 \
+          -o umask=0022 \
+          -o url=https://s3.${AWS_REGION}.amazonaws.com
+
+# --- example 10 ---
+- step:
+    type: Run
+    name: Write file to bucket
+    identifier: Write_file_to_bucket
+    spec:
+      shell: Sh
+      envVariables:
+        S3FS_MOUNT_DIR: <+input>
+      command: |-
+        echo "Write file" > $S3FS_MOUNT_DIR/example.txt
+- step:
+    type: Run
+    name: Read file from bucket
+    identifier: Read_file_from_bucket
+    spec:
+      shell: Sh
+      envVariables:
+        S3FS_MOUNT_DIR: <+input>
+      command: |-
+        cat $S3FS_MOUNT_DIR/example.txt

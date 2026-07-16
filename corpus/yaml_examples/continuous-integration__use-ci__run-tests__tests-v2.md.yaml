@@ -1,0 +1,49 @@
+# source: docs/continuous-integration/use-ci/run-tests/tests-v2.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/tests-v2)
+
+# --- example 1 ---
+- step:
+    type: Test
+    name: Intelligent Tests
+    identifier: test
+    spec:
+      command: mvn test # Required. All other settings are optional.
+      shell: sh # Optional shell type.
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR # Container registry connector.
+      image: repo/image # Container image to use to run the commands.
+      privileged: false
+      intelligenceMode: true # Enable Test Intelligence.
+      globs: # Test glob pattern.
+        - "some/glob/pattern"
+      reports: # Test report path.
+        - "**/*.xml"
+      envVariables:
+        MAVEN_OPTS: "-Djansi.force=true"
+
+# --- example 2 ---
+              - step:
+                  type: Test
+                  name: Intelligent Tests
+                  identifier: test
+                  spec:
+                    ...
+                    reports:
+                      - tmp/junit.xml
+
+# --- example 3 ---
+              - step:
+                  type: Test
+                  name: Intelligent Tests
+                  identifier: test
+                  spec:
+                    ...
+                    parallelism : 4 # Divide tests into 4 parallel workloads executed by 4 steps.
+
+# --- example 4 ---
+config:
+  ignore:
+    - "README.md"
+    - ".ticonfig.yaml"
+    - "**/*.go"
+    - "**/Dockerfile*"
+    - "licenses/**/*"
+    - "img/**/*"

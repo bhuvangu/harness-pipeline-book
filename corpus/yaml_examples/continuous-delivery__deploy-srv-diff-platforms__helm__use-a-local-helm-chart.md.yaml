@@ -1,0 +1,6 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/helm/use-a-local-helm-chart.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/helm/use-a-local-helm-chart)
+
+# --- example 1 ---
+       env:
+        - name: HELM_LOCAL_REPOSITORY
+          value: "/opt"

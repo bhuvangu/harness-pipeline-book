@@ -1,0 +1,27 @@
+# source: docs/platform/pipelines/step-skip-condition-settings.md  (https://developer.harness.io/docs/platform/pipelines/step-skip-condition-settings)
+
+# --- example 1 ---
+    when:
+      pipelineStatus: Success
+      condition: <+codebase.build.type>=="PR"
+
+# --- example 2 ---
+    when:
+      stageStatus: Success
+      condition: <+codebase.build.type>=="PR"
+
+# --- example 3 ---
+when:
+  stageStatus: Success
+  condition: <+env.type> == "Production"
+
+# --- example 4 ---
+when:
+  stageStatus: All
+  condition: <+env.type> == "Production"
+
+# --- example 5 ---
+   <+pipeline.stages.somestage.status> == "FAILED"
+
+# --- example 6 ---
+   <+pipeline.stages.somestage.spec.execution.steps.somestep.status> == "FAILED"

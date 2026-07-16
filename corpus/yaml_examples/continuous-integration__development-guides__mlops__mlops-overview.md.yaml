@@ -1,0 +1,76 @@
+# source: docs/continuous-integration/development-guides/mlops/mlops-overview.md  (https://developer.harness.io/docs/continuous-integration/development-guides/mlops/mlops-overview)
+
+# --- example 1 ---
+             - step:
+                 type: Run
+                 name: train
+                 identifier: train
+                 spec:
+                   shell: Sh
+                   command: |-
+                     pip install --upgrade pip
+                     pip install -r requirements.txt
+                     pytest --nbval-lax credit_card_approval.ipynb --junitxml=report.xml
+
+# --- example 2 ---
+             - step:
+                 type: BuildAndPushECR
+                 name: Harness Training
+                 identifier: BuildAndPushCCAprovalECR
+                 spec:
+                   connectorRef: someawsconnector
+                   region: us-east-2
+                   account: "12345"
+                   imageName: ccapproval
+                   tags:
+                     - latest
+                   dockerfile: Dockerfile_Training_Testing
+             - step:
+                 type: Run
+                 name: Integration Tests
+                 identifier: runtest_ccapproval_deploy
+                 spec:
+                   connectorRef: someawsconnector
+                   image: 12345.dkr.ecr.us-east-2.amazonaws.com/ccapproval-deploy:latest
+                   shell: Sh
+                   command: pytest --nbval-lax credit_card_approval.ipynb --junitxml=report.xml
+                 failureStrategies:
+                   - onFailure:
+                       errors:
+                         - AllErrors
+                       action:
+                         type: Ignore
+             - step:
+                 type: BuildAndPushECR
+                 name: Export Model
+                 identifier: BuildAndPushCCApprovalECR
+                 spec:
+                   connectorRef: someawsconnector
+                   region: us-east-2
+                   account: "12345"
+                   imageName: ccapproval-deploy
+                   tags:
+                     - latest
+                   caching: false
+                   dockerfile: Dockerfile_Inference_Lambda
+                 when:
+                   stageStatus: Success
+             - step:
+                 type: Run
+                 name: Deploy Model
+                 identifier: Deploy_Model_via_Lambda
+                 spec:
+                   shell: Sh
+                   command: |-
+                     aws lambda update-function-code --function-name lambda-python --image-uri 12345.dkr.ecr.us-east-2.amazonaws.com/ccapproval-deploy:latest
+                     aws lambda wait function-updated-v2 --function-name lambda-python
+
+                     aws lambda invoke --function-name lambda-python response.json
+                     cat response.json
+                   envVariables:
+                     APP_VERSION: latest
+                     AWS_ACCESS_KEY_ID: <+secrets.getValue("aws_access_key_id")>
+                     AWS_SECRET_ACCESS_KEY: <+secrets.getValue("aws_secret_access_key")>
+                     AWS_SESSION_TOKEN: <+secrets.getValue("aws_session_token")>
+                     AWS_ACCOUNT_ID: "12345"
+                     AWS_REGION: us-east-2

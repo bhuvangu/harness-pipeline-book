@@ -1,0 +1,127 @@
+# source: docs/continuous-integration/use-ci/run-tests/tests-v1/ti-for-python.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/tests-v1/ti-for-python)
+
+# --- example 1 ---
+- step:
+    type: RunTests
+    name: Run Python Tests
+    identifier: Run_Python_Tests
+    spec:
+      language: Python
+      buildTool: Pytest ## Specify pytest or unittest.
+      runOnlySelectedTests: true ## Must be 'true' to enable TI.
+      preCommand: |- ## Optional
+        python3 -m venv .venv
+        . .venv/bin/activate
+
+        python3 -m pip install -r requirements/test.txt
+        python3 -m pip install -e .
+
+# --- example 2 ---
+pipeline:
+  name: Test Intelligence Demo
+  identifier: testintelligencedemo
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        build: <+input>
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+  stages:
+    - stage:
+        type: CI
+        identifier: Build_and_Test
+        name: Build and Test
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RunTests
+                  name: Run Python Tests
+                  identifier: Run_Python_Tests
+                  spec:
+                    language: Python
+                    buildTool: Pytest ## Specify pytest or unittest.
+                    runOnlySelectedTests: true ## Must be 'true' to enable TI.
+                    preCommand: |- ## Optional
+                      python3 -m venv .venv
+                      . .venv/bin/activate
+
+                      python3 -m  pip install pytest
+                      python3 -m pip install -r requirements/dev.txt
+                      python3 -m pip install -e .
+                    envVariables:
+                      PYTHONPATH: /harness ## Exclude if not applicable.
+          platform:
+            arch: Amd64
+            os: Linux
+          runtime:
+            spec: {}
+            type: Cloud
+
+# --- example 3 ---
+pipeline:
+  name: Test Intelligence Demo
+  identifier: testintelligencedemo
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        build: <+input>
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+  stages:
+    - stage:
+        type: CI
+        identifier: Build_and_Test
+        name: Build and Test
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RunTests
+                  name: Run Python Tests
+                  identifier: Run_Python_Tests
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: python:latest ## Specify if required by your build infrastructure.
+                    language: Python
+                    buildTool: Pytest ## Specify pytest or unittest.
+                    runOnlySelectedTests: true ## Must be 'true' to enable TI.
+                    preCommand: |- ## Optional
+                      python3 -m venv .venv
+                      . .venv/bin/activate
+
+                      python3 -m  pip install pytest
+                      python3 -m pip install -r requirements/dev.txt
+                      python3 -m pip install -e .
+                    envVariables:
+                      PYTHONPATH: /harness ## Exclude if not applicable.
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+
+# --- example 4 ---
+reports:
+  type: JUnit
+  spec:
+    paths:
+      - out_report.xml*
+
+# --- example 5 ---
+              - step:
+                  type: RunTests
+                  name: Run Python Tests
+                  identifier: Run_Python_Tests
+                  spec:
+                    language: Python
+                    ...
+                    envVariables:
+                      PYTHONPATH: /harness

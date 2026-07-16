@@ -1,0 +1,57 @@
+# source: docs/continuous-delivery/verify/configure-cv/configure-verify-step-with-ai/ai-verify.md  (https://developer.harness.io/docs/continuous-delivery/verify/configure-cv/configure-verify-step-with-ai/ai-verify)
+
+# --- example 1 ---
+pipeline:
+  name: AI-verify-Deploy-check
+  identifier: AIverifyDeploycheck
+  projectIdentifier: my_project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: deploy-and-verify
+        identifier: deployAndVerify
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: my_service
+          environment:
+            environmentRef: my_environment
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: my_infrastructure
+          execution:
+            steps:
+              - stepGroup:
+                  name: ai-verify-step-group
+                  identifier: aiVerifyStepGroup
+                  steps:
+                    - step:
+                        type: AIVerifyNG
+                        name: AIVerifyV2_1
+                        identifier: AIVerifyV2_1
+                        spec:
+                          dataCollectionWindow: 5m
+                          healthSources:
+                            - healthSourceRef: my_health_source_1
+                            - healthSourceRef: my_health_source_2
+                          resources:
+                            limits:
+                              cpu: 250m
+                              memory: 256Mi
+                        timeout: 10m
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: my_k8s_connector
+                      namespace: harness-delegate-ng
+            rollbackSteps: []
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback

@@ -1,0 +1,90 @@
+# source: docs/continuous-delivery/cd-onboarding/new-user/migrate-github-action-to-harness.md  (https://developer.harness.io/docs/continuous-delivery/cd-onboarding/new-user/migrate-github-action-to-harness)
+
+# --- example 1 ---
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  KUBECONFIG_FILE: kubeconfig.yaml
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Set up Kubectl
+      uses: azure/setup-kubectl@v1
+      with:
+        version: '1.20.0'
+        
+    - name: Configure kubeconfig
+      run: echo "${{ secrets.KUBECONFIG }}" > $KUBECONFIG_FILE
+    
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -f deployment.yaml
+        kubectl rollout status deployment/my-deployment
+
+# --- example 2 ---
+pipeline:
+  name: Kubernetes Deployment
+  identifier: Kubernetes_Deployment
+  projectIdentifier: Platform_Engineering
+  orgIdentifier: Product_Engineering
+  tags: {}
+  stages:
+    - stage:
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: nginx
+          environment:
+            environmentRef: dev
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: devk8s
+          execution:
+            steps:
+              - step:
+                  name: Rollout Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+              - step:
+                  type: K8sDelete
+                  name: Clean up
+                  identifier: Clean_up
+                  spec:
+                    deleteResources:
+                      type: ReleaseName
+                      spec:
+                        deleteNamespace: false
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  name: Rollback Rollout Deployment
+                  identifier: rollbackRolloutDeployment
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec:
+                    pruningEnabled: false
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        name: Deploy
+        identifier: Deploy
+        tags: {}

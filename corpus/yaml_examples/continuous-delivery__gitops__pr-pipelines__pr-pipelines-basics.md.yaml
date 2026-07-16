@@ -1,0 +1,27 @@
+# source: docs/continuous-delivery/gitops/pr-pipelines/pr-pipelines-basics.md  (https://developer.harness.io/docs/continuous-delivery/gitops/pr-pipelines/pr-pipelines-basics)
+
+# --- example 1 ---
+- step:
+      type: GitOpsUpdateReleaseRepo
+      name: Modify Git
+      identifier: Modify_Git
+      timeout: 10m
+      spec:
+      variables:
+            - name: replicas[0].count
+            type: String
+            value: <+pipeline.variables.replica>
+            rTitle: Update Replica Count
+      allowEmptyCommit: true
+      ignoreMissingFiles: true
+
+# --- example 2 ---
+- step:
+    type: MergePR
+    name: MergePR_1
+    identifier: MergePR_1
+    spec:
+      deleteSourceBranch: false
+      mergeStrategy: squash
+      variables: []
+    timeout: 10m

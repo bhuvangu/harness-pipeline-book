@@ -1,0 +1,403 @@
+# source: docs/platform/pipelines/harness-yaml-quickstart.md  (https://developer.harness.io/docs/platform/pipelines/harness-yaml-quickstart)
+
+# --- example 1 ---
+   ...
+   tags:
+       docs: "CD"
+       yaml example: ""
+   ...
+
+# --- example 2 ---
+   ...
+   script: |-
+       echo "hello"
+
+      echo <+pipeline.name>
+   ...
+
+# --- example 3 ---
+pipeline:
+    name: YAML Example ## A name for the pipeline.
+    identifier: YAML_Example ## A unique Id for the pipeline.
+    projectIdentifier: default ## Specify the project this pipeline belongs to.
+    orgIdentifier: default ## Specify the organization this pipeline belongs to.
+    tags: {}
+    description:
+    stages: ## Contains the stage definitions.
+        - stage:
+            ...
+        - stage:
+            ...
+    notificationRules:
+    flowControl:
+    properties:
+    timeout:
+    variables: ## Contains pipeline variables. Stage and step variables are defined within their own sections.
+        -
+
+# --- example 4 ---
+    stages:
+        - stage:
+              identifier: ## Enter a unique Id for the stage. In the Visual editor, the Id is generated automatically. In YAML, you have to enter an Id.
+              name: ## Enter a name for the stage.
+              type: ## Define the stage type, such as CD (Deploy), CI (Build), Approval, or Custom.
+              description:
+              tags:
+              spec: ## Contains stage components, such as infrastructure and execution (steps).
+                  serviceConfig: ## For deployment stages, define service configurations.
+
+                  infrastructure: ## Define infrastructure to use to run the stage.
+
+                  execution: ## Define the steps in the stage.
+                      steps:
+                          -
+              variables: ## Define stage variables.
+                  -
+              when: ## Define a conditional execution.
+                  pipelineStatus:
+              failureStrategies: ## Define a failure strategy.
+                  - onFailure:
+                          errors:
+                              - null
+
+# --- example 5 ---
+              spec:  
+                  serviceConfig:  
+                      service:  
+                          identifier: myservice  
+                          name: myservice  
+                      serviceDefinition:  
+                          type: Kubernetes  
+                          spec:  
+                              manifests:  
+                                  - manifest:  
+                                        identifier: <+input>  
+                                        type: K8sManifest  
+                                        spec:  
+                                            store:  
+                                                type: Github  
+                                                spec:  
+                                                    connectorRef: <+input>  
+                                                    gitFetchType: Branch  
+                                                    branch: <+input>  
+                                                    folderPath: <+input>  
+                                                    repoName: <+input>
+
+# --- example 6 ---
+              spec:  
+                  serviceConfig:  
+                      useFromStage:  
+                          stage: ""
+
+# --- example 7 ---
+                  infrastructure:
+                      environment:
+                          identifier: myinfra
+                          name: myinfra
+                          type: PreProduction
+                      infrastructureDefinition:
+                          type: KubernetesDirect
+                          spec:
+                              connectorRef: <+input>
+                              namespace: <+input>
+                              releaseName: <+input>
+
+# --- example 8 ---
+                          - step:
+                                identifier: ssh ## Enter a unique Id for the step. In the Visual editor, the Id is generated automatically. In YAML, you have to enter an Id.
+                                name: ssh ## Enter a name for the step.
+                                type: ShellScript ## Define the step type.
+                                description:
+                                spec: ## Define the step settings, depending on the step type.
+                                    shell: Bash
+                                    source:
+                                        type: Inline
+                                        spec:
+                                            script: echo "hello world"
+                                    timeout: <+input>
+                                    onDelegate: false
+                                failureStrategies: ## Define a failure strategy.
+                                    - onFailure:
+                                            errors:
+                                                - AllErrors
+                                            action:
+                                                type: Abort
+                                when: ## Define a conditional execution.
+                                    stageStatus: Success
+
+# --- example 9 ---
+                          - stepGroup: ## Step group flag.
+                                name: ## Provide a name for the step group.
+                                identifier: ## Provide a unique identifier for the step group.
+                                steps: ## Define steps in the step group.
+                                    - step:
+                                        ...
+                                    - step:
+                                        ...
+
+# --- example 10 ---
+                                when:
+                                    stageStatus: Success
+
+# --- example 11 ---
+              failureStrategies:  
+                  - onFailure:  
+                          errors:  
+                              - AllErrors  
+                          action:  
+                              type: Abort
+
+# --- example 12 ---
+              variables: 
+                  - name: someVar
+                    type: String
+                    value: someValue
+
+# --- example 13 ---
+pipeline:  
+    name: ""  
+    identifier: ""  
+    projectIdentifier: ""  
+    orgIdentifier: ""  
+    tags: {}  
+    stages:  
+...  
+    notificationRules:  
+        - name: NOTIFICATION_NAME
+          pipelineEvents: 
+              - type: AllEvents
+          notificationMethod:
+              type: Email
+              spec:
+                  userGroups: []
+                  recipients:
+                      - some.email@company.com
+          enabled: true
+
+# --- example 14 ---
+pipeline:  
+    name: ""  
+    identifier: ""  
+    projectIdentifier: ""  
+    orgIdentifier: ""  
+    tags: {}  
+    stages:  
+...  
+    flowControl:  
+        barriers:  
+            - name:
+              identifier:
+
+# --- example 15 ---
+trigger:  
+    name: ""  
+    identifier: ""  
+    enabled: true|false  
+    description: ""  
+    tags: {}  
+    orgIdentifier: ""  
+    projectIdentifier: ""  
+    pipelineIdentifier: ""  
+    source:  
+        type: Webhook  
+        spec:  
+            type: Github  
+            spec:  
+                type: ""  
+                spec:  
+                    connectorRef: ""  
+                    autoAbortPreviousExecutions: true|false  
+                    payloadConditions:  
+                        - key: ""  
+                          operator: ""  
+                          value: ""  
+                        - key: ""  
+                          operator: ""  
+                          value: ""  
+                        - key: ""  
+                          operator: ""  
+                          value: ""  
+                    headerConditions: []  
+                    actions: []
+
+# --- example 16 ---
+trigger:  
+    name: mytrigger  
+    identifier: mytrigger  
+    enabled: true  
+    description: ""  
+    tags: {}  
+    orgIdentifier: default  
+    projectIdentifier: CD_Examples  
+    pipelineIdentifier: YAML  
+    source:  
+        type: Webhook  
+        spec:  
+            type: Github  
+            spec:  
+                type: PullRequest  
+                spec:  
+                    connectorRef: quickstart  
+                    autoAbortPreviousExecutions: false  
+                    payloadConditions:  
+                        - key: changedFiles  
+                          operator: Equals  
+                          value: filename  
+                        - key: sourceBranch  
+                          operator: Equals  
+                          value: foo  
+                        - key: targetBranch  
+                          operator: Equals  
+                          value: bar  
+                    headerConditions: []  
+                    actions: []  
+    inputYaml: |  
+        pipeline:  
+            identifier: YAML  
+            stages:  
+                - stage:  
+                      identifier: Deploy  
+                      type: Deployment  
+                      spec:  
+                          infrastructure:  
+                              infrastructureDefinition:  
+                                  type: KubernetesDirect  
+                                  spec:  
+                                      connectorRef: Kubernetes_Quickstart  
+                                      namespace: default  
+                - stage:  
+                      identifier: Canary  
+                      type: Deployment  
+                      spec:  
+                          infrastructure:  
+                              environmentRef: helmchart  
+                              infrastructureDefinition:  
+                                  type: KubernetesDirect  
+                                  spec:  
+                                      connectorRef: Kubernetes_Quickstart  
+                                      namespace: default
+
+# --- example 17 ---
+trigger:  
+    name: ""  
+    identifier: ""  
+    enabled: true|false  
+    tags: {}  
+    orgIdentifier: ""  
+    projectIdentifier: ""  
+    pipelineIdentifier: ""  
+    source:  
+        type: Scheduled  
+        spec:  
+            type: Cron  
+            spec:  
+                expression: ""
+
+# --- example 18 ---
+trigger:  
+    name: ""  
+    identifier: ""  
+    enabled: true|false  
+    description: ""  
+    tags: {}  
+    orgIdentifier: ""  
+    projectIdentifier: ""  
+    pipelineIdentifier: ""  
+    source:  
+        type: Webhook  
+        spec:  
+            type: Custom  
+            spec:  
+                payloadConditions: []  
+                headerConditions: []
+
+# --- example 19 ---
+inputSet:  
+    name: ""  
+    tags: {}  
+    identifier: ""  
+    orgIdentifier: ""  
+    projectIdentifier: ""  
+    pipeline:  
+        identifier: ""  
+        stages:  
+            - stage:  
+                  identifier: ""  
+                  type: ""  
+                  spec:  
+                      infrastructure:  
+                          infrastructureDefinition:  
+                              type: ""  
+                              spec:  
+                                  connectorRef: ""  
+                                  namespace: ""
+
+# --- example 20 ---
+inputSet:  
+    name: My Input Set 1  
+    tags: {}  
+    identifier: My_Input_Set  
+    orgIdentifier: default  
+    projectIdentifier: CD_Examples  
+    pipeline:  
+        identifier: YAML  
+        stages:  
+            - stage:  
+                  identifier: Deploy  
+                  type: Deployment  
+                  spec:  
+                      infrastructure:  
+                          infrastructureDefinition:  
+                              type: KubernetesDirect  
+                              spec:  
+                                  connectorRef: Kubernetes_Quickstart  
+                                  namespace: default  
+            - stage:  
+                  identifier: Canary  
+                  type: Deployment  
+                  spec:  
+                      infrastructure:  
+                          environmentRef: helmchart  
+                          infrastructureDefinition:  
+                              type: KubernetesDirect  
+                              spec:  
+                                  connectorRef: Kubernetes_Quickstart  
+                                  namespace: default
+
+# --- example 21 ---
+overlayInputSet:  
+    name: ""  
+    identifier: ""  
+    orgIdentifier: ""  
+    projectIdentifier: ""  
+    pipelineIdentifier: ""  
+    inputSetReferences:  
+        - ""  
+        - ""  
+    tags: {}
+
+# --- example 22 ---
+overlayInputSet:  
+    name: My Overlay Set  
+    identifier: My_Overlay_Set  
+    orgIdentifier: default  
+    projectIdentifier: CD_Examples  
+    pipelineIdentifier: YAML  
+    inputSetReferences:  
+        - My_Input_Set  
+        - My_Input_Set_2  
+    tags: {}
+
+# --- example 23 ---
+connector:
+    name:
+    identifier:
+    description:
+    orgIdentifier: default
+    projectIdentifier: default
+    type: K8sCluster ## Indicate the connector type.
+    spec: ## Define connector settings depending on the type.
+        credential:
+            type: InheritFromDelegate
+        delegateSelectors:
+            - example

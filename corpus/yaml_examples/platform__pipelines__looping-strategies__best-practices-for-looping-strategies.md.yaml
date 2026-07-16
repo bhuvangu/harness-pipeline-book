@@ -1,0 +1,179 @@
+# source: docs/platform/pipelines/looping-strategies/best-practices-for-looping-strategies.md  (https://developer.harness.io/docs/platform/pipelines/looping-strategies/best-practices-for-looping-strategies)
+
+# --- example 1 ---
+   matrix:
+     browser: [chrome, firefox]
+     maxConcurrency: 2
+
+# --- example 2 ---
+   matrix:
+     os: [macos, linux, android]
+     browser: [chrome, firefox, opera]
+     maxConcurrency: 9
+
+# --- example 3 ---
+pipeline:
+  identifier: RepeatJiraTickets
+  variables:
+    - name: jiraTickets
+      type: String
+      value: HD-29193,HD-29194,HD-29195
+
+# --- example 4 ---
+<+pipeline.variables.jiraTickets.split(',')>
+
+# --- example 5 ---
+repeat:
+  items: <+pipeline.variables.jiraTickets.split(',')>
+
+# --- example 6 ---
+matrix:
+  jira: <+stage.variables.jiraTickets.split(',')>
+
+# --- example 7 ---
+    - stage:
+        name: custom_stage_conditional_execution
+        identifier: custom_stage_conditional_execution
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo hey
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        strategy:
+          matrix:
+            jdk:
+              - "18"
+              - "17"
+              - "16"
+              - "15"
+              - "14"
+              - "13"
+              - "12"
+              - "11"
+              - "10"
+              - "9"
+        when:
+          pipelineStatus: Success
+          condition: "false"
+
+# --- example 8 ---
+        strategy:
+          when: <+pipeline.name> == "looping_strategy_when"
+          matrix:
+            jdk:
+              - "18"
+              - "17"
+              - ...
+
+# --- example 9 ---
+    - stage:
+        name: custom_stage_when_condition
+        identifier: custom_stage_conditional_execution
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo hey
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        strategy:
+          when: <+pipeline.name> == "looping_strategy_when"
+          matrix:
+            jdk:
+              - "18"
+              - "17"
+              - "16"
+              - "15"
+              - "14"
+              - "13"
+              - "12"
+              - "11"
+              - "10"
+              - "9"
+
+# --- example 10 ---
+pipeline:
+  name: looping_strategy_when
+  identifier: looping_strategy_when
+  tags: {}
+  projectIdentifier: fdsf
+  orgIdentifier: default
+  stages:
+    - stage:
+        name: sA
+        identifier: sA
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo hey
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        strategy:
+          when: <+pipeline.name> == "looping_strategy_when"
+          matrix:
+            jdk:
+              - "18"
+              - "17"
+              - "16"
+              - "15"
+              - "14"
+              - "13"
+              - "12"
+              - "11"
+              - "10"
+              - "9"
+        when:
+          pipelineStatus: Success
+          condition: <+environment.name> != "QA"
+  allowStageExecutions: true
+
+# --- example 11 ---
+        strategy:
+          when: <+pipeline.stages.STAGE_ID.spec.execution.steps.STEP_ID.output.outputVariables.number_of_services> > 0
+          matrix:
+            service: <+json.list("services", <+pipeline.stages.STAGE_ID.spec.execution.steps.STEP_ID.output.outputVariables.deployed_services>)>
+            maxConcurrency: 4

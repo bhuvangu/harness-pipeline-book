@@ -1,0 +1,59 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/deploy-manifests-using-apply-step.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/deploy-manifests-using-apply-step)
+
+# --- example 1 ---
+# harness.io/skip-file-for-deploy  
+  
+{{- if .Values.env.config}}  
+apiVersion: v1  
+kind: ConfigMap  
+metadata:  
+  name: {{.Values.name}}  
+data:  
+{{.Values.env.config | toYaml | indent 2}}  
+---  
+{{- end}}
+
+# --- example 2 ---
+...
+          - step:
+              type: K8sApply
+              name: Apply DB Migration Job
+              identifier: Apply_DB_Migration_Job
+              spec:
+                filePaths:
+                  - database-migration.yaml
+                skipDryRun: false
+                skipSteadyStateCheck: true
+                skipRendering: false
+                commandFlags: 
+                  - commandType: Apply
+                    flag: "--dry-run=true --server-side"
+                overrides:
+                  - manifest:
+                      identifier: DBValues
+                      type: Values
+                      spec:
+                        store:
+                          type: Github
+                          spec:
+                            connectorRef: account.ThisRohanGupta
+                            gitFetchType: Branch
+                            paths:
+                              - migration-values.yaml
+                            repoName: Product-Management
+                            branch: "main"
+              timeout: 10m
+              failureStrategies:
+                - onFailure:
+                    errors:
+                      - AllErrors
+                    action:
+                      type: Retry
+                      spec:
+                        retryCount: 3
+                        retryIntervals:
+                          - 2s
+                        onRetryFailure:
+                          action:
+                            type: StageRollback
+...

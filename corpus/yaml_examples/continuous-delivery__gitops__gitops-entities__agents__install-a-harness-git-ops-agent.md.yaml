@@ -1,0 +1,134 @@
+# source: docs/continuous-delivery/gitops/gitops-entities/agents/install-a-harness-git-ops-agent.md  (https://developer.harness.io/docs/continuous-delivery/gitops/gitops-entities/agents/install-a-harness-git-ops-agent)
+
+# --- example 1 ---
+... rest of the agent YAML ...
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ labels:
+   app.kubernetes.io/name: argocd-repo-server
+   app.kubernetes.io/instance: argocd
+   app.kubernetes.io/component: repo-server
+   app.kubernetes.io/managed-by: Helm
+   app.kubernetes.io/part-of: argocd
+
+... other objects ...
+
+spec: 
+ ... other fields ...
+ containers:
+   - command:
+
+       - sh
+       - -c
+       - entrypoint.sh argocd-repo-server --redis argocd-redis:6379
+   env: 
+     ... other variables ...
+     - name: HTTPS_PROXY
+       value: "http://squid.proxy-test:3128"
+     - name: HTTP_PROXY
+       value: "http://squid.proxy-test:3128"
+     - name: NO_PROXY
+       value: localhost,argocd-repo-server,argocd-redis,127.0.0.1,$(KUBERNETES_SERVICE_HOST),(\{agentname}-agent)
+ initContainers:
+   ... other init containers spec ...
+   - name: sops-helm-secrets-tool
+     image: alpine:latest
+     imagePullPolicy: IfNotPresent
+     command: [ sh, -ec ]
+     env:
+       - name: HELM_SECRETS_VERSION
+         value: 4.4.2
+       - name: KUBECTL_VERSION
+         value: 1.26.7
+       - name: SOPS_VERSION
+         value: 3.7.3
+       - name: https_proxy
+         value: "http://squid.proxy-test:3128"
+       - name: http_proxy
+         value: "http://squid.proxy-test:3128"
+
+   .. rest of agent YAML ...
+
+# --- example 2 ---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gitops-agent-upgrader
+  namespace: "default"
+  labels: ...
+spec:
+  schedule: "0 */4 * * *"
+
+# --- example 3 ---
+# <---Agent upgrader overrides--->
+upgrader:
+  enabled: true 
+  cron : "0 */4 * * *"
+  image: harness/upgrader:latest
+
+# --- example 4 ---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: gitops-agent-upgrader
+  namespace: "agrocd"
+  labels:...
+spec:
+  schedule: "0 */4 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 20
+  jobTemplate:
+      spec: 
+         suspend: true
+
+# --- example 5 ---
+# <---Agent upgrader overrides--->
+upgrader:
+  enabled: false 
+  cron : "0 */4 * * *"
+  image: harness/upgrader:latest
+
+# --- example 6 ---
+  # Source: gitops-helm-byoa/templates/upgrader/harness-upgrader-cm.yaml
+  apiVersion: v1
+  data:
+    UPGRADER_REGISTRY_MIRROR: myprivateartifactory.xyz
+    ... other configs ...
+    kind: ConfigMap
+    metadata:
+      name: gitops-agent-upgrader
+      namespace: "default"
+
+# --- example 7 ---
+# <---Agent upgrader overrides--->
+upgrader:
+  enabled: true
+  image: docker.io/harness/upgrader:latest
+  config:
+    registryMirror: myprivateartifactory.xyz
+
+# --- example 8 ---
+    apiVersion: v1
+    data:
+      .dockerconfigjson: <BASE64_ENCODED_USERNAME+TOKEN>
+    kind: Secret
+    metadata:
+      creationTimestamp: null
+      name: harness-stig-registry
+      namespace: <AGENT_NAMESPACE>
+    type: kubernetes.io/dockerconfigjson
+
+# --- example 9 ---
+    spec:
+      template:
+        spec:
+          imagePullSecrets:
+            - name: harness-stig-registry
+          containers:
+              image: docker.io/harnesssecure/gitops-agent:<GITOPS_AGENT_VERSION>
+
+# --- example 10 ---
+crds:
+  # -- Keep CRDs on chart uninstall
+  keep: true

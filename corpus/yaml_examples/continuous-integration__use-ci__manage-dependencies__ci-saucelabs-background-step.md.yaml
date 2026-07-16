@@ -1,0 +1,89 @@
+# source: docs/continuous-integration/use-ci/manage-dependencies/ci-saucelabs-background-step.md  (https://developer.harness.io/docs/continuous-integration/use-ci/manage-dependencies/ci-saucelabs-background-step)
+
+# --- example 1 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      description: ""
+      type: CI
+      spec:
+        cloneCodebase: false ## Clone codebase is disabled for this example.
+        platform: ## This stage uses Harness Cloud build infrastructure.
+          os: Linux
+          arch: Amd64
+        runtime:
+          type: Cloud
+          spec: {}
+        execution:
+          steps:
+            - step: ## Background step runs the Sauce Connect Docker image.
+                type: Background
+                name: Sauce Connect
+                identifier: Sauce_Connect
+                spec:
+                  connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                  image: saucelabs/sauce-connect
+                  shell: Sh
+                  envVariables:
+                    SAUCE_USERNAME: YOUR_SAUCE_LABS_USERNAME
+                    SAUCE_ACCESS_KEY: <+secrets.getValue('Sauce_Access_Key')>
+                  portBindings:
+                    "8032": "8032"
+            - step: ## Run step checks that Sauce Connect is healthy before allowing other steps to run.
+                type: Run
+                name: Wait for SC
+                identifier: Wait_for_SC
+                spec:
+                  shell: Bash
+                  command: |-
+                    until [ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8032/readiness)" == "200" ]
+                    do
+                      sleep 2
+                    done
+                    echo "SC ready"
+
+# --- example 2 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      description: ""
+      type: CI
+      spec:
+        cloneCodebase: false ## Clone codebase is disabled for this example.
+        infrastructure: ## This pipeline uses a Kubernetes cluster build infrastructure
+          type: KubernetesDirect
+          spec:
+            connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR
+            namespace: YOUR_KUBERNETES_NAMESPACE
+            automountServiceAccountToken: true
+            nodeSelector: {}
+            os: Linux
+        execution:
+          steps:
+            - step: ## Background step runs the Sauce Connect Docker image.
+                type: Background
+                name: Sauce Connect
+                identifier: Sauce_Connect
+                spec:
+                  connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                  image: saucelabs/sauce-connect
+                  shell: Sh
+                  envVariables:
+                    SAUCE_USERNAME: YOUR_SAUCE_LABS_USERNAME
+                    SAUCE_ACCESS_KEY: <+secrets.getValue('Sauce_Access_Key')>
+            - step: ## Run step checks that Sauce Connect is healthy before allowing other steps to run.
+                type: Run
+                name: Wait for SC
+                identifier: Wait_for_SC
+                spec:
+                  connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                  image: curlimages/curl:7.83.1
+                  shell: Sh
+                  command: |-
+                    until [ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8032/readiness)" == "200" ]
+                    do
+                      sleep 2
+                    done
+                    echo "SC ready"

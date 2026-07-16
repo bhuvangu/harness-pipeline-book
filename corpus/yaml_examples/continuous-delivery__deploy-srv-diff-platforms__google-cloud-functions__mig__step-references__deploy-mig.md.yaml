@@ -1,0 +1,28 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/mig/step-references/deploy-mig.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/mig/step-references/deploy-mig)
+
+# --- example 1 ---
+- stepGroup:
+    name: Deployment MIG
+    identifier: blueGreenDeployment
+    steps:
+      - step:
+          type: DownloadManifests
+          name: Download Manifests
+          identifier: DownloadManifests
+          spec: {}
+          failureStrategies: []
+      - step:
+          type: GoogleMigDeploy
+          name: GoogleMigDeploy
+          identifier: GoogleMigDeploy
+          spec:
+            connectorRef: account.harnessImage
+            mig: mig-pool-1
+            image: harness/google-mig-deploy:0.0.1-linux-amd64
+            targetSize: 4
+          timeout: 10m
+    stepGroupInfra:
+      type: KubernetesDirect
+      spec:
+        connectorRef: k8s-connector
+        namespace: default

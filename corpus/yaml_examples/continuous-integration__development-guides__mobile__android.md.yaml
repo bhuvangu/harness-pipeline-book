@@ -1,0 +1,468 @@
+# source: docs/continuous-integration/development-guides/mobile/android.md  (https://developer.harness.io/docs/continuous-integration/development-guides/mobile/android)
+
+# --- example 1 ---
+stages:
+  - stage:
+      name: Build
+      identifier: Build
+      type: CI
+      spec:
+        cloneCodebase: true
+        platform:
+          os: Linux
+          arch: Amd64
+        runtime:
+          type: Cloud
+          spec: {}
+
+# --- example 2 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      type: CI
+      spec:
+        cloneCodebase: true
+        platform:
+          os: MacOS ## selects macOS operating system
+          arch: Arm64 ## selects M1 architecture
+        runtime:
+          type: Cloud
+          spec: {}
+
+# --- example 3 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      description: ""
+      type: CI
+      spec:
+        cloneCodebase: true
+        infrastructure:
+          type: KubernetesDirect
+          spec:
+            connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+            namespace: YOUR_NAMESPACE
+            automountServiceAccountToken: true
+            nodeSelector: {}
+            os: Linux
+
+# --- example 4 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      description: ""
+      type: CI
+      spec:
+        cloneCodebase: true
+        infrastructure:
+          type: VM
+          spec:
+            type: Pool
+            spec:
+              poolName: YOUR_VM_POOL_NAME
+              os: MacOS
+
+# --- example 5 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: dependencies
+    spec:
+      shell: Sh
+      command: |-
+        bundle update
+
+# --- example 6 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: dependencies
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: fabernovel/android:api-30-v1.7.0
+      shell: Sh
+      command: |-
+        npm install -g firebase-tools
+        gem install fastlane
+
+        bundle exec fastlane add_plugin load_json
+        bundle exec fastlane add_plugin increment_version_code
+        bundle exec fastlane add_plugin firebase_app_distribution
+
+# --- example 7 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+        paths:
+          - YOUR_CACHE_PATH
+      sharedPaths:
+        - YOUR_CACHE_PATH
+
+# --- example 8 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+
+# --- example 9 ---
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "package.json" }} ## Example cache key based on checksum.
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  ...
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "package.json" }} ## Example cache key based on checksum.
+                    sourcePaths:
+                      - "YOUR_CACHE_PATH"
+                    archiveFormat: Tar
+
+# --- example 10 ---
+- step:
+    type: Run
+    name: build and test
+    identifier: build_and_test
+    spec:
+      shell: Sh
+      command: |-
+        ./gradlew test assemble -YOUR_PROJECT
+        ./gradlew testDebug
+
+# --- example 11 ---
+- step:
+    type: Run
+    name: build and test
+    identifier: build_and_test
+    spec:
+      shell: Sh
+      command: |-
+        ./gradlew test assemble -YOUR_PROJECT
+        ./gradlew testDebug
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - "*/build/test-results/.*xml"
+
+# --- example 12 ---
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: fabernovel/android:api-30-v1.7.0
+      shell: Sh
+      command: |-
+        ./gradlew test assemble -YOUR_PROJECT
+        ./gradlew testDebug
+
+# --- example 13 ---
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: fabernovel/android:api-30-v1.7.0
+      shell: Sh
+      command: |-
+        ./gradlew test assemble -YOUR_PROJECT
+        ./gradlew testDebug
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - "*/build/test-results/.*xml"
+
+# --- example 14 ---
+- step:
+    type: Run
+    name: android version
+    identifier: android_version
+    spec:
+      shell: Sh
+      command: |-
+        fastlane init
+        fastlane tests
+
+# --- example 15 ---
+- step:
+    type: Run
+    name: android version
+    identifier: android_version
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: fabernovel/android:api-30-v1.7.0
+      shell: Sh
+      command: |-
+        fastlane init
+        fastlane tests
+
+# --- example 16 ---
+- stage:
+    strategy:
+      matrix:
+        androidVersion:
+          - 30
+          - 31
+          - 33
+
+# --- example 17 ---
+- step:
+    type: Run
+    name: android Version
+    identifier: android_version
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: fabernovel/android:api-<+ stage.matrix.androidVersion >-v1.7.0
+      shell: Sh
+      command: |-
+        fastlane init
+        fastlane tests
+
+# --- example 18 ---
+- step:
+    type: Run
+    name: android version
+    identifier: android_version
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: fabernovel/android:api-30-v1.7.0
+      shell: Sh
+      command: |-
+        fastlane init
+        fastlane tests
+
+# --- example 19 ---
+- stage:
+    strategy:
+      matrix:
+        androidVersion:
+          - 30
+          - 31
+          - 33
+
+# --- example 20 ---
+- step:
+    type: Run
+    name: android Version
+    identifier: android_version
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: fabernovel/android:api-<+ stage.matrix.androidVersion >-v1.7.0
+      shell: Sh
+      command: |-
+        fastlane init
+        fastlane tests
+
+# --- example 21 ---
+- step:
+    type: Run
+    name: fastlane_deploy
+    identifier: fastlane_deploy
+    spec:
+      shell: Sh
+      command: |-
+        fastlane init
+        fastlane android deploy
+        fastlane action upload_to_play_store
+
+# --- example 22 ---
+- step:
+    type: Run
+    name: fastlane_deploy
+    identifier: fastlane_deploy
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: fabernovel/android:api-<+ stage.matrix.androidVersion >-v1.7.0
+      shell: Sh
+      command: |-
+        fastlane init
+        fastlane android deploy
+        fastlane action upload_to_play_store
+
+# --- example 23 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+            paths:
+              - "YOUR_CACHE_PATH"
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: dependencies
+                  spec:
+                    shell: Sh
+                    command: |-
+                      bundle update
+              - step:
+                  type: Run
+                  name: Test
+                  identifier: test
+                  spec:
+                    shell: Sh
+                    command: |-
+                      ./gradlew test assemble -YOUR_PROJECT
+                      ./gradlew testDebug
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - "*/build/test-results/.*xml"
+              - step:
+                  type: Run
+                  name: fastlane_deploy
+                  identifier: fastlane_deploy
+                  spec:
+                    shell: Sh
+                    command: |-
+                      fastlane init
+                      fastlane android deploy
+                      fastlane action upload_to_play_store
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          sharedPaths:
+            - YOUR_CACHE_PATH
+
+# --- example 24 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "package.json" }} ## Example cache key based on checksum.
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: dependencies
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: fabernovel/android:api-30-v1.7.0
+                    shell: Sh
+                    command: |-
+                      npm install -g firebase-tools
+                      gem install fastlane
+
+                      bundle exec fastlane add_plugin load_json
+                      bundle exec fastlane add_plugin increment_version_code
+                      bundle exec fastlane add_plugin firebase_app_distribution
+              - step:
+                  type: Run
+                  name: Test
+                  identifier: test
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: fabernovel/android:api-30-v1.7.0
+                    shell: Sh
+                    command: |-
+                      ./gradlew test assemble -YOUR_PROJECT
+                      ./gradlew testDebug
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - "*/build/test-results/.*xml"
+              - step:
+                  type: Run
+                  name: fastlane_deploy
+                  identifier: fastlane_deploy
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: fabernovel/android:api-<+ stage.matrix.androidVersion >-v1.7.0
+                    shell: Sh
+                    command: |-
+                      fastlane init
+                      fastlane android deploy
+                      fastlane action upload_to_play_store
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "package.json" }} ## Example cache key based on checksum.
+                    sourcePaths:
+                      - "YOUR_CACHE_PATH"
+                    archiveFormat: Tar

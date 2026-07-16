@@ -1,0 +1,11 @@
+# source: docs/platform/pipelines/failure-handling/fast-fail.md  (https://developer.harness.io/docs/platform/pipelines/failure-handling/fast-fail)
+
+# --- example 1 ---
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: PipelineRollback
+                spec:
+                  failAll: true

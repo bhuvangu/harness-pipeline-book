@@ -1,0 +1,243 @@
+# source: docs/platform/templates/reconcile-pipeline-templates.md  (https://developer.harness.io/docs/platform/templates/reconcile-pipeline-templates)
+
+# --- example 1 ---
+template:
+  name: step_template_1
+  identifier: step_template_1
+  versionLabel: v1
+  type: Step
+  projectIdentifier: Pipeline_Samples
+  orgIdentifier: default1
+  tags: {}
+  spec:
+    timeout: 10m
+    type: ShellScript
+    spec:
+      shell: Bash
+      executionTarget: {}
+      delegateSelectors: []
+      source:
+        type: Inline
+        spec:
+          script: echo hello
+      environmentVariables:
+        - name: var1
+          type: String
+          value: val1
+      outputVariables: []
+
+# --- example 2 ---
+template:
+  name: stage_template_1
+  identifier: stage_template_1
+  versionLabel: v1
+  type: Stage
+  projectIdentifier: Pipeline_Samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    type: Custom
+    spec:
+      execution:
+        steps:
+          - step:
+              name: steptemp1
+              identifier: steptemp1
+              template:
+                templateRef: step_template_1
+                versionLabel: v1
+
+# --- example 3 ---
+template:
+  name: pipeline_template_1
+  identifier: pipeline_template_1
+  versionLabel: v1
+  type: Pipeline
+  projectIdentifier: Pipeline_Samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    stages:
+      - stage:
+          name: stagetemp1
+          identifier: stagetemp1
+          tags: {}
+          template:
+            templateRef: stage_template_1
+            versionLabel: v1
+
+# --- example 4 ---
+template:
+  name: step_template_1
+  identifier: step_template_1
+  versionLabel: v1
+  type: Step
+  projectIdentifier: Pipeline_Samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    timeout: 10m
+    type: ShellScript
+    spec:
+      shell: Bash
+      executionTarget: {}
+      delegateSelectors: []
+      source:
+        type: Inline
+        spec:
+          script: echo hello
+      environmentVariables:
+        - name: var1
+          type: String
+          value: <+input>
+      outputVariables: []
+
+# --- example 5 ---
+template:
+  name: step_template_1
+  identifier: step_template_1
+  versionLabel: v1
+  type: Step
+  projectIdentifier: CD_Samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    timeout: 10m
+    type: ShellScript
+    spec:
+      shell: Bash
+      executionTarget: {}
+      delegateSelectors: []
+      source:
+        type: Inline
+        spec:
+          script: echo hello
+      environmentVariables:
+        - name: var1
+          type: String
+          value: <+input>.allowedValues(a,b,c,d)
+      outputVariables: []
+
+# --- example 6 ---
+template:
+  name: ReconcileStepTemplate
+  identifier: ReconcileStepTemplate
+  versionLabel: v1
+  type: Step
+  projectIdentifier: ShivamTemplate
+  orgIdentifier: default
+  tags: {}
+  spec:
+    timeout: <+input>
+    type: ShellScript
+    spec:
+      shell: Bash
+      executionTarget: {}
+      delegateSelectors: []
+      source:
+        type: Inline
+        spec:
+          script: <+input>
+      environmentVariables:
+        - name: var1
+          type: String
+          value: <+input>
+      outputVariables: []
+      includeInfraSelectors: <+input>
+
+# --- example 7 ---
+template:
+  name: ReconcileStepTemplate
+  identifier: ReconcileStepTemplate
+  versionLabel: v1
+  type: Step
+  projectIdentifier: Testemplate
+  orgIdentifier: default
+  tags: {}
+  spec:
+    timeout: <+input>
+    type: ShellScript
+    spec:
+      shell: Bash
+      executionTarget: {}
+      delegateSelectors: []
+      source:
+        type: Inline
+        spec:
+          script: echo hello
+      environmentVariables:
+        - name: var1
+          type: String
+          value: <+input>
+      outputVariables: []
+      includeInfraSelectors: <+input>
+
+# --- example 8 ---
+template:
+  name: step_test
+  identifier: step_test
+  versionLabel: v1
+  type: Step
+  projectIdentifier: test
+  orgIdentifier: default
+  tags: {}
+  spec:
+    timeout: 10s
+    type: ShellScript
+    spec:
+      shell: Bash
+      executionTarget: {}
+      delegateSelectors: []
+      source:
+        type: Inline
+        spec:
+          script: echo hello
+      environmentVariables: []
+      outputVariables: []
+
+# --- example 9 ---
+template:
+  name: stage_test
+  identifier: stage_test
+  versionLabel: v1
+  type: Stage
+  projectIdentifier: Krishika_test_autocreation
+  orgIdentifier: default
+  tags: {}
+  spec:
+    type: Custom
+    spec:
+      execution:
+        steps:
+          - step:
+              name: step1
+              identifier: step1
+              template:
+                templateRef: step_test
+                versionLabel: v1
+                templateInputs:
+                  type: ShellScript
+                  timeout: 10s
+
+# --- example 10 ---
+template:
+  name: step_test
+  identifier: step_test
+  versionLabel: v1
+  type: Step
+  projectIdentifier: test
+  orgIdentifier: default
+  tags: {}
+  spec:
+    timeout: <+input>
+    type: ShellScript
+    spec:
+      shell: Bash
+      executionTarget: {}
+      delegateSelectors: []
+      source:
+        type: Inline
+        spec:
+          script: echo hello
+      environmentVariables: []
+      outputVariables: []

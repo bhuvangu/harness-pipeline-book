@@ -1,0 +1,42 @@
+# source: docs/continuous-delivery/manage-deployments/control-resource-usage-with-queue-steps.md  (https://developer.harness.io/docs/continuous-delivery/manage-deployments/control-resource-usage-with-queue-steps)
+
+# --- example 1 ---
+pipeline:  
+    name: Queue  
+    identifier: Queue  
+    projectIdentifier: queuesteptest  
+    orgIdentifier: default  
+    tags: {}  
+    stages:  
+        - stage:  
+              name: Queue  
+              identifier: Queue  
+              description: ""  
+              type: Custom  
+              spec:  
+                  execution:  
+                      steps:  
+                          - step:  
+                                type: Queue  
+                                name: Queue  
+                                identifier: Queue  
+                                spec:  
+                                    key: "123"  
+                                    scope: Pipeline  
+                                timeout: 10m  
+                          - step:  
+                                type: ShellScript  
+                                name: Sleep  
+                                identifier: Sleep  
+                                spec:  
+                                    shell: Bash  
+                                    onDelegate: true  
+                                    source:  
+                                        type: Inline  
+                                        spec:  
+                                            script: sleep 30  
+                                    environmentVariables: []  
+                                    outputVariables: []  
+                                    executionTarget: {}  
+                                timeout: 10m  
+              tags: {}

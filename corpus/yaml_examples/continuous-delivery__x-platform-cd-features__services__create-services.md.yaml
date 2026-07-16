@@ -1,0 +1,18 @@
+# source: docs/continuous-delivery/x-platform-cd-features/services/create-services.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/services/create-services)
+
+# --- example 1 ---
+spec:
+  service:
+    serviceRef: <+trigger.payload.serviceId>
+    serviceInputs:
+      serviceDefinition:
+        type: TAS
+        spec:
+          artifacts:
+            primary:
+              primaryArtifactRef: <+trigger.payload.artifactId>
+              sources:
+                - identifier: <+trigger.payload.artifactId>
+                  type: Nexus2Registry
+                  spec:
+                    tag: <+trigger.payload.tag>

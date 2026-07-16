@@ -1,0 +1,13 @@
+# source: docs/continuous-integration/use-ci/caching-ci-data/docker-layer-caching.md  (https://developer.harness.io/docs/continuous-integration/use-ci/caching-ci-data/docker-layer-caching)
+
+# --- example 1 ---
+   - step:
+      type: BuildAndPushDockerRegistry
+      name: Build and push to Docker
+      identifier: Build_and_push_to_Docker
+      spec:
+         connectorRef: YOUR_DOCKER_CONNECTOR_ID
+         repo: DOCKER_USERNAME/DOCKER_REPO_NAME
+         caching: true 
+         tags:
+            - <+pipeline.sequenceId>

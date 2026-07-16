@@ -1,0 +1,4 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/aws/ecs/ecs-blue-green-faqs.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/aws/ecs/ecs-blue-green-faqs)
+
+# --- example 1 ---
+stageTargetGroupArn: <+execution.steps.SelectTargetGroup.output.outputVariables.STAGE_TARGET_GROUP_ARN>

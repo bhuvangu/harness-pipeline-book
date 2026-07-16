@@ -1,0 +1,130 @@
+# source: docs/continuous-integration/use-ci/run-tests/tests-v1/ti-for-java-kotlin-scala.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/tests-v1/ti-for-java-kotlin-scala)
+
+# --- example 1 ---
+- step:
+    type: RunTests
+    name: Run Tests
+    identifier: Run_Tests
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: maven:3.8-jdk-11 ## Specify if required by your build infrastructure.
+      language: Java ## Specify Java, Kotlin, or Scala.
+      buildTool: Maven ## Specify your build tool.
+      args: test
+      packages: io.harness.
+      runOnlySelectedTests: true ## Must be 'true' to enable TI.
+      postCommand: mvn package -DskipTests
+      reports: ## Reports must be in JUnit XML format.
+        type: JUnit
+        spec:
+          paths:
+            - "target/reports/*.xml"
+
+# --- example 2 ---
+tasks.withType<Test> {
+val harnessJavaAgent = System.getProperty("HARNESS_JAVA_AGENT")
+if (harnessJavaAgent != null) {
+jvmArgs(harnessJavaAgent)
+}
+}
+
+gradle.projectsEvaluated {
+tasks.withType<Test> {
+filter {
+isFailOnNoMatchingTests = false
+}
+}
+}
+
+# --- example 3 ---
+pipeline:
+  name: Test Intelligence Demo
+  identifier: testintelligencedemo
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        build: <+input>
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+  stages:
+    - stage:
+        type: CI
+        identifier: Build_and_Test
+        name: Build and Test
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RunTests
+                  name: Run Tests
+                  identifier: Run_Tests
+                  spec:
+                    language: Java ## Specify Java, Kotlin, or Scala.
+                    buildTool: Maven ## For Java or Kotlin, specify Bazel, Maven, or Gradle. For Scala, specify Bazel, Maven, Gradle, or Sbt.
+                    args: test
+                    packages: io.harness.
+                    runOnlySelectedTests: true ## Must be 'true' to enable TI.
+                    postCommand: mvn package -DskipTests
+                    reports: ## Reports must be in JUnit XML format.
+                      type: JUnit
+                      spec:
+                        paths:
+                          - "target/reports/*.xml"
+          platform:
+            arch: Amd64
+            os: Linux
+          runtime:
+            spec: {}
+            type: Cloud
+
+# --- example 4 ---
+pipeline:
+  name: Test Intelligence Demo
+  identifier: testintelligencedemo
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        build: <+input>
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+  stages:
+    - stage:
+        type: CI
+        identifier: Build_and_Test
+        name: Build and Test
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RunTests
+                  name: Run Tests
+                  identifier: Run_Tests
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: maven:3.8-jdk-11 ## Specify if required by your build infrastructure.
+                    language: Java ## Specify Java, Kotlin, or Scala.
+                    buildTool: Maven ## For Java or Kotlin, specify Bazel, Maven, or Gradle. For Scala, specify Bazel, Maven, Gradle, or Sbt.
+                    args: test
+                    packages: io.harness.
+                    runOnlySelectedTests: true ## Must be 'true' to enable TI.
+                    postCommand: mvn package -DskipTests
+                    reports: ## Reports must be in JUnit XML format.
+                      type: JUnit
+                      spec:
+                        paths:
+                          - "target/reports/*.xml"
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+
+# --- example 5 ---
+testAnnotations: annotation1, annotation2, annotation3

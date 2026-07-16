@@ -1,0 +1,254 @@
+---
+title: GitOps vs CD Services
+description: Understand how GitOps services differ from traditional CD services in Harness.
+sidebar_position: 20
+---
+
+Before diving into the differences between GitOps and CD services, let’s clarify what a service is in Harness and how it fits into the deployment process.
+
+A **service** in Harness defines what you’re deploying — typically a microservice, application, or workload. Every service bundles the essential configuration required to deploy your software across environments such as development, staging, or production.
+
+Every service includes:
+
+- **Service Definition**: Specifies the deployment type (Kubernetes, Helm, Serverless, etc.).
+- **Manifests**: Point to deployment specs like Kubernetes manifests, Helm charts, and more.
+- **Artifacts**: Reference container images, packages, or binaries to deploy.
+- **Variables**: Store configuration values specific to the service.
+- **Config Files**: Include application config files (if needed).
+
+Services are reusable, so you can deploy the same definition to multiple environments using different pipelines and stages.
+
+## Two Approaches for Deploying Kubernetes Services
+
+Harness supports two main models for deploying Kubernetes services—each suited to different operational needs:
+
+### Traditional CD (Continuous Delivery)
+
+CD is a push-based approach. When you execute a pipeline, the Harness Delegate fetches manifests and artifacts, then applies them directly to your Kubernetes cluster. You control each deployment step, timing, and strategy (rolling update, canary, blue-green, etc.).
+
+### GitOps
+
+GitOps uses a pull-based workflow, where **your Git repository is the source of truth** for every deployment. Instead of pipelines pushing changes directly to Kubernetes, you update configuration files in Git (via pull requests, for example). A GitOps Agent (based on Argo CD) watches for changes in Git and continuously syncs your cluster to reflect the desired state.
+
+**Key GitOps principles:**
+- **Declarative:** Everything is described and managed through configuration in Git.
+- **Versioned and immutable:** Git histories provide complete audit trails.
+- **Pulled automatically:** Agents fetch the desired state from Git and make sure your cluster matches.
+- **Continuously reconciled:** Any drift from the Git state gets auto-corrected by the agent.
+
+Whether a service is used for GitOps or traditional CD depends on which fields you populate in the service definition and which pipeline stages you use it in.
+
+:::info Feature flag: `CDS_GITOPS_MERGE_K8S_SERVICES`
+When this feature flag is enabled, the GitOps checkbox is removed and the `gitOpsEnabled` YAML field becomes redundant. The same service can be used in both CD stages and GitOps stages. You are responsible for populating the relevant fields for your use case (for example, a Release Repository for the Update Release Repo step, or an App Set Reference for Fetch Linked Apps). Contact [Harness Support](mailto:support@harness.io) to enable it.
+:::
+
+Without the feature flag, the choice between GitOps and CD is permanent. You choose between them at service creation time and cannot change it afterwards.
+
+:::tip Learn More About GitOps
+
+Want to go deeper? Check out these Harness blogs:
+- [Harness GitOps Product Overview](https://www.harness.io/products/continuous-delivery/harness-gitops)
+- [GitOps vs. DevOps: What's the Difference?](https://www.harness.io/blog/gitops-vs-devops-whats-the-difference)
+- [Complete Guide for GitOps on Kubernetes](https://www.harness.io/blog/complete-guide-for-gitops-on-kubernetes)
+- [Top GitOps Benefits Explained](https://www.harness.io/blog/gitops-benefits)
+
+:::
+
+## How Each Deployment Workflow Works
+
+Let’s walk through how each approach works with a real example—rolling out a new image version `v2.0.0`.
+
+### CD Service Workflow (without GitOps)
+
+**Your service configuration:**
+
+```yaml
+artifacts:
+  primary:
+    sources:
+      - identifier: myapp
+        type: DockerRegistry
+        spec:
+          imagePath: myorg/myapp
+          tag: <+input>
+```
+
+**Steps:**
+1. Start the CD pipeline.
+2. Select the image tag `v2.0.0` when prompted.
+3. The Harness Delegate applies the manifests, deploying `image: myorg/myapp:v2.0.0` to the cluster.
+
+**Result:** The application updates immediately to version `v2.0.0`.
+
+**Key trait:** **Push-based** — Harness acts directly to update your cluster.
+
+### GitOps Service Workflow (with GitOps Repository Sources)
+
+**Your service configuration:**
+
+```yaml
+manifests:
+  - manifest:
+      type: ReleaseRepo
+      spec:
+        store:
+          spec:
+            paths:
+              - cluster-config/prod/config.json
+```
+
+**Before `config.json` update:**
+
+```json
+{
+  "imageTag": "v1.9.0"
+}
+```
+
+**Steps:**
+1. Run the PR pipeline.
+2. Provide the new image tag `v2.0.0` as a variable.
+3. The **Update Release Repo** step changes `config.json` to `"imageTag": "v2.0.0"` and raises a PR.
+4. The PR is merged, either by a **Merge PR** step in the pipeline, or by authorized reviewers in your Git provider when you enable **Wait for PR merge** on the Update Release Repo step. With this option, the Harness step pauses and waits until an authorized user merges the PR in the Git system.
+5. The Agent detects the change and syncs your application to match Git.
+
+**After update:**
+
+```json
+{
+  "imageTag": "v2.0.0"
+}
+```
+
+**Result:** The application is updated after the Agent completes the sync.
+
+**Key trait:** **Pull-based** — the agent syncs the cluster to Git’s defined state.
+
+## Comparing Pipeline Steps: CD vs GitOps
+
+The pipeline steps you build differ depending on which model you use.
+
+### CD Service Steps (traditional CD)
+
+In traditional CD, pipeline steps interact directly with your cluster:
+
+| Step                        | Purpose                                                   |
+|-----------------------------|-----------------------------------------------------------|
+| **K8s Rolling Deployment**  | Rolling update of your app                                |
+| **K8s Canary Deployment**   | Deploy a canary for safe testing                          |
+| **K8s Blue Green Deployment** | Blue-green strategy for zero-downtime rollout          |
+| **K8s Apply**               | Apply Kubernetes manifests                                |
+| **K8s Scale**               | Scale deployments up/down                                 |
+| **K8s Delete**              | Remove K8s resources                                      |
+
+**Example pipeline:**
+
+```yaml
+execution:
+  steps:
+    - step:
+        type: K8sRollingDeploy
+        name: Rolling Deployment
+        spec:
+          skipDryRun: false
+    - step:
+        type: K8sApply
+        name: Apply ConfigMap
+        spec:
+          filePaths:
+            - configmap.yaml
+```
+
+### GitOps Service Steps (with GitOps Repository Sources)
+
+GitOps pipelines manage changes via Git and rely on the agent to apply those updates.
+
+| Step                   | Purpose                                              |
+|------------------------|------------------------------------------------------|
+| **Update Release Repo**| Update config files in Git and create a pull request. Optionally wait for authorized users to merge the PR in the Git system.   |
+| **Merge PR**           | Merge the pull request from within the pipeline (not needed when using Wait for PR merge)                |
+| **Fetch Linked Apps**  | Get the relevant GitOps applications                |
+| **GitOps Sync**        | Manually trigger agent sync (if needed)             |
+| **Update GitOps App**  | Change app config like Helm overrides               |
+| **Revert PR**          | Roll back by reverting a commit and opening a new PR|
+
+**Example PR pipeline:**
+
+```yaml
+execution:
+  steps:
+    - step:
+        type: UpdateReleaseRepo
+        name: Update Config
+        spec:
+          variables:
+            - name: imageTag
+              value: "v2.1.0"
+            - name: replicas
+              value: "5"
+    - step:
+        type: MergePR
+        name: Merge Changes
+        spec:
+          mergeStrategy: squash
+        identifier: MergePR_1
+        timeout: 10m
+    - step:
+        type: FetchLinkedApps
+        name: Get Applications
+```
+
+**Bottom line:**  
+- **CD pipelines** act directly on Kubernetes resources.
+- **PR pipelines** update Git, and deployments happen when the agent detects changes.
+
+## Choosing the Right Model
+
+Which approach fits your workload? Here are common scenarios:
+
+### Use CD Services When…
+
+- You need immediate and explicit control over deployment timing and logic.
+- Custom strategies like canary and blue-green are essential.
+- You must coordinate with external systems (migrations, API calls).
+- Non-Kubernetes workloads or legacy apps are in play.
+- Real-time deployment feedback is important.
+
+**Example:**  
+Deploying a monolithic application that needs a database migration, cache warming, and multiple manual approval steps.
+
+### Use GitOps Services When…
+
+- You want all deployment config managed in Git for easy auditing.
+- Automatic drift detection and correction matter.
+- You’re running multiple environments, kept in sync by files in Git.
+- Active use of Git history and commit traceability is needed.
+- You deploy microservices across many clusters with ApplicationSets.
+
+**Example:**  
+Managing microservices in dev, staging, and prod, each with distinct config files in Git, and letting the agent ensure clusters stay in sync.
+
+## Summary: Core Differences
+
+With the feature flag enabled, the same service can serve both models. The fields you populate determine the behavior:
+
+| What Changes           | CD workflow                              | GitOps workflow                      |
+|-----------------------|------------------------------------------|--------------------------------------|
+| **Manifest Options**  | Add K8sManifest, Add Override File       | Add Release Repo, Add Deployment Repo|
+| **Manifest Target**   | K8s resources (Deployment, Service, etc.)| Git paths, config files, AppSet templates|
+| **Artifact Handling** | Harness injects and deploys from pipeline| Git updated, agent deploys after sync|
+| **Pipeline Steps**    | K8s deployment steps                     | PR steps (Update Repo, Merge PR, Fetch Apps)|
+| **Deployment Trigger**| Pipeline execution                       | Merge to Git, agent detects/syncs    |
+| **Speed**             | Immediate after pipeline runs            | Eventual, when agent syncs Git/cluster|
+| **Control Model**     | Push-based (Harness to cluster)          | Pull-based (agent from Git)          |
+
+**Key takeaway:**  
+- **CD Services** directly deploy to Kubernetes with each pipeline run.
+- **GitOps Services** update config in Git, and the agent syncs clusters to stay aligned.
+
+## Next Steps
+
+- [Create a GitOps Service](/docs/continuous-delivery/gitops/gitops-entities/service/)
+- [Create a CD Service](/docs/continuous-delivery/x-platform-cd-features/services/create-services)
+- [Learn about PR Pipelines](/docs/continuous-delivery/gitops/pr-pipelines/pr-pipelines-basics)
+- [Understand Kubernetes CD Services](/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-services)

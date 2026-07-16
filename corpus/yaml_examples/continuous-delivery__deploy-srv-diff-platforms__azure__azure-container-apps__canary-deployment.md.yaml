@@ -1,0 +1,125 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/canary-deployment.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/canary-deployment)
+
+# --- example 1 ---
+pipeline:
+  name: Azure Container Apps Canary Deployment
+  identifier: aca_canary_deployment
+  projectIdentifier: my_project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Deploy
+        identifier: deploy
+        description: "Canary Azure Container Apps Deployment"
+        type: Deployment
+        spec:
+          deploymentType: AzureContainerApps
+          service:
+            serviceRef: <+input>
+          environment:
+            environmentRef: <+input>
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: <+input>
+          execution:
+            steps:
+              - stepGroup:
+                  name: Azure Container Apps Deployment
+                  identifier: aca_deployment
+                  steps:
+                    - step:
+                        type: DownloadManifests
+                        name: Download Manifests
+                        identifier: DownloadManifests
+                        spec: {}
+                        failureStrategies: []
+                    - step:
+                        name: ACA Prepare Rollback Data
+                        identifier: AcaPrepareRollbackData
+                        type: AzureContainerAppsPrepareRollbackData
+                        timeout: 10m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+                    - step:
+                        name: ACA Deploy
+                        identifier: AcaDeploy
+                        type: AzureContainerAppsDeploy
+                        timeout: 30m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+                          skipTrafficShift: true
+                    - step:
+                        name: ACA Traffic Shift 20%
+                        identifier: AcaTrafficShift1
+                        type: AzureContainerAppsTrafficShift
+                        timeout: 30m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+                          revisionTrafficDetails:
+                            - revisionName: latest
+                              trafficValue: 20
+                              tag: canary
+                            - revisionName: secondlatest
+                              trafficValue: 80
+                              tag: stable
+                    - step:
+                        name: ACA Traffic Shift 70%
+                        identifier: AcaTrafficShift2
+                        type: AzureContainerAppsTrafficShift
+                        timeout: 30m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+                          revisionTrafficDetails:
+                            - revisionName: latest
+                              trafficValue: 70
+                              tag: canary
+                            - revisionName: secondlatest
+                              trafficValue: 30
+                              tag: stable
+                    - step:
+                        name: ACA Traffic Shift 100%
+                        identifier: AcaTrafficShift3
+                        type: AzureContainerAppsTrafficShift
+                        timeout: 30m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+                          revisionTrafficDetails:
+                            - revisionName: latest
+                              trafficValue: 100
+                              tag: production
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: default
+            rollbackSteps:
+              - stepGroup:
+                  name: ACA Rollback
+                  identifier: aca_rollback
+                  steps:
+                    - step:
+                        name: ACA Rollback
+                        identifier: AcaRollbackStep
+                        type: AzureContainerAppsRollback
+                        timeout: 30m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: <+input>
+                      namespace: default
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback

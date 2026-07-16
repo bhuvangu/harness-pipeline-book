@@ -1,0 +1,109 @@
+# source: docs/platform/pipelines/input-data-preprocessing.md  (https://developer.harness.io/docs/platform/pipelines/input-data-preprocessing)
+
+# --- example 1 ---
+pipeline:
+  name: Input_Pipeline
+  identifier: Input_Pipeline
+  projectIdentifier: test
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: custom
+        identifier: custom
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          input_variable=<+pipeline.variables.input_variable>
+                          echo "the value is:$input_variable"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+  variables:
+    - name: input_variable
+      type: String
+      description: ""
+      required: false
+      value: <+input>
+
+# --- example 2 ---
+inputSet:
+  name: input_set
+  tags: {}
+  identifier: input_set
+  orgIdentifier: default
+  projectIdentifier: test
+  pipeline:
+    identifier: Input_Pipeline
+    variables:
+      - name: input_variable
+        type: String
+        value: ""
+
+# --- example 3 ---
+pipeline:
+  name: Input_Pipeline
+  identifier: Input_Pipeline
+  projectIdentifier: test
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: custom
+        identifier: custom
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          input_variable=<+pipeline.variables.input_variable>
+                          echo "the value is:$input_variable"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+  variables:
+    - name: input_variable
+      type: String
+      description: ""
+      required: false
+      value: <+input>
+
+# --- example 4 ---
+inputSet:
+  name: input_set
+  tags: {}
+  identifier: input_set
+  orgIdentifier: default
+  projectIdentifier: test
+  pipeline:
+    identifier: Input_Pipeline
+    variables:
+      - name: input_variable
+        type: String
+        value: ""

@@ -1,0 +1,61 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/aws/spot/spot-traffic-shifting.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/aws/spot/spot-traffic-shifting)
+
+# --- example 1 ---
+- step:
+                  name: Elastigroup Blue Green Stage Setup
+                  identifier: Elastigroup_BGSetup
+                  type: ElastigroupBGStageSetup
+                  timeout: 10m
+                  spec:
+                    name: <+project.identifier>_<+service.identifier>_<+env.identifier>
+                    instances:
+                      type: Fixed
+                      spec:
+                        min: 1
+                        max: 1
+                        desired: 1
+                    connectedCloudProvider:
+                      type: AWS
+                      spec:
+                        connectorRef: AWS_Connector
+                        region: us-east-1
+                    loadBalancers:
+                      - type: AWSLoadBalancerConfig
+                        spec:
+                          loadBalancer: myLB
+                          isTrafficShift: true
+                          prodListenerPort: "8080"
+                          prodListenerRuleArn: prodRuleARN
+                          stageTargetGroupArn: stageTargetGroupArn
+                  failureStrategies: []
+
+# --- example 2 ---
+    - step:
+        identifier: ElastigroupBlueGreenTrafficShift
+        type: ElastigroupBlueGreenTrafficShift
+        name: Elastigroup Blue Green Traffic Shift
+        timeout: 10m
+        spec:
+          elastigroupTrafficShiftWrapper:
+          type: Inherit
+            spec:
+              weightPercentage: <+matrix.weight>
+
+# --- example 3 ---
+- step:
+    identifier: ElastigroupBlueGreenTrafficShift
+    type: ElastigroupBlueGreenTrafficShift
+    name: Stage rule Shift
+    timeout: 10m
+    spec:
+       elastigroupTrafficShiftWrapper:
+       type: Standalone
+          spec:
+            loadBalancer: namanSpot
+            listenerArn: <+stage.variables.devListener>
+            listenerRuleArn: <+stage.variables.stageRule>
+            forwardTrafficConfig:
+              - targetGroupArn: <+stage.variables.stageTargetGroup>
+                weight: <+matrix.weight>
+              - targetGroupArn: <+stage.variables.prodTargetGroup>
+                weight: <+(100 - <+matrix.weight>)>

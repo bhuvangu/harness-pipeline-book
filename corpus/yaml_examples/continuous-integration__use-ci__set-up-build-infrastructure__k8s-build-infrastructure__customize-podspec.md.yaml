@@ -1,0 +1,58 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/k8s-build-infrastructure/customize-podspec.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/k8s-build-infrastructure/customize-podspec)
+
+# --- example 1 ---
+spec:
+  volumes:
+    - name: projected-vol
+      projected:
+        sources:
+          - configMap:
+              name: my-config
+          - secret:
+              name: my-secret
+
+# --- example 2 ---
+spec:
+  securityContext:
+    runAsGroup: 15
+
+# --- example 3 ---
+spec:
+  containers:
+    - name: container-blah
+      image: nginx:1.14
+      ports:
+        - containerPort: 80
+    - name: step-1
+      resources:
+        requests:
+          ephemeral-storage: "400Mi"   
+        limits:
+          ephemeral-storage: "500Mi"
+
+# --- example 4 ---
+topologySpreadConstraints:
+  - maxSkew: 3
+    minDomains: 2
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchExpressions:
+        - key: app
+          operator: In
+          values:
+            - my-app
+
+# --- example 5 ---
+spec:
+  topologySpreadConstraints:
+    - maxSkew: 3
+      minDomains: 2
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchExpressions:
+          - key: app
+            operator: In
+            values:
+              - my-app

@@ -1,0 +1,274 @@
+# source: docs/platform/templates/customized-notification-template.md  (https://developer.harness.io/docs/platform/templates/customized-notification-template)
+
+# --- example 1 ---
+template:
+  name: email-template
+  type: Notification
+  projectIdentifier: samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    body:
+      content: |
+        subject: Harness Pipeline Notification
+        body: |
+          Hello,
+
+          Here's a summary of your pipeline execution:
+
+          Pipeline Name: <+pipeline.name>
+          Status: <+pipeline.status>
+
+          Stage Name: <+stage.name>
+
+          View Execution:
+          <+pipeline.executionUrl>
+
+
+          Regards,
+          Harness CI/CD
+      type: YAML
+    variables: []
+  identifier: email-template
+  versionLabel: v0
+
+# --- example 2 ---
+template:
+  name: datadog-template
+  identifier: datadog-template
+  type: Notification
+  projectIdentifier: samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    body:
+      content: |
+        {
+          "title": "Pipeline Event by Harness : <+pipeline.name>",
+          "text": "Pipeline **<+pipeline.name>** has **<+notification.eventType>**.\n\n• **Project:** `<+project.identifier>`\n• **Org:** `<+org.identifier>`\n• **Execution URL:** `<+pipeline.executionUrl>`\n• **Detail 1:** `<+notification.variables.var1>`\n• **Detail 2:** `<+notification.variables.var2>``\n• **Detail 3:** `<+notification.variables.var3>",
+          "tags": [
+            "pipeline:<+pipeline.name>",
+            "project:<+project.identifier>",
+            "org:<+org.identifier>",
+            "execution_url:<+pipeline.executionUrl>",
+            "event_type:<+notification.eventType>",
+            "detail1:<+notification.variables.var1>",
+            "detail2:<+notification.variables.var2>",
+            "detail3:<+notification.variables.var3>",
+            "image_status:<+notification.variables.imageStatus>",
+            "color:<+notification.variables.color>"
+          ],
+          "aggregation_key": "<+pipeline.name>",
+          "priority": "normal",
+          "alert_type": "info",
+          "source_type_name": "harness_notifications"
+        }
+      type: JSON
+    variables:
+      - name: var1
+        value: fixedinputPassed
+        type: string
+      - name: var2
+        value: <+input>
+        type: string
+      - name: var3
+        value: <+stage.name>
+        type: string
+  versionLabel: v2
+
+# --- example 3 ---
+template:
+  name: MSteamTemplate
+  identifier: MSteamTemplate
+  versionLabel: v0
+  type: Notification
+  projectIdentifier: samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    body:
+      content: |
+        {
+          "type": "message",
+          "attachments": [
+            {
+              "contentType": "application/vnd.microsoft.card.adaptive",
+              "content": {
+                "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                "type": "AdaptiveCard",
+                "version": "1.2",
+                "body": [
+                  {
+                    "type": "Image",
+                    "url": "https://s3.amazonaws.com/wings-assets/slackicons/${IMAGE_STATUS}.png",
+                    "size": "Small"
+                  },
+                  {
+                    "type": "TextBlock",
+                    "size": "Medium",
+                    "weight": "Bolder",
+                    "text": "Pipeline [<+pipeline.name>](<+pipeline.executionUrl>) <+pipeline.status> by <+notification.variables.runtimeVar>",
+                    "wrap": true
+                  },
+                  {
+                    "type": "TextBlock",
+                    "text": "In Project <+project.name> by <+notification.variables.runtimeVar>",
+                    "isSubtle": true,
+                    "wrap": true
+                  },
+                  {
+                    "type": "FactSet",
+                    "facts": [
+                      {
+                        "title": "Pipeline Name",
+                        "value": "<+pipeline.name>"
+                      },
+                      {
+                        "title": "Status",
+                        "value": "<+pipeline.status>"
+                      },
+                      {
+                        "title": "Stage Name",
+                        "value": "<+stage.name>"
+                      },
+                      {
+                        "title": "Execution URL",
+                        "value": "<+pipeline.executionUrl>"
+                      }
+                    ]
+                  }
+                ],
+                "actions": [
+                  {
+                    "type": "Action.OpenUrl",
+                    "title": "View Details",
+                    "url": "<+pipeline.executionUrl>"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      type: JSON
+    variables:
+      - name: var1
+        value: var1ValuePassed
+        type: string
+      - name: runtimeVar
+        value: <+input>
+        type: string
+  description: This is a perfect template all details are provided and the view details (msteams) button will work.
+
+# --- example 4 ---
+template:
+  name: SlackTemplate
+  type: Notification
+  projectIdentifier: samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    body:
+      content: |2-
+              {
+                "text": "Hello, here's an update:",
+                "username": "HarnessBot",
+                "icon_emoji": ":robot_face:",
+                "attachments": [
+                  {
+                    "fallback": "Notification fallback text",
+                    "color": "#36a64f",
+                    "pretext": "Pipeline Update",
+                    "title": "Pipeline Execution Summary",
+                    "fields": [
+                      {
+                        "title": "Pipeline Name",
+                        "value": "<+pipeline.name>",
+                        "short": true
+                      },
+                      {
+                        "title": "Status",
+                        "value": "<+pipeline.status>",
+                        "short": true
+                      },
+                      {
+                        "title": "Stage Name",
+                        "value": "<+stage.name>",
+                        "short": true
+                      },
+                      {
+                        "title": "Execution URL",
+                        "value": "<+pipeline.executionUrl>",
+                        "short": false
+                      },
+                      {
+                        "title": "Variables Tested",
+                        "value": "var1: <+notification.variables.var1>\nvar2: <+notification.variables.var2>\nvar3: <+notification.variables.stageName>",
+                        "short": false
+                      }
+                    ],
+                    "footer": "Harness CI/CD"
+                  }
+                ]
+              }
+      type: JSON
+    variables:
+      - name: var1
+        value: var1Passed
+        type: string
+      - name: var2
+        value: <+input>
+        type: string
+      - name: stageName
+        value: <+stage.name>
+        type: string
+  identifier: SlackTempUpdated
+  versionLabel: v4
+
+# --- example 5 ---
+template:
+  name: JsonPagerDuty
+  identifier: JsonPagerDuty
+  versionLabel: "1"
+  type: Notification
+  projectIdentifier: sample-project
+  orgIdentifier: default
+  tags: {}
+  spec:
+    body:
+      content: |-
+        {
+                "summary": "This is a Pipeline notification from Harness",
+                "link": {
+                  "href": "harness.io",
+                  "text": "Harness"
+                }
+              }
+      type: JSON
+    variables:
+      - name: var1
+        value: Harness
+        type: string
+
+# --- example 6 ---
+template:
+  name: sample_notification_template
+  identifier: sample_notification_template
+  versionLabel: v1
+  type: Notification
+  projectIdentifier: samples
+  orgIdentifier: default
+  tags: {}
+  spec:
+    body:
+      content: |-
+        {
+            "pipeline name": "<+pipeline.name>",
+            "description": "<+pipeline.description>",
+            "eventType": "<+notification.eventType>",
+            "runtime_var_1": "<+notification.variables.var1>"
+        }
+      type: YAML
+    variables:
+      - name: var1
+        value: <+input>
+        type: string

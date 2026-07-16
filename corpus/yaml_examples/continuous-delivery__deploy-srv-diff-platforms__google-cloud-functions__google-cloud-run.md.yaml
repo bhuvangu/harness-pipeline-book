@@ -1,0 +1,27 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/google-cloud-run.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/google-cloud-run)
+
+# --- example 1 ---
+- step:
+    type: GoogleCloudRunDeploy
+    name: Google Cloud Run Deploy
+    identifier: Google_Cloud_Run_Deploy
+    spec:
+      connectorRef: account.harnessImage
+      image: harness/google-cloud-run-plugin:1.0.0-linux-amd64
+      imagePullPolicy: Always
+      skipTrafficShift: true
+    timeout: 10m
+
+# --- example 2 ---
+- step:
+    type: GoogleCloudRunTrafficShift
+    name: Google Cloud Run Traffic Shift
+    identifier: Google_Cloud_Run_Traffic_Shift
+    spec:
+      revisionTrafficDetails:
+        - revisionName: latest
+          trafficValue: 100
+          tag: canary, latest
+      connectorRef: account.harnessImage
+      image: harness/google-cloud-run-plugin:1.0.0-linux-amd64
+      imagePullPolicy: Always

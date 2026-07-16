@@ -1,0 +1,114 @@
+# source: docs/continuous-integration/development-guides/mobile/e2e-ios-tutorial.md  (https://developer.harness.io/docs/continuous-integration/development-guides/mobile/e2e-ios-tutorial)
+
+# --- example 1 ---
+                 - step:
+                     type: Run
+                     name: NPM Install
+                     identifier: NPM_Install
+                     spec:
+                       shell: Sh
+                       command: |-
+                         mkdir $HOME/nodejs
+                         curl -L https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz | tar xJ -C $HOME/nodejs
+                         export PATH=$HOME/nodejs/node-v${NODE_VERSION}-linux-x64/bin:$PATH
+                         npm install --global yarn
+                         yarn
+                       envVariables:
+                         NODE_VERSION: 18.16.0
+
+# --- example 2 ---
+                 - parallel:
+                     - step:
+                         type: Owasp
+                         name: Owasp
+                         identifier: Owasp
+                         spec:
+                           mode: orchestration
+                           config: default
+                           target:
+                             type: repository
+                             name: iOS app
+                             variant: main
+                           advanced:
+                             log:
+                               level: info
+                             fail_on_severity: none
+                     - step:
+                         type: Gitleaks
+                         name: Gitleaks
+                         identifier: Gitleaks
+                         spec:
+                           mode: orchestration
+                           config: default
+                           target:
+                             type: repository
+                             detection: auto
+                           advanced:
+                             log:
+                               level: info
+                             fail_on_severity: low
+
+# --- example 3 ---
+                 - step:
+                     type: Run
+                     name: Run NPM Tests
+                     identifier: Run_NPM_Tests
+                     spec:
+                       shell: Sh
+                       reports:
+                         type: JUnit
+                         spec:
+                           paths:
+                             - junit.xml
+                       command: |
+                         yarn
+                         npm test
+
+# --- example 4 ---
+                 - step:
+                     identifier: Install_Build_Dependencies
+                     type: Run
+                     name: Install Build Dependencies
+                     spec:
+                       shell: Sh
+                       envVariables:
+                         BUNDLE_JOBS: "4"
+                         BUNDLE_RETRY: "3"
+                       command: |-
+                         cd ios
+
+                         gem update --system
+                         gem install bundler
+                         bundle install
+                         gem install cocoapods
+
+                         chmod 0600 /Users/anka/.netrc
+                         pod install
+
+# --- example 5 ---
+                 - step:
+                     identifier: Build
+                     type: Run
+                     name: Build
+                     spec:
+                       shell: Bash
+                       envVariables:
+                         CI: "true"
+                         APPLE_USERNAME: <+secrets.getValue("APPLE_USERNAME")>
+                         APPLE_API_KEY_ID: <+secrets.getValue("APPLE_API_KEY_ID")>
+                         APPLE_API_KEY_ISSUER_ID: <+secrets.getValue("APPLE_API_KEY_ISSUER_ID")>
+                         APPLE_API_KEY_CONTENT: <+secrets.getValue("APPLE_API_KEY_CONTENT")>
+                         MATCH_PASSWORD: <+secrets.getValue("MATCH_PASSWORD")>
+                         MATCH_USERNAME: APPLE_ID_USERNAME
+                       command: |-
+                         cd ios
+
+                         # Pin Xcode version
+                         sudo xcode-select -switch /Applications/Xcode_15.2.app
+
+                         if [ "$CI_BUILD_EVENT" == "pull_request" ]; then
+                           FASTLANE_LANE=build
+                         else
+                           FASTLANE_LANE=beta
+                         fi
+                         bundle exec fastlane $FASTLANE_LANE

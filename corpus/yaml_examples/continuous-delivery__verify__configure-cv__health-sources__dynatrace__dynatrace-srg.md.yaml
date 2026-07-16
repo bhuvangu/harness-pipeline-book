@@ -1,0 +1,257 @@
+# source: docs/continuous-delivery/verify/configure-cv/health-sources/dynatrace/dynatrace-srg.md  (https://developer.harness.io/docs/continuous-delivery/verify/configure-cv/health-sources/dynatrace/dynatrace-srg)
+
+# --- example 1 ---
+template:
+  name: SRG Validation
+  identifier: SRG_Validation
+  versionLabel: "1"
+  type: StepGroup
+  tags: {}
+  spec:
+    stageType: Deployment
+    steps:
+      - step:
+          type: Wait
+          name: Wait
+          identifier: Wait
+          spec:
+            duration: 3m
+      - step:
+          name: Trigger SRG
+          identifier: triggerSRG
+          type: Http
+          timeout: 2m
+          spec:
+            url: <+pipeline.variables.dynaUrl>/platform/automation/v1/workflows/<+pipeline.variables.workflowId>/run
+            method: POST
+            headers:
+              - key: Authorization
+                value: Bearer <+secrets.getValue("dyna-pf-token")>
+              - key: Content-Type
+                value: application/json
+            requestBody: |-
+              {
+                "input": {
+                  "timeframe.from": "now-10m",
+                  "timeframe.to": "now",
+                  "pod.name": "<+stepGroup.variables.podName>"
+                }
+              }
+            outputVariables:
+              - name: executionId
+                type: String
+                value: <+json.select("id", httpResponseBody)>
+            inputVariables: []
+            assertion: <+httpResponseCode> == 201
+      - step:
+          type: Http
+          name: Poll SRG Result
+          identifier: pollSrgResult
+          spec:
+            url: <+pipeline.variables.dynaUrl>/platform/automation/v1/executions/<+steps.triggerSRG.output.outputVariables.executionId>/tasks
+            method: GET
+            headers:
+              - key: Authorization
+                value: Bearer <+secrets.getValue("dyna-pf-token")>
+              - key: Accept
+                value: application/json
+            assertion: <+httpResponseCode> == 200 && <+json.select(".site_reliability_guardian_1.state", httpResponseBody)> != "RUNNING"
+            outputVariables:
+              - name: POLL_RESPONSE
+                type: String
+                value: <+httpResponseBody>
+              - name: TASK_STATE
+                type: String
+                value: <+json.select(".site_reliability_guardian_1.state", httpResponseBody)>
+              - name: VALIDATION_STATUS
+                type: String
+                value: <+json.select(".site_reliability_guardian_1.result.validation_status", httpResponseBody)>
+              - name: GUARDIAN_NAME
+                type: String
+                value: <+json.select(".site_reliability_guardian_1.result.guardian_name", httpResponseBody)>
+            inputVariables: []
+          timeout: 30s
+          failureStrategies:
+            - onFailure:
+                errors:
+                  - AllErrors
+                action:
+                  type: Retry
+                  spec:
+                    retryCount: 10
+                    retryIntervals:
+                      - 5s
+                    onRetryFailure:
+                      action:
+                        type: MarkAsFailure
+          when:
+            stageStatus: Success
+    variables:
+      - name: podName
+        type: String
+        value: <+input>
+        description: canary pod name
+        required: false
+
+# --- example 2 ---
+pipeline:
+  projectIdentifier: <PROJECT_ID>
+  orgIdentifier: <ORG_ID>
+  tags: {}
+  stages:
+    - stage:
+        name: Grail-Deploy
+        identifier: GrailDeploy
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <SERVICE_REF>
+            failureStrategies:
+              - onFailure:
+                  errors:
+                    - Timeout
+                    - Unknown
+                  action:
+                    type: PipelineRollback
+          environment:
+            environmentRef: <ENV_REF>
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: <INFRA_DEF_ID>
+          execution:
+            steps:
+              - step:
+                  type: K8sCanaryDeploy
+                  name: K8sCanaryDeploy_1
+                  identifier: K8sCanaryDeploy_1
+                  spec:
+                    skipDryRun: false
+                    instanceSelection:
+                      type: Count
+                      spec:
+                        count: 1
+                  timeout: 10m
+              - parallel:
+                  - stepGroup:
+                      name: srg_validation
+                      identifier: srg_validation
+                      template:
+                        templateRef: account.SRG_Validation
+                        versionLabel: "1"
+                        templateInputs:
+                          variables:
+                            - name: podName
+                              type: String
+                              value: <+pipeline.stages.GrailDeploy.spec.execution.steps.K8sCanaryDeploy_1.deploymentInfoOutcome.serverInstanceInfoList.get(<+pipeline.stages.GrailDeploy.spec.execution.steps.K8sCanaryDeploy_1.deploymentInfoOutcome.serverInstanceInfoList.size()> - 1).name>
+                    contextType: Pipeline
+                  - step:
+                      type: Verify
+                      name: Verify_1
+                      identifier: Verify_1
+                      spec:
+                        isMultiServicesOrEnvs: false
+                        type: Canary
+                        monitoredService:
+                          type: Default
+                          spec: {}
+                        spec:
+                          sensitivity: HIGH
+                          duration: 5m
+                      timeout: 2h
+                      failureStrategies:
+                        - onFailure:
+                            errors:
+                              - Verification
+                            action:
+                              type: MarkAsFailure
+                        - onFailure:
+                            errors:
+                              - Unknown
+                            action:
+                              type: MarkAsFailure
+                      when:
+                        stageStatus: Success
+              - step:
+                  type: ShellScript
+                  name: Release Verification Summary
+                  identifier: Release_Verification_Summary
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          #!/bin/bash
+
+                          echo "=========================================="
+                          echo "  DEPLOYMENT VERIFICATION SUMMARY"
+                          echo "=========================================="
+
+                          VALIDATION_STATUS="<+pipeline.stages.GrailDeploy.spec.execution.steps.srg_validation.steps.pollSrgResult.output.outputVariables.VALIDATION_STATUS>"
+                          CV_STEP_STATUS="<+pipeline.stages.GrailDeploy.spec.execution.steps.Verify_1.status>"
+                          EXECUTION_ID="<+pipeline.stages.GrailDeploy.spec.execution.steps.srg_validation.steps.triggerSRG.output.outputVariables.executionId>"
+                          DYNA_URL="<+pipeline.variables.dynaUrl>"
+
+                          echo ""
+                          echo "CV Verdict       : $CV_STEP_STATUS"
+                          echo "SRG Verdict      : $VALIDATION_STATUS"
+                          echo "Dynatrace Run    : ${DYNA_URL}/ui/apps/dynatrace.automations/executions/${EXECUTION_ID}"
+                          echo ""
+                          echo "=========================================="
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+                  when:
+                    stageStatus: All
+                contextType: Pipeline
+              - step:
+                  type: K8sCanaryDelete
+                  name: K8sCanaryDelete_1
+                  identifier: K8sCanaryDelete_1
+                  spec: {}
+                  timeout: 10m
+                  when:
+                    stageStatus: All
+                contextType: Pipeline
+              - step:
+                  type: K8sRollingDeploy
+                  name: K8sRollingDeploy_1
+                  identifier: K8sRollingDeploy_1
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+                  timeout: 10m
+                  when:
+                    stageStatus: Success
+                    condition: <+pipeline.stages.GrailDeploy.spec.execution.steps.srg_validation.steps.pollSrgResult.output.outputVariables.VALIDATION_STATUS>=="pass"
+            rollbackSteps:
+              - step:
+                  name: Rolling Rollback
+                  identifier: rollingRollback
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+  timeout: 20m
+  variables:
+    - name: dynaUrl
+      type: String
+      description: ""
+      required: false
+      value: <DYNATRACE_PLATFORM_URL>
+    - name: workflowId
+      type: String
+      description: ""
+      required: false
+      value: <WORKFLOW_ID>
+  identifier: Harness_SRG_Canary
+  name: Harness-SRG-Canary

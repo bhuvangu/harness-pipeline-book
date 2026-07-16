@@ -1,0 +1,42 @@
+# source: docs/continuous-delivery/manage-deployments/deployment-freeze.md  (https://developer.harness.io/docs/continuous-delivery/manage-deployments/deployment-freeze)
+
+# --- example 1 ---
+freeze:
+  name: example
+  identifier: example
+  entityConfigs:
+  # enter the rule name
+    - name: myapp freeze
+    # select the entities to freeze
+      entities:
+        - type: Org
+          filterType: All
+        - type: Project
+          filterType: All
+        - type: Service
+          filterType: All
+        - type: EnvType
+          filterType: All
+  # enable or disable the freeze window with Enabled/Disabled
+  status: Disabled
+  # define when the freeze windows starts and stops.
+  windows:
+    - timeZone: America/Los_Angeles
+      startTime: 2023-07-03 10:08 AM
+      endTime: 2023-07-05 10:38 AM
+  description: ""
+  # set the notification events and method
+  notificationRules:
+    - name: my team
+      identifier: my_team
+      events:
+        - type: FreezeWindowEnabled
+        - type: DeploymentRejectedDueToFreeze
+      notificationMethod:
+        type: Email
+        spec:
+          userGroups:
+            - account._account_all_users
+          recipients:
+            - john.doe@harness.io
+      enabled: true

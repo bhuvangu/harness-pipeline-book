@@ -1,0 +1,21 @@
+# source: docs/continuous-delivery/kb-articles/articles/triggered-pipeline-fails.md  (https://developer.harness.io/docs/continuous-delivery/kb-articles/articles/triggered-pipeline-fails)
+
+# --- example 1 ---
+- stage:
+    identifier: xxxxx
+    template:
+      templateInputs:
+        type: Deployment
+        spec:
+          service:
+            serviceInputs:
+              serviceDefinition:
+                type: CustomDeployment
+                spec:
+                  artifacts:
+                    primary:
+                      sources:
+                        - identifier: xxxxxx
+                          type: xxxxx
+                          spec:
+                            tag: <+trigger.payload.tag>

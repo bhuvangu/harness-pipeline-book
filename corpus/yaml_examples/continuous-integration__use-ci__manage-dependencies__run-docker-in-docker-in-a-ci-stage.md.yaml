@@ -1,0 +1,94 @@
+# source: docs/continuous-integration/use-ci/manage-dependencies/run-docker-in-docker-in-a-ci-stage.md  (https://developer.harness.io/docs/continuous-integration/use-ci/manage-dependencies/run-docker-in-docker-in-a-ci-stage)
+
+# --- example 1 ---
+entrypoint:
+  - docker-entrypoint.sh
+  - "--mtu=1450"
+
+# --- example 2 ---
+pipeline:
+  name: dind-background-step-demo
+  identifier: dindbackgroundstepdemo
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        type: CI
+        spec:
+          cloneCodebase: false
+          execution:
+            steps:
+              - step:
+                  type: Background
+                  name: Background
+                  identifier: Background
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    image: docker:dind
+                    shell: Sh
+                    privileged: true
+              - step:
+                  type: Run
+                  name: Run
+                  identifier: Run
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    image: docker:run_step_image
+                    shell: Sh
+                    command: |-
+                      while ! docker ps ;do
+                            echo "Docker not available yet"
+                      done
+                      echo "Docker Service Ready"
+                      docker ps
+
+                      apk add git
+                      git --version
+                      git clone https://github.com/john-doe/$GITHUB_REPO
+                      cd $GITHUB_REPO
+
+                      echo $DOCKERHUB_PAT > my_password.txt
+                      cat my_password.txt | docker login --username $DOCKERHUB_USERNAME --password-stdin
+
+                      docker build -t $DOCKER_IMAGE_LABEL .
+                      docker tag $DOCKER_IMAGE_LABEL $DOCKERHUB_USERNAME/$DOCKER_IMAGE_LABEL:<+pipeline.sequenceId>
+                      docker push $DOCKERHUB_USERNAME/$DOCKER_IMAGE_LABEL:<+pipeline.sequenceId>
+                    privileged: false
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_K8S_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_K8S_NAMESPACE
+              nodeSelector: {}
+              os: Linux
+          sharedPaths:
+            - /var/run
+            - /var/lib/docker
+        variables:
+          - name: DOCKERHUB_USERNAME
+            type: String
+            description: ""
+            value: jdoe
+          - name: DOCKERHUB_PAT
+            type: Secret
+            description: ""
+            value: jdoedockerhubpat
+          - name: GITHUB_USERNAME
+            type: String
+            description: ""
+            value: j-doe
+          - name: GITHUB_REPO
+            type: String
+            description: ""
+            value: codebaseAlpha
+          - name: GITHUB_PAT
+            type: Secret
+            description: ""
+            value: jdoegithubpat
+          - name: DOCKER_IMAGE_LABEL
+            type: String
+            description: ""
+            value: dind-bg-step

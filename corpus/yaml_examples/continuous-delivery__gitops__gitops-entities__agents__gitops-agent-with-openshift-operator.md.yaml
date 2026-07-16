@@ -1,0 +1,26 @@
+# source: docs/continuous-delivery/gitops/gitops-entities/agents/gitops-agent-with-openshift-operator.md  (https://developer.harness.io/docs/continuous-delivery/gitops/gitops-entities/agents/gitops-agent-with-openshift-operator)
+
+# --- example 1 ---
+apiVersion: gitops.harness.io/v1alpha1
+kind: GitopsAgent
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: gitops-operator
+  name: Agentname
+  namespace: AgentNamespace
+spec:
+  identity:
+    accountIdentifier: YourAccountIdentifier
+    agentIdentifier: YourAgentIdentifier
+    agentName: Agentname
+    orgIdentifier: default
+  logLevel: DEBUG
+  replicas: 1
+  networkPolicy:
+    create: true
+  secrets:
+    agentSecret: YourAgentSecrets
+  target:
+    http: 'https://app.harness.io/gitops'
+    protocol: HTTP1

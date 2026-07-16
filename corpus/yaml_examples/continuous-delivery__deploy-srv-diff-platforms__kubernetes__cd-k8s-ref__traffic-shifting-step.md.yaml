@@ -1,0 +1,211 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/traffic-shifting-step.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/traffic-shifting-step)
+
+# --- example 1 ---
+            http:
+              - match:
+                - headers:
+                    cookie:
+                      regex: .*app-version=canary.*
+                  uri:
+                    prefix: /personal/consumer/creditcards/directdebit/bos
+
+# --- example 2 ---
+            http:
+              - match:
+                - headers:
+                    cookie:
+                      regex: .*app-version=canary.*
+                - uri:
+                    prefix: /personal/consumer/creditcards/directdebit/bos
+
+# --- example 3 ---
+        http:
+          - match:
+              - uri:
+                  prefix: /old-path
+            rewrite:
+              uri: /new-path
+            route:
+              - destination:
+                  host: my-service
+
+# --- example 4 ---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: my-service-vs
+  annotations:
+    harness.io/direct-apply: "true"
+spec:
+  gateways:
+    - my-service-gw
+  hosts:
+    - "*"
+  http:
+    - name: primary-route
+      headers:
+        request:
+          set:
+            X-Request-ID: trace-123
+        response:
+          set:
+            X-Response-Source: stable
+      fault:
+        delay:
+          percentage:
+            value: 0.1
+          fixedDelay: 5s
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: gateway-error,connect-failure
+      corsPolicy:
+        allowOrigins:
+          - exact: https://example.com
+        allowMethods:
+          - GET
+          - POST
+        maxAge: 24h
+      match:
+        - uri:
+            prefix: /api/v1
+      route:
+        - destination:
+            host: my-service
+            port:
+              number: 8080
+            subset: stable
+          headers:
+            response:
+              remove:
+                - X-Server-Internal
+          weight: 100
+
+# --- example 5 ---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: my-service-vs
+  annotations:
+    harness.io/direct-apply: "true"       # Preserved
+spec:
+  gateways:
+    - my-service-gw
+  hosts:
+    - "*"
+  http:
+    - name: primary-route
+      headers:                             # Preserved
+        request:
+          set:
+            X-Request-ID: trace-123
+        response:
+          set:
+            X-Response-Source: stable
+      fault:                               # Preserved
+        delay:
+          percentage:
+            value: 0.1
+          fixedDelay: 5s
+      timeout: 30s                         # Preserved
+      retries:                             # Preserved
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: gateway-error,connect-failure
+      corsPolicy:                          # Preserved
+        allowOrigins:
+          - exact: https://example.com
+        allowMethods:
+          - GET
+          - POST
+        maxAge: 24h
+      match:
+        - uri:
+            prefix: /api/v1
+      route:
+        - destination:
+            host: my-service
+            port:
+              number: 8080
+            subset: stable                 # Preserved
+          headers:                         # Preserved
+            response:
+              remove:
+                - X-Server-Internal
+          weight: 80                       # Updated from step config
+        - destination:
+            host: my-service-canary
+            port:
+              number: 8080
+          weight: 20                       # Added from step config
+
+# --- example 6 ---
+  - step:
+      identifier: K8sTrafficRoutingConfig
+      type: K8sTrafficRouting
+      name: config
+      spec:
+        type: config
+        trafficRouting:
+          provider: istio
+          spec:
+            name: istio-vs-k8s-res
+            hosts:
+              - test.com
+            gateways:
+              - testgateway
+            routes:
+              - route:
+                  type: http
+                  name: route1
+                  rules:
+                    - rule:
+                        type: uri
+                        spec:
+                          value: /login
+                          matchType: prefix
+                    - rule:
+                        type: method
+                        spec:
+                          value: POST
+                    - rule:
+                        type: headers
+                        spec:
+                          values:
+                            - value: authxx
+                              key: X-Request
+                              matchType: prefix
+                  destinations:
+                    - destination:
+                        host: svc1
+                        weight: 65
+                    - destination:
+                        host: svc2
+                        weight: 35
+          matchAllConditions: true
+
+# --- example 7 ---
+spec:
+  http:
+    - name: api-route
+      headers: { ... }
+      route: [ ... ]
+    - name: web-route
+      headers: { ... }
+      route: [ ... ]
+
+# --- example 8 ---
+routes:
+  - route:
+      type: http
+      name: my-route
+      destinations:
+        - destination:
+            host: my-service
+            subset: canary
+            weight: 25
+        - destination:
+            host: my-service
+            subset: stable
+            weight: 75

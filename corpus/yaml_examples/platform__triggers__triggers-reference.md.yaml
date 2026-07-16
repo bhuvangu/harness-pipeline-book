@@ -1,0 +1,86 @@
+# source: docs/platform/triggers/triggers-reference.md  (https://developer.harness.io/docs/platform/triggers/triggers-reference)
+
+# --- example 1 ---
+trigger:
+    name: GitlabNewTrigger
+    identifier: GitlabNewTrigger
+    enabled: true
+    description: ""
+    tags: {}
+    orgIdentifier: default
+    projectIdentifier: NewProject
+    pipelineIdentifier: testpp
+    source:
+        type: Webhook
+        spec:
+            type: Gitlab
+            spec:
+                type: MergeRequest
+                spec:
+                    connectorRef: gitlab
+                    autoAbortPreviousExecutions: true
+                    payloadConditions:
+                        - key: <+trigger.payload.user.username>
+                          operator: In
+                          value: john, doe.john
+                    headerConditions:
+                        - key: <+trigger.header['X-Gitlab-Event']>
+                          operator: Equals
+                          value: Merge Request Hook
+                    jexlCondition: (<+trigger.payload.user.username> == "doe" || <+trigger.payload.user.username> == "doe.john") && <+trigger.header['X-Gitlab-Event']> == "Merge Request Hook"
+                    actions: []
+    inputYaml: |
+        pipeline:
+            identifier: testpp
+            properties:
+                ci:
+                    codebase:
+                        build:
+                            type: branch
+                            spec:
+                                branch: <+trigger.branch>
+            variables:
+                - name: testVar
+                  type: String
+                  value: alpine
+
+# --- example 2 ---
+trigger:
+  name: test
+  identifier: test
+  enabled: true
+  description: ""
+  tags: {}
+  stagesToExecute: <+<+trigger.payload.stages_to_execute>.split(",")>
+  orgIdentifier: default
+  projectIdentifier: Sarthak
+  pipelineIdentifier: Testing
+  source:
+    type: Webhook
+    spec:
+      type: Custom
+      spec:
+        payloadConditions:
+          - key: <+trigger.payload.sample_key>
+            operator: Equals
+            value: sample_value
+        headerConditions: []
+  inputYaml: |
+    pipeline:
+      identifier: Testing
+      stages:
+        - stage:
+            identifier: Custom
+            type: Custom
+            variables:
+              - name: var1
+                type: String
+                value: "78"
+  inputSetRefs: <+<+trigger.payload.input_set_refs>.split(",")>
+
+# --- example 3 ---
+{
+    "sample_key": "sample_value",
+    "stages_to_execute" : "Custom,Custom2",
+    "input_set_refs" : "inputSet1,inputSet2"
+}

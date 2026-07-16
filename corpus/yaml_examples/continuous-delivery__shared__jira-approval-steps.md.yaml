@@ -1,0 +1,55 @@
+# source: docs/continuous-delivery/shared/jira-approval-steps.md  (https://developer.harness.io/docs/continuous-delivery/shared/jira-approval-steps)
+
+# --- example 1 ---
+pipeline:
+  name: Jira
+  identifier: Jira
+  projectIdentifier: CD_Docs
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Jira Stage
+        identifier: Jira_Stage
+        description: ""
+        type: Approval
+        spec:
+          execution:
+            steps:
+              - step:
+                  name: Jira Create
+                  identifier: Jira_Create
+                  type: JiraCreate
+                  timeout: 5m
+                  spec:
+                    connectorRef: Jira
+                    projectKey: TJI
+                    issueType: Bug
+                    fields:
+                      - name: Summary
+                        value: test for doc
+              - step:
+                  type: JiraUpdate
+                  name: JiraUpdate_1
+                  identifier: JiraUpdate_1
+                  spec:
+                    connectorRef: Jira
+                    issueKey: <+pipeline.stages.Jira_Stage.spec.execution.steps.Jira_Create.issue.key>
+                    transitionTo:
+                      transitionName: ""
+                      status: In Progress
+                    fields: []
+                  timeout: 10m
+              - step:
+                  type: JiraUpdate
+                  name: JiraUpdate_2
+                  identifier: JiraUpdate_2
+                  spec:
+                    connectorRef: Jira
+                    issueKey: <+execution.steps.JiraUpdate_1.spec.issueKey>
+                    transitionTo:
+                      transitionName: ""
+                      status: Will Not Fix
+                    fields: []
+                  timeout: 10m
+        tags: {}

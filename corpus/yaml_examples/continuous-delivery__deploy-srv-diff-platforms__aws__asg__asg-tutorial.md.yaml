@@ -1,0 +1,463 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/aws/asg/asg-tutorial.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/aws/asg/asg-tutorial)
+
+# --- example 1 ---
+service:
+  name: svc-asg
+  identifier: svcasg
+  serviceDefinition:
+    type: Asg
+    spec:
+      manifests:
+        - manifest:
+            identifier: launchTemplate
+            type: AsgLaunchTemplate
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /asg/launchtemplate
+        - manifest:
+            identifier: launchConfig
+            type: AsgConfiguration
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /asg/launchconfig
+        - manifest:
+            identifier: scalePolicy
+            type: AsgScalingPolicy
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /asg/scalingPolicy.json
+        - manifest:
+            identifier: scheduledUpdateGroupAction
+            type: AsgScheduledUpdateGroupAction
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /asg/scheduledUpdateGroupAction.json
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: AMI-ARTIFACT
+              spec:
+                connectorRef: AWS_ASG_CONNECTOR
+                region: us-east-1
+                filters:
+                  - name: ami-name
+                    value: Returns local IP address at port 80
+                version: Returns local IP address at port 80
+              type: AmazonMachineImage
+  gitOpsEnabled: false
+
+# --- example 2 ---
+curl -i -X POST \
+  'https://app.harness.io/gateway/ng/api/servicesV2/batch?accountIdentifier=<Harness account Id>' \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: <Harness API key>' \
+  -d '[{
+    "identifier": "svcasg",
+    "orgIdentifier": "default",
+    "projectIdentifier": "CD_Docs",
+    "name": "svc-asg",
+    "description": "string",
+    "tags": {
+      "property1": "string",
+      "property2": "string"
+    },
+    "yaml": "service:\n  name: svc-asg\n  identifier: svcasg\n  serviceDefinition:\n    type: Asg\n    spec:\n      manifests:\n        - manifest:\n            identifier: launchTemplate\n            type: AsgLaunchTemplate\n            spec:\n              store:\n                type: Harness\n                spec:\n                  files:\n                    - /asg/launchtemplate\n        - manifest:\n            identifier: launchConfig\n            type: AsgConfiguration\n            spec:\n              store:\n                type: Harness\n                spec:\n                  files:\n                    - /asg/launchconfig\n        - manifest:\n            identifier: scalePolicy\n            type: AsgScalingPolicy\n            spec:\n              store:\n                type: Harness\n                spec:\n                  files:\n                    - /asg/scalingPolicy.json\n        - manifest:\n            identifier: scheduledUpdateGroupAction\n            type: AsgScheduledUpdateGroupAction\n            spec:\n              store:\n                type: Harness\n                spec:\n                  files:\n                    - /asg/scheduledUpdateGroupAction.json\n      artifacts:\n        primary:\n          primaryArtifactRef: <+input>\n          sources:\n            - identifier: AMI-ARTIFACT\n              spec:\n                connectorRef: AWS_ASG_CONNECTOR\n                region: us-east-1\n                filters:\n                  - name: ami-name\n                    value: Returns local IP address at port 80\n                version: Returns local IP address at port 80\n              type: AmazonMachineImage\n  gitOpsEnabled: false"
+  }]'
+
+# --- example 3 ---
+resource "harness_platform_service" "example" {
+  identifier  = "identifier"
+  name        = "name"
+  description = "test"
+  org_id      = "org_id"
+  project_id  = "project_id"
+
+  ## SERVICE V2 UPDATE
+  ## We now take in a YAML that can define the service definition for a given Service
+  ## It isn't mandatory for Service creation 
+  ## It is mandatory for Service use in a pipeline
+
+  yaml = <<-EOT
+                service:
+                  name: svc-asg
+                  identifier: svcasg
+                  serviceDefinition:
+                    type: Asg
+                    spec:
+                      manifests:
+                        - manifest:
+                            identifier: launchTemplate
+                            type: AsgLaunchTemplate
+                            spec:
+                              store:
+                                type: Harness
+                                spec:
+                                  files:
+                                    - /asg/launchtemplate
+                        - manifest:
+                            identifier: launchConfig
+                            type: AsgConfiguration
+                            spec:
+                              store:
+                                type: Harness
+                                spec:
+                                  files:
+                                    - /asg/launchconfig
+                        - manifest:
+                            identifier: scalePolicy
+                            type: AsgScalingPolicy
+                            spec:
+                              store:
+                                type: Harness
+                                spec:
+                                  files:
+                                    - /asg/scalingPolicy.json
+                        - manifest:
+                            identifier: scheduledUpdateGroupAction
+                            type: AsgScheduledUpdateGroupAction
+                            spec:
+                              store:
+                                type: Harness
+                                spec:
+                                  files:
+                                    - /asg/scheduledUpdateGroupAction.json
+                      artifacts:
+                        primary:
+                          primaryArtifactRef: <+input>
+                          sources:
+                            - identifier: AMI-ARTIFACT
+                              spec:
+                                connectorRef: AWS_ASG_CONNECTOR
+                                region: us-east-1
+                                filters:
+                                  - name: ami-name
+                                    value: Returns local IP address at port 80
+                                version: Returns local IP address at port 80
+                              type: AmazonMachineImage
+                  gitOpsEnabled: false
+              EOT
+}
+
+# --- example 4 ---
+environment:
+  name: ASG
+  identifier: ASG
+  description: ""
+  tags: {}
+  type: Production
+  orgIdentifier: default
+  projectIdentifier: myProject
+  variables: []
+
+# --- example 5 ---
+curl -i -X POST \
+  'https://app.harness.io/gateway/ng/api/environmentsV2?accountIdentifier=<account_id>' \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: <token>' \
+  -d '{
+    "orgIdentifier": "default",
+    "projectIdentifier": "CD_Docs",
+    "identifier": "ASG",
+    "tags": {
+      "property1": "",
+      "property2": ""
+    },
+    "name": "ASG",
+    "description": "",
+    "color": "",
+    "type": "PreProduction",
+    "yaml": "environment:\n  name: ASG\n  identifier: ASG\n  tags: {}\n  type: PreProduction\n  orgIdentifier: default\n  projectIdentifier: CD_Docs\n  variables: []"
+  }'
+
+# --- example 6 ---
+resource "harness_platform_environment" "example" {
+  identifier = "ASG"
+  name       = "ASG"
+  org_id     = "default"
+  project_id = "myproject"
+  tags       = ["foo:bar", "baz"]
+  type       = "PreProduction"
+
+  ## ENVIRONMENT V2 Update
+  ## The YAML is needed if you want to define the Environment Variables and Overrides for the environment
+  ## Not Mandatory for Environment Creation nor Pipeline Usage
+
+  yaml = <<-EOT
+               environment:
+                  name: ASG
+                  identifier: ASG
+                  description: ""
+                  tags: {}
+                  type: Production
+                  orgIdentifier: default
+                  projectIdentifier: myproject
+                  variables: []
+      EOT
+}
+
+# --- example 7 ---
+infrastructureDefinition:
+  name: asg-infra
+  identifier: asginfra
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: DoNotDelete_IvanBalan
+  environmentRef: ASG
+  deploymentType: Asg
+  type: Asg
+  spec:
+    connectorRef: AWS_ASG_CONNECTOR
+    region: us-east-1
+  allowSimultaneousDeployments: false
+
+# --- example 8 ---
+curl -i -X POST \
+  'https://app.harness.io/gateway/ng/api/infrastructures?accountIdentifier=<account_Id>' \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: <token>' \
+  -d '{
+    "identifier": "asginfra",
+    "orgIdentifier": "default",
+    "projectIdentifier": "CD_Docs",
+    "environmentRef": "ASG",
+    "name": "asginfra",
+    "description": "",
+    "tags": {
+      "property1": "1",
+      "property2": "2"
+    },
+    "type": "Asg",
+    "yaml": "infrastructureDefinition:\n  name: asginfra\n  identifier: asginfra\n  description: \"\"\n  tags: {}\n  orgIdentifier: default\n  projectIdentifier: CD_Docs\n  environmentRef: ASG\n  deploymentType: Asg\n  type: Asg\n  spec:\n    connectorRef: AWS_ASG\n    region: us-east-2\n  allowSimultaneousDeployments: false"
+  }'
+
+# --- example 9 ---
+pipeline:
+  projectIdentifier: CD_Docs
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: DeployRolling
+        identifier: Deploy
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Asg
+          service:
+            serviceRef: svcasg
+            serviceInputs:
+              serviceDefinition:
+                type: Asg
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+                  variables:
+                    - name: desiredCapacity
+                      type: String
+                      value: <+input>
+          environment:
+            environmentRef: ASG
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: asginfra
+          execution:
+            steps:
+              - step:
+                  name: ASG Rolling Deploy
+                  identifier: AsgRollingDeploy
+                  type: AsgRollingDeploy
+                  timeout: 10m
+                  spec:
+                    useAlreadyRunningInstances: false
+                    skipMatching: true
+            rollbackSteps:
+              - step:
+                  type: AsgRollingRollback
+                  name: ASG Rolling Rollback
+                  identifier: ASG_Rolling_Rollback
+                  spec: {}
+                  timeout: 10m
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+  identifier: ASGROLLING
+  name: ASG-ROLLING
+
+# --- example 10 ---
+          execution:
+            steps:
+              - step:
+                  name: ASG Rolling Deploy
+                  identifier: AsgRollingDeploy
+                  type: AsgRollingDeploy
+                  timeout: 10m
+                  spec:
+                    useAlreadyRunningInstances: false
+                    skipMatching: true
+
+# --- example 11 ---
+    - stage:
+        name: Steady Stage
+        identifier: Steady_Stage
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Asg
+          service:
+            serviceRef: ASG_SERVICE
+            serviceInputs:
+              serviceDefinition:
+                type: Asg
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: ASG_ENV
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: ASG_INFRA
+          execution:
+            steps:
+              - step:
+                  type: AsgSteadyState
+                  name: AsgSteadyState_1
+                  identifier: AsgSteadyState_1
+                  spec:
+                    pollingInterval: 30s
+                    asgName: asg-test
+                  timeout: 10m
+            rollbackSteps: []
+
+# --- example 12 ---
+    - stage:
+        name: Deploy Stage
+        identifier: deploy-stage
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Asg
+          service:
+            serviceRef: ASG_SERVICE
+            serviceInputs:
+              serviceDefinition:
+                type: Asg
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: ASG_ENV
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: ASG_ENV
+          execution:
+            steps:
+              - step:
+                  type: AsgRollingDeploy
+                  name: AsgRollingDeploy_1
+                  identifier: AsgRollingDeploy_1
+                  spec:
+                    useAlreadyRunningInstances: false
+                    skipMatching: true
+                    asgName: asg-test
+                    instances:
+                      type: Fixed
+                      spec:
+                        desired: 2
+                        max: 3
+                        min: 1
+                    skipInstanceTermination: true
+                  timeout: 10m
+              - step:
+                  type: AsgSteadyState
+                  name: AsgSteadyState_1
+                  identifier: AsgSteadyState_1
+                  spec:
+                    pollingInterval: ""
+                    asgName: asg-test
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  name: Asg Rolling Rollback
+                  identifier: AsgRollingRollback
+                  type: AsgRollingRollback
+                  timeout: 10m
+                  spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+
+# --- example 13 ---
+              - step:
+                  type: AsgSetup
+                  name: AsgSetup_1
+                  identifier: AsgSetup_1
+                  spec:
+                    asgName: abcd
+                    instances:
+                      type: CurrentRunning
+                    resizeStrategy: "resize_new_first"
+                  timeout: 10m
+
+# --- example 14 ---
+          - step:
+              type: AsgSetup
+              name: AsgSetup_1
+              identifier: AsgSetup_1
+              spec:
+                asgName: abcd
+                instances:
+                  type: Fixed
+                  spec:
+                    desired: 2
+                    max: 3
+                    min: 1
+                resizeStrategy: "downsize_old_first"
+              timeout: 10m
+
+# --- example 15 ---
+              - step:
+                  type: AsgPhasedDeploy
+                  name: AsgPhasedDeployStep_1
+                  identifier: AsgPhasedDeployStep_1
+                  spec:
+                    instanceSelection:
+                      type: Count
+                      spec:
+                        count: 1
+                  timeout: 10m
+
+# --- example 16 ---
+          - step:
+              name: Asg Rollback
+              identifier: AsgRollback
+              type: AsgRollback
+              timeout: 10m
+              spec: {}

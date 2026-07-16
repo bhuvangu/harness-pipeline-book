@@ -1,0 +1,8 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-kubernetes-category/add-a-custom-remote-script-and-manifests.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-kubernetes-category/add-a-custom-remote-script-and-manifests)
+
+# --- example 1 ---
+manifest:  
+ - values.yaml  
+ - templates  
+     - deployment.yaml  
+     - service.yaml

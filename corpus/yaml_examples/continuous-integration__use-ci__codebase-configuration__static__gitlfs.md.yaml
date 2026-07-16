@@ -1,0 +1,24 @@
+# source: docs/continuous-integration/use-ci/codebase-configuration/static/gitlfs.md  (https://developer.harness.io/docs/continuous-integration/use-ci/codebase-configuration/static/gitlfs)
+
+# --- example 1 ---
+              - step:
+                  type: Run
+                  name: install gitlfs
+                  identifier: install_gitlfs
+                  spec:
+                    connectorRef: account.harnessImage ## Specify a container registry connector, if required.
+                    image: curlimages/curl:latest ## Specify an image, if required.
+                    shell: Sh
+                    command: |- ## Use commands for your platform.
+                      curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+                      sudo apt-get install git-lfs=3.3.0
+
+# --- example 2 ---
+              - step:
+                  type: Run
+                  name: git lfs clone
+                  identifier: git_lfs_clone
+                  spec:
+                    shell: Sh
+                    command: |-
+                      git lfs clone harness/developer-hub

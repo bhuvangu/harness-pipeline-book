@@ -1,0 +1,32 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/download-and-copy-artifacts-using-the-command-step.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/download-and-copy-artifacts-using-the-command-step)
+
+# --- example 1 ---
+repeat:
+  items: <+pipeline.variables.test123>.split(",")
+
+# --- example 2 ---
+steps:
+  - step:
+      type: Command
+      name: Copy Config Files
+      identifier: CopyConfigFiles
+      spec:
+        onDelegate: false
+        environmentVariables: []
+        outputVariables: []
+        commandUnits:
+          - identifier: CopyConfigs
+            name: CopyConfigs
+            type: Copy
+            spec:
+              sourceType: Config
+              destinationPath: /opt/app/config
+              preserveDirectoryStructure: true
+      timeout: 10m
+      strategy:
+        repeat:
+          items: <+stage.output.hosts>
+
+# --- example 3 ---
+repeat:
+  items: <+pipeline.variables.test123>.split(",")

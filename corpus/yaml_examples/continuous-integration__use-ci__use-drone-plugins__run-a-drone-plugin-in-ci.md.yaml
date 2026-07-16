@@ -1,0 +1,98 @@
+# source: docs/continuous-integration/use-ci/use-drone-plugins/run-a-drone-plugin-in-ci.md  (https://developer.harness.io/docs/continuous-integration/use-ci/use-drone-plugins/run-a-drone-plugin-in-ci)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: drone plugin
+                  identifier: drone_plugin
+                  spec:
+                    connectorRef: account.docker
+                    image: plugins/download
+                    settings:
+                      source: https://github.com/drone/drone-cli/releases/download/v0.8.5/drone_linux_amd64.tar.gz ## Target to download
+                      username: my-username ## Username for authentication to the source
+                      password: `<+secrets.getValue("mygithubpersonalaccesstoken")>` ## Password for authentication to the source
+
+# --- example 2 ---
+              - step:
+                  type: Plugin
+                  name: drone plugin
+                  identifier: drone_plugin
+                  spec:
+                    connectorRef: account.docker
+                    image: plugins/download
+                    settings:
+                      source: https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip ## Target to download
+                      destination: awscli.zip ## File name to assign the downloaded file.
+
+# --- example 3 ---
+               - step:
+                  type: Plugin
+                  name: metadata publisher plugin
+                  identifier: metadata_publisher_plugin
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://storage.googleapis.com/mybucket/index.html ## Provide a URL to the artifact you want to show on the artifact tab. You can provide a list of multiple URLs to show multiple links on the Artifacts tab.
+                      artifact_file: artifact.txt ## Provide any '.txt' file name, such as 'artifact.txt' or 'url.txt'. This is a required setting that Harness uses to store the artifact URL and display it on the Artifacts tab. This value is not the name of your uploaded artifact, and it has no relationship to the artifact object itself.
+
+# --- example 4 ---
+steps:
+- name: download ## Step name
+  image: plugins/download ## Plugin's Docker image
+  settings: ## Plugin settings
+    source: https://github.com/drone/drone-cli/releases/download/v0.8.5/drone_linux_amd64.tar.gz
+
+# --- example 5 ---
+            steps:
+              - step:
+                  type: Plugin ## Indicates that this is a Plugin step.
+                  name: drone plugin ## Step name
+                  identifier: drone_plugin ## Step ID
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                    image: plugins/download ## Plugin's Docker image
+                    settings: ## Plugin settings
+                      source: https://github.com/drone/drone-cli/releases/download/v0.8.5/drone_linux_amd64.tar.gz
+
+# --- example 6 ---
+Settings:
+  tags:
+    - latest
+	- '1.0.1'
+	- '1.0'
+
+# --- example 7 ---
+settings:
+  mynestedsetting:
+    nextlevel:
+      varname: 100
+  mylistsetting:
+   - itemone
+   - itemtwo
+
+# --- example 8 ---
+steps:
+    - name: download
+	  image: plugins/download
+	  settings:
+	    username:
+		    from_secret: username
+		password:
+			from_secret: password
+		source: https://github.com/drone/drone-cli/releases/download/v0.8.5/drone_linux_amd64.tar.gz
+
+# --- example 9 ---
+  - step:
+    type: Plugin
+	name: download-drone
+	identifier: downloaddrone
+	spec:
+	    connectorRef: mygithubconnector
+		image: plugins/download
+		privileged: false
+		settings:
+		    username: <+secrets.getValue("myusernamesecret")>
+			password: <+secrets.getValue("mypasswordsecret")>
+			source: https://github.com/drone/drone-cli/releases/download/v0.8.5/drone_linux_amd64.tar.gz

@@ -1,0 +1,129 @@
+# source: docs/platform/delegates/install-delegates/install-a-delegate-with-3-rd-party-tool-custom-binaries.md  (https://developer.harness.io/docs/platform/delegates/install-delegates/install-a-delegate-with-3-rd-party-tool-custom-binaries)
+
+# --- example 1 ---
+# Script to run before delegate installation
+initScript: "
+            curl -L0 https://dl.k8s.io/release/v1.24.3/bin/linux/amd64/kubectl -o kubectl
+            chmod +x ./kubectl
+            mv kubectl /usr/local/bin/"
+
+# --- example 2 ---
+...
+        - name: DELEGATE_TYPE
+          value: "KUBERNETES"
+        - name: DELEGATE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: INIT_SCRIPT
+          value: |
+
+            ## Kubectl
+            curl -L0 https://dl.k8s.io/release/v1.24.3/bin/linux/amd64/kubectl -o kubectl
+            chmod +x ./kubectl
+            mv kubectl /usr/local/bin/
+
+            ## Helm V3
+            curl -L0 https://get.helm.sh/helm-v3.9.2-linux-amd64.tar.gz -o helm-v3.9.2.tar.gz
+            tar -xvzf helm-v3.9.2.tar.gz
+            chmod +x ./linux-amd64/helm
+            mv ./linux-amd64/helm /usr/local/bin/
+
+            ## Kustomize
+            curl -L0 https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv4.5.4/kustomize_v4.5.4_linux_amd64.tar.gz -o kustomize_v4.5.4.tar.gz
+            tar -xvzf kustomize_v4.5.4.tar.gz
+            chmod +x ./kustomize
+            mv kustomize /usr/local/bin/
+
+            ## OpenShift OC
+            curl -L0 https://mirror.openshift.com/pub/openshift-v4/clients/oc/latest/linux/oc.tar.gz -o oc.tar.gz
+            tar -xvzf oc.tar.gz
+            chmod +x ./oc
+            mv oc /usr/local/bin/
+
+            ## go-template
+            mkdir -p /opt/harness-delegate/client-tools/go-template/v0.4.1/
+            curl -L0 https://app.harness.io/public/shared/tools/go-template/release/v0.4.1/bin/linux/amd64/go-template -o go-template
+            chmod +x ./go-template
+            mv go-template /usr/local/bin/
+
+            curl -L https://get.helm.sh/chartmuseum-v0.14.0-linux-amd64.tar.gz -o chartmuseum-v0.14.tar.gz
+            tar xzvf chartmuseum-v0.14.tar.gz
+            chmod +x ./linux-amd64/chartmuseum
+            mv ./linux-amd64/chartmuseum /usr/local/bin/
+
+            cd /opt/harness-delegate
+...
+
+# --- example 3 ---
+  - name: INIT_SCRIPT
+    value: |
+        microdnf install -y zip unzip
+
+# --- example 4 ---
+  - name: INIT_SCRIPT
+    value: |
+        microdnf install -y zip unzip
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        ./aws/install
+
+# --- example 5 ---
+  - name: INIT_SCRIPT
+    value: |
+        curl -L0 https://dl.k8s.io/release/v1.24.3/bin/linux/amd64/kubectl -o kubectl
+        chmod +x ./kubectl
+        mv kubectl /opt/harness-delegate/custom-client-tools/kubectl
+
+# --- example 6 ---
+  - name: INIT_SCRIPT
+    value: |
+        microdnf install -y zip unzip
+        curl -O -L  https://releases.hashicorp.com/terraform/0.12.25/terraform_0.12.25_linux_amd64.zip
+        unzip terraform_0.12.25_linux_amd64.zip
+        mv ./terraform /usr/bin/
+
+# --- example 7 ---
+  - name: INIT_SCRIPT
+    value: |
+        curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        chmod 700 get_helm.sh
+        ./get_helm.sh
+
+# --- example 8 ---
+  - name: INIT_SCRIPT
+    value: |
+        microdnf install -y zip unzip
+        ## Install AWS CLI
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        ./aws/install
+
+        ## Install kubectl
+        curl -L0 https://dl.k8s.io/release/v1.24.3/bin/linux/amd64/kubectl -o kubectl
+        chmod +x ./kubectl
+        mv kubectl /opt/harness-delegate/custom-client-tools/kubectl
+
+        ## Install Terraform
+        curl -O -L  https://releases.hashicorp.com/terraform/0.12.25/terraform_0.12.25_linux_amd64.zip
+        unzip terraform_0.12.25_linux_amd64.zip
+        mv ./terraform /usr/bin/
+
+        ## Install Helm3
+        curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        chmod 700 get_helm.sh
+        ./get_helm.sh
+
+# --- example 9 ---
+  - name: INIT_SCRIPT
+    value: |
+
+        ## for AKS
+        mkdir -m 777 -p client-tools/kubelogin/v0.1.1 \
+        && curl -s -L -o client-tools/kubelogin/v0.1.1/kubelogin https://app.harness.io/public/shared/tools/kubelogin/release/v0.1.1/bin/linux/amd64/kubelogin
+        export PATH=/opt/harness-delegate/client-tools/kubelogin/v0.1.1/:$PATH
+
+        ## for GKE or AKS with certificate auth type
+        mkdir -m 777 -p client-tools/harness-credentials-plugin/v0.1.0 \
+        && curl -s -L -o client-tools/harness-credentials-plugin/v0.1.0/harness-credentials-plugin https://app.harness.io/public/shared/tools/harness-credentials-plugin/release/v0.1.0/bin/linux/amd64/harness-credentials-plugin 
+        export PATH=/opt/harness-delegate/client-tools/harness-credentials-plugin/v0.1.0/:$PATH

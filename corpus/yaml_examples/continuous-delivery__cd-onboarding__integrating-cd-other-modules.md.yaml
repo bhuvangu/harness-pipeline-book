@@ -1,0 +1,85 @@
+# source: docs/continuous-delivery/cd-onboarding/integrating-cd-other-modules.md  (https://developer.harness.io/docs/continuous-delivery/cd-onboarding/integrating-cd-other-modules)
+
+# --- example 1 ---
+pipeline:
+  name: tweety
+  identifier: tweety
+  projectIdentifier: CD_Docs
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: tweetapp
+        build: <+input>
+  stages:
+    - stage:
+        name: Tweetapp
+        identifier: Tweetapp
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: docimmut
+              namespace: default
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: Build Tweet App
+                  identifier: Build_Tweet_App
+                  spec:
+                    connectorRef: Docker_Hub_with_Pwd
+                    repo: cretzman/tweetapp
+                    tags:
+                      - <+pipeline.sequenceId>
+          service:
+            serviceRef: ""
+        variables: []
+    - stage:
+        name: deploy tweety
+        identifier: deploy_tweety
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: Tweety
+          environment:
+            environmentRef: Tweety
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: Tweety
+          execution:
+            steps:
+              - step:
+                  name: Rollout Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+            rollbackSteps:
+              - step:
+                  name: Rollback Rollout Deployment
+                  identifier: rollbackRolloutDeployment
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec:
+                    pruningEnabled: false
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        when:
+          pipelineStatus: Success
+  allowStageExecutions: true

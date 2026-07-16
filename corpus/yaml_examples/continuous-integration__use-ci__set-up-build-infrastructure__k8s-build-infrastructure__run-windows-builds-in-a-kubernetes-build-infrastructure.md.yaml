@@ -1,0 +1,42 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/k8s-build-infrastructure/run-windows-builds-in-a-kubernetes-build-infrastructure.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/k8s-build-infrastructure/run-windows-builds-in-a-kubernetes-build-infrastructure)
+
+# --- example 1 ---
+pipeline:
+  name: WindowsK8
+  identifier: WindowsK8
+  projectIdentifier: myproject
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: $GITHUB_CONNECTOR
+        repoName: testing-flask-with-pytest
+        build: <+input>
+  stages:
+    - stage:
+        name: Build and Test
+        identifier: Build_and_Test
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: $K8S_CONNECTOR
+              namespace: harness-delegate-ng
+              automountServiceAccountToken: true
+              nodeSelector:
+                kubernetes.io/os: windows
+              os: Windows
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: helloWorld
+                  identifier: Pre
+                  spec:
+                    connectorRef: $DOCKERHUB_CONNECTOR
+                    image: winamd64/python
+                    shell: Powershell
+                    command: 'Write-Host "hello world" '

@@ -1,0 +1,102 @@
+# source: docs/continuous-integration/use-ci/caching-ci-data/run-if-no-cache.md  (https://developer.harness.io/docs/continuous-integration/use-ci/caching-ci-data/run-if-no-cache)
+
+# --- example 1 ---
+                 - step:
+                     type: RestoreCacheGCS
+                     name: gemfile cache
+                     identifier: gemfile_cache
+                     spec:
+                       connectorRef: YOUR_GCP_CONNECTOR
+                       bucket: YOUR_GCS_BUCKET_NAME
+                       key: harness-cache-gemfile
+                       archiveFormat: Tar
+                       failIfKeyNotFound: true
+                     failureStrategies:
+                       - onFailure:
+                           errors:
+                             - AllErrors
+                           action:
+                             type: Ignore
+
+# --- example 2 ---
+                 - step: ## This step will install the dependencies if the cache wasn't restored. Otherwise, this step doesn't run.
+                     type: Run
+                     name: install dependencies
+                     identifier: install_dependencies
+                     spec:
+                       shell: Sh
+                       command: |-
+                         bundle check || bundle install
+                     when:
+                       stageStatus: Success
+                       condition: <+execution.steps.gemfile_cache.status> == "IGNORE_FAILED" ## Replace 'gemfile_cache' with your Restore Cache step's ID.
+
+# --- example 3 ---
+pipeline:
+  name: Cache confirm
+  identifier: Cache_confirm
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: RestoreCacheGCS
+                  name: gemfile cache
+                  identifier: gemfile_cache
+                  spec:
+                    connectorRef: YOUR_GCP_CONNECTOR
+                    bucket: YOUR_GCS_BUCKET_NAME
+                    key: harness-cache-gemfile
+                    archiveFormat: Tar
+                    failIfKeyNotFound: true
+                  failureStrategies:
+                    - onFailure:
+                        errors:
+                          - AllErrors
+                        action:
+                          type: Ignore
+              - step: ## This step will install the dependencies if the cache wasn't restored. Otherwise, this step doesn't run.
+                  type: Run
+                  name: install dependencies
+                  identifier: install_dependencies
+                  spec:
+                    shell: Sh
+                    command: |-
+                      bundle check || bundle install
+                  when:
+                    stageStatus: Success
+                    condition: <+execution.steps.L2_Cache.status> == "IGNORE_FAILED"
+              - step: # Add other steps to the pipeline as needed.
+                ...
+              - step:
+                  type: SaveCacheGCS
+                  name: save gemfile cache
+                  identifier: save_gemfile_cache
+                  spec:
+                    connectorRef: YOUR_GCP_CONNECTOR
+                    bucket: YOUR_GCS_BUCKET_NAME
+                    key: harness-cache-gemfile
+                    sourcePaths:
+                      - /vendor/bundle
+                    archiveFormat: Tar
+          sharedPaths: ## This setting shares directories that are outside the default workspace directory (/harness).
+            - /vendor/bundle
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        build: <+input>

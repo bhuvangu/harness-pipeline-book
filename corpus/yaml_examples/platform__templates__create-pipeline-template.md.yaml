@@ -1,0 +1,9 @@
+# source: docs/platform/templates/create-pipeline-template.md  (https://developer.harness.io/docs/platform/templates/create-pipeline-template)
+
+# --- example 1 ---
+spec:
+  timeout: 10m
+  allowStageExecutions: true
+  fixedInputsOnRerun: true
+  delegateSelectors:
+    - your-delegate

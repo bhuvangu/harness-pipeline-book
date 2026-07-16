@@ -1,0 +1,17 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/deploy-aca.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/deploy-aca)
+
+# --- example 1 ---
+- step:
+    type: AzureContainerAppsDeploy
+    name: Azure_Container_Apps_Deploy
+    identifier: Azure_Container_Apps_Deploy
+    spec:
+      connectorRef: account.harnessImage
+      image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+      imagePullPolicy: Always
+      skipTrafficShift: true
+      resources:
+        limits:
+          memory: 512Mi
+          cpu: 0.5
+    timeout: 30m

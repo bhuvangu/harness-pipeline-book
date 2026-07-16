@@ -1,0 +1,43 @@
+# source: docs/platform/triggers/trigger-pipeline-on-tag-event.md  (https://developer.harness.io/docs/platform/triggers/trigger-pipeline-on-tag-event)
+
+# --- example 1 ---
+trigger:
+  name: Tag-based Release Trigger
+  identifier: tag_release_trigger
+  enabled: true
+  description: "Execute pipeline from Git tag for releases"
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: myProject
+  pipelineIdentifier: myPipeline
+  source:
+    type: Webhook
+    spec:
+      type: Github
+      spec:
+        type: Push
+        spec:
+          connectorRef: myGithubConnector
+          autoAbortPreviousExecutions: false
+          repoName: myRepo
+          payloadConditions:
+            - key: <+trigger.payload.ref>
+              operator: StartsWith
+              value: refs/tags/
+            - key: <+trigger.payload.created>
+              operator: Equals
+              value: "true"
+  pipelineBranchName: <+"$tag:"+<+trigger.tag>>
+  inputSetBranchName: <+"$tag:"+<+trigger.tag>>
+  inputSetRefs:
+    - production-input-set
+  inputYaml: |
+    pipeline:
+      identifier: myPipeline
+      properties:
+        ci:
+          codebase:
+            build:
+              type: branch
+              spec:
+                branch: <+trigger.tag>

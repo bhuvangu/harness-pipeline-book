@@ -1,0 +1,33 @@
+# source: docs/continuous-delivery/x-platform-cd-features/services/manifest-sources.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/services/manifest-sources)
+
+# --- example 1 ---
+service:
+  name: my-mig-service
+  identifier: my_mig_service
+  serviceDefinition:
+    type: GoogleManagedInstanceGroup
+    spec:
+      manifests:
+        - manifest:
+            identifier: instancetemplate
+            type: GoogleMigInstanceTemplate
+            spec:
+              store:
+                type: GoogleCloudStorage
+                spec:
+                  connectorRef: my_gcp_connector
+                  bucket: my-manifests-bucket
+                  path: mig/templates/instance-template.json
+        - manifest:
+            identifier: migconfig
+            type: GoogleMigConfiguration
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: my_github_connector
+                  gitFetchType: Branch
+                  paths:
+                    - mig/my-project/mig-manifest.json
+                  repoName: my-repo
+                  branch: main

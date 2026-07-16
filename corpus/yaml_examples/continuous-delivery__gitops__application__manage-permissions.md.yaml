@@ -1,0 +1,25 @@
+# source: docs/continuous-delivery/gitops/application/manage-permissions.md  (https://developer.harness.io/docs/continuous-delivery/gitops/application/manage-permissions)
+
+# --- example 1 ---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: my-apps
+spec:
+  generators:
+  - list:
+      elements:
+      - name: app1
+        env: prod
+        team: frontend
+      - name: app2
+        env: dev
+        team: backend
+  template:
+    metadata:
+      name: '{{name}}'
+      labels:
+        harness.io/env-type: '{{env}}'
+        harness.io/team: '{{team}}'
+    spec:
+      # ... rest of your application spec

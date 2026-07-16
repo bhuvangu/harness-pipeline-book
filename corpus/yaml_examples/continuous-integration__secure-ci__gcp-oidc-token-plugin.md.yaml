@@ -1,0 +1,74 @@
+# source: docs/continuous-integration/secure-ci/gcp-oidc-token-plugin.md  (https://developer.harness.io/docs/continuous-integration/secure-ci/gcp-oidc-token-plugin)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: generate-token
+                  identifier: generate-token
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/gcp-oidc
+                    settings:
+                      project_id: 12345678
+                      pool_id: 12345678
+                      service_account_email_id: some-email@email.com
+                      provider_id: service-account1
+                      duration: 7200
+                      create_application_credentials_file: false
+
+# --- example 2 ---
+              - step:
+                  type: Plugin
+                  name: generate-token
+                  identifier: generate_token
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/gcp-oidc
+                    settings:
+                      project_id: 12345678
+                      pool_id: 12345678
+                      service_account_email_id: some-email@email.com
+                      provider_id: service-account1
+                      duration: 7200
+                      create_application_credentials_file: false
+              - step:
+                  type: Run
+                  name: list compute engine zone
+                  identifier: list_zones
+                  spec:
+                    shell: Sh
+                    command: |-
+                      curl -H "Authorization: Bearer <+steps.generate_token.output.outputVariables.GCLOUD_ACCESS_TOKEN>" \
+                      "https://compute.googleapis.com/compute/v1/projects/my-cool-project/zones/some-zone/instances"
+
+# --- example 3 ---
+              - step:
+                  type: Plugin
+                  name: generate-sheets-token-example
+                  identifier: generate_sheets_token_example
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/gcp-oidc
+                    settings:
+                      project_id: "357844043395"
+                      pool_id: my-pool
+                      provider_id: my-provider
+                      service_account_email_id: my-service-account@my-project.iam.gserviceaccount.com
+                      duration: "600"
+                      create_application_credentials_file: "true"
+
+# --- example 4 ---
+              - step:
+                  type: Run
+                  name: access-spreadsheet
+                  identifier: access_spreadsheet
+                  spec:
+                    shell: Sh
+                    command: |-
+                      set -e
+
+                      SHEETS_TOKEN=$(gcloud auth application-default print-access-token \
+                        --scopes=https://www.googleapis.com/auth/spreadsheets.readonly)
+
+                      curl -sS -H "Authorization: Bearer ${SHEETS_TOKEN}" \
+                        'https://sheets.googleapis.com/v4/spreadsheets/SPREADSHEET_ID/values/Sheet1'

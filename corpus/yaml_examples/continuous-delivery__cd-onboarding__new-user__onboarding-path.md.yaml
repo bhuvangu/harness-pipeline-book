@@ -1,0 +1,1130 @@
+# source: docs/continuous-delivery/cd-onboarding/new-user/onboarding-path.md  (https://developer.harness.io/docs/continuous-delivery/cd-onboarding/new-user/onboarding-path)
+
+# --- example 1 ---
+service:
+  name: k8s-svc
+  identifier: k8ssvc
+  serviceDefinition:
+    spec:
+      release:
+        name: release-<+INFRA_KEY_SHORT_ID>
+      manifests:
+        - manifest:
+            identifier: Kubernetes
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: account.YourGitHubConnector
+                  gitFetchType: Branch
+                  paths:
+                    - content/en/examples/application/nginx-app.yaml
+                  repoName: kubernetes/website
+                  branch: main
+              skipResourceVersioning: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: account.YourArtifactConnector
+                imagePath: bitnami/kafka
+                tag: <+input>
+                digest: ""
+              identifier: artifact
+              type: DockerRegistry
+    type: Kubernetes
+  tags: {}
+
+# --- example 2 ---
+service:
+  name: ecs-service
+  identifier: ecs_service
+  orgIdentifier: default
+  projectIdentifier: ECS Deployment
+  serviceDefinition:
+    type: ECS
+    spec:
+      manifests:
+        - manifest:
+            identifier: serviceDefinition
+            type: EcsServiceDefinition
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: org.YourGitHubConnector
+                  gitFetchType: Branch
+                  paths:
+                    - applications/ecs-fargate-manifests/CreateServiceRequest.yaml
+                  repoName: harness-community/developer-hub-apps
+                  branch: main
+        - manifest:
+            identifier: taskDefinition
+            type: EcsTaskDefinition
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: org.YourGitHubConnector
+                  gitFetchType: Branch
+                  paths:
+                    - ECS/BlueGreenNoVariables/RegisterTaskDefinitionRequest.yaml
+                  repoName: harness-community/developer-hub-apps
+                  branch: main
+        - manifest:
+            identifier: scalingPolicy
+            type: EcsScalingPolicyDefinition
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: org.GitHubConnector
+                  gitFetchType: Branch
+                  paths:
+                    - applications/ecs-fargate-manifests/PutScalingPolicyRequest.yaml
+                  repoName: harness-community/developer-hub-apps
+                  branch: main
+        - manifest:
+            identifier: scalabletarget
+            type: EcsScalableTargetDefinition
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: org.GitHubConnector
+                  gitFetchType: Branch
+                  paths:
+                    - applications/ecs-fargate-manifests/RegisterScalableTargetRequest.yaml
+                  repoName: harness-community/developer-hub-apps
+                  branch: main
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: org.YourAwsConnector
+                imagePath: your-image-path
+                tag: latest
+                region: us-east-1
+              identifier: ECRartifact
+              type: Ecr
+  gitOpsEnabled: false
+
+# --- example 3 ---
+environment:
+  name: Env_1
+  identifier: Env_1
+  tags: {}
+  type: Production
+  orgIdentifier: default
+  projectIdentifier: Default_Project
+  variables: []
+
+# --- example 4 ---
+infrastructureDefinition:
+  name: Infra_1
+  identifier: Infra_1
+  orgIdentifier: default
+  projectIdentifier: Default_Project
+  environmentRef: Env_1
+  deploymentType: Kubernetes
+  type: KubernetesDirect
+  spec:
+    connectorRef: org.KubernetesConnectorForAutomationTest
+    namespace: cdp-k8s-qa-sanity
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: true
+
+# --- example 5 ---
+pipeline:
+  name: K8s Rolling Deployment
+  identifier: K8s_Rolling_Deployment
+  projectIdentifier: Default Project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Rolling Deployment
+        identifier: Rolling_Deployment
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: Service_1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: Env_1
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: Infra_1
+          execution:
+            steps:
+              - step:
+                  name: Rolling Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+            rollbackSteps:
+              - step:
+                  name: Rollback Rollout Deployment
+                  identifier: rollbackRolloutDeployment
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec:
+                    pruningEnabled: false
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+
+# --- example 6 ---
+pipeline:
+  name: K8s Rolling Deployment
+  identifier: K8s_Rolling_Deployment
+  projectIdentifier: Default Project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Rolling Deployment
+        identifier: Rolling_Deployment
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: Service_1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: Env_1
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: Infra_1
+          execution:
+            steps:
+              - step:
+                  name: Rolling Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+            rollbackSteps:
+              - step:
+                  name: Rollback Rollout Deployment
+                  identifier: rollbackRolloutDeployment
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec:
+                    pruningEnabled: false
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+
+# --- example 7 ---
+pipeline:
+  name: K8s Blue Green Deployment
+  identifier: K8s_Blue_Green_Deployment
+  projectIdentifier: Default Project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Blue Green Deployment
+        identifier: Blue_Green_Deployment
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: Service_1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: Env_1
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: Infra_1
+          execution:
+            steps:
+              - step:
+                  name: Stage Deployment
+                  identifier: stageDeployment
+                  type: K8sBlueGreenDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+              - step:
+                  name: Swap primary with stage service
+                  identifier: bgSwapServices
+                  type: K8sBGSwapServices
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+            rollbackSteps:
+              - step:
+                  name: Swap primary with stage service
+                  identifier: rollbackBgSwapServices
+                  type: K8sBGSwapServices
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        timeout: 10m
+        variables:
+          - name: resourceNamePrefix
+            type: String
+            description: ""
+            required: false
+            value: cdpsanitysuites-trybg
+
+# --- example 8 ---
+pipeline:
+  name: K8s Canary Deployment
+  identifier: K8s_Canary_Deployment
+  projectIdentifier: Default Project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Canary Deployment
+        identifier: Canary_Deployment
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: Service_1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: Env_1
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: Infra_1
+          execution:
+            steps:
+              - stepGroup:
+                  name: Canary Deployment
+                  identifier: canaryDepoyment
+                  steps:
+                    - step:
+                        name: Canary Deployment
+                        identifier: canaryDeployment
+                        type: K8sCanaryDeploy
+                        timeout: 10m
+                        spec:
+                          instanceSelection:
+                            type: Count
+                            spec:
+                              count: 1
+                          skipDryRun: false
+                    - step:
+                        name: Canary Delete
+                        identifier: canaryDelete
+                        type: K8sCanaryDelete
+                        timeout: 10m
+                        spec: {}
+              - stepGroup:
+                  name: Primary Deployment
+                  identifier: primaryDepoyment
+                  steps:
+                    - step:
+                        name: Rolling Deployment
+                        identifier: rollingDeployment
+                        type: K8sRollingDeploy
+                        timeout: 10m
+                        spec:
+                          skipDryRun: false
+            rollbackSteps:
+              - step:
+                  name: Canary Delete
+                  identifier: rollbackCanaryDelete
+                  type: K8sCanaryDelete
+                  timeout: 10m
+                  spec: {}
+              - step:
+                  name: Rolling Rollback
+                  identifier: rollingRollback
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        variables:
+          - name: resourceNamePrefix
+            type: String
+            description: ""
+            required: false
+            value: cdpsanitysuites-trycanary
+        timeout: 10m
+
+# --- example 9 ---
+pipeline:
+  name: K8s Deployment with Apply Step
+  identifier: K8s_Deployment_with_Apply_Step
+  projectIdentifier: Default Project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Deployment with Apply Step
+        identifier: Deployment_with_Apply_Step
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: Service_1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: Env_1
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: Infra_1
+          execution:
+            steps:
+              - step:
+                  type: K8sApply
+                  name: K8s Apply
+                  identifier: K8s_Apply
+                  spec:
+                    filePaths:
+                      - namespace.yaml
+                      - service.yaml
+                    skipDryRun: false
+                    skipSteadyStateCheck: false
+                    skipRendering: false
+                    overrides: []
+                  timeout: 10m
+            rollbackSteps: []
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        timeout: 10m
+        variables:
+          - name: resourceNamePrefix
+            type: String
+            description: ""
+            required: false
+            value: cdpsanitysuites-qwerandom
+
+# --- example 10 ---
+pipeline:
+  name: K8s Deployment with Scale Step
+  identifier: K8s_Deployment_with_Scale_Step
+  projectIdentifier: Default Project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Deployment With Scale Step
+        identifier: Deployment_With_Scale_Step
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: Service_1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: Env_1
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: Infra_1
+          execution:
+            steps:
+              - step:
+                  name: Rollout Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+              - step:
+                  type: K8sScale
+                  name: K8sScale_1
+                  identifier: K8sScale_1
+                  spec:
+                    workload: Deployment/<+stage.variables.resourceNamePrefix>-deployment
+                    skipSteadyStateCheck: false
+                    instanceSelection:
+                      type: Count
+                      spec:
+                        count: 2
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  name: Rollback Rollout Deployment
+                  identifier: rollbackRolloutDeployment
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec:
+                    pruningEnabled: false
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        variables:
+          - name: resourceNamePrefix
+            type: String
+            description: ""
+            required: false
+            value: cdpsanitysuites-tryscale
+        timeout: 10m
+
+# --- example 11 ---
+trigger:
+  name: trigger_on_new_artifact_v2
+  identifier: trigger_on_new_artifact_v2
+  enabled: true
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: default_project
+  pipelineIdentifier: trigger_on_new_artifact
+  stagesToExecute: []
+  source:
+    type: Artifact
+    spec:
+      type: DockerRegistry
+      spec:
+        connectorRef: account.Pritish_Harness
+        imagePath: pritishharness/harness_test
+        tag: <+trigger.artifact.build>
+        eventConditions: []
+  inputYaml: |
+    pipeline:
+      identifier: trigger_on_new_artifact
+      stages:
+        - stage:
+            identifier: test
+            type: Deployment
+            spec:
+              service:
+                serviceInputs:
+                  serviceDefinition:
+                    type: Kubernetes
+                    spec:
+                      artifacts:
+                        primary:
+                          sources:
+                            - identifier: artifact
+                              type: DockerRegistry
+                              spec:
+                                tag: <+lastPublished.tag>
+
+# --- example 12 ---
+trigger:
+  name: github_filechange_trigger
+  identifier: github_filechange_trigger
+  enabled: true
+  encryptedWebhookSecretIdentifier: ""
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  stagesToExecute: []
+  projectIdentifier: default_project
+  pipelineIdentifier: github_filechange_trigger
+  source:
+    type: Webhook
+    spec:
+      type: Github
+      spec:
+        type: PullRequest
+        spec:
+          connectorRef: account.CIPHERTron
+          autoAbortPreviousExecutions: false
+          payloadConditions:
+            - key: changedFiles
+              operator: Equals
+              value: README.md
+            - key: targetBranch
+              operator: Equals
+              value: main
+          headerConditions: []
+          repoName: harness-yarn-demo
+          actions:
+            - Open
+  inputYaml: |
+    pipeline:
+      identifier: github_filechange_trigger
+      properties:
+        ci:
+          codebase:
+            build:
+              type: branch
+              spec:
+                branch: <+trigger.branch>
+
+# --- example 13 ---
+freeze:
+  name: test-freeze
+  identifier: testfreeze
+  entityConfigs:
+    - name: project_specific
+      entities:
+        - type: Project
+          filterType: NotEquals
+          entityRefs:
+            - chaosprjyps
+            - CI_QS_yps
+            - ypsnativehelm
+        - type: Service
+          filterType: All
+        - type: Environment
+          filterType: All
+        - type: EnvType
+          filterType: Equals
+          entityRefs:
+            - Production
+  status: Disabled
+  orgIdentifier: testOrgyps
+  windows:
+    - timeZone: Asia/Calcutta
+      startTime: 2023-11-18 08:39 PM
+      duration: 30m
+      recurrence:
+        type: Monthly
+  description: ""
+
+# --- example 14 ---
+template:
+  name: Golden Deploy
+  identifier: Golden_Deploy
+  type: Stage
+  projectIdentifier: Platform_Demo
+  orgIdentifier: default
+  spec:
+    type: Deployment
+    spec:
+      serviceConfig:
+        serviceDefinition:
+          type: Kubernetes
+          spec:
+            artifacts:
+              sidecars: []
+              primary:
+                type: Gcr
+                spec:
+                  connectorRef: TestGCP_inherit
+                  imagePath: sales-209522/platform-demo
+                  registryHostname: us.gcr.io
+                  tag: <+pipeline.sequenceId>
+            manifestOverrideSets: []
+            manifests:
+              - manifest:
+                  identifier: HarnessAppDemoManifests
+                  type: K8sManifest
+                  spec:
+                    store:
+                      type: Github
+                      spec:
+                        connectorRef: Platformdemo2
+                        gitFetchType: Branch
+                        paths:
+                          - k8s/manifests/namespace.yml
+                          - k8s/manifests/volumeclaim-creation.yml
+                          - k8s/manifests/nodeport-deployment.yml
+                          - k8s/manifests/ingress-deployment.yml
+                          - k8s/manifests/app-deployment.yml
+                        branch: main
+                    skipResourceVersioning: false
+              - manifest:
+                  identifier: values
+                  type: Values
+                  spec:
+                    store:
+                      type: Github
+                      spec:
+                        connectorRef: Platformdemo2
+                        gitFetchType: Branch
+                        paths:
+                          - k8s/values/values.yml
+                        branch: main
+        serviceRef: HarnessPlatformDemoApp
+      infrastructure:
+        environmentRef: k8sProduction
+        infrastructureDefinition:
+          type: KubernetesDirect
+          spec:
+            connectorRef: platformdemok8s
+            namespace: <+pipeline.variables.githublogin>
+            releaseName: <+pipeline.variables.githublogin>
+        allowSimultaneousDeployments: true
+        infrastructureKey: ""
+      execution:
+        steps:
+          - step:
+              type: HarnessApproval
+              name: Approve this version
+              identifier: Keep_this_Version
+              spec:
+                approvalMessage: Please review the following information and approve the pipeline progression
+                includePipelineExecutionHistory: false
+                approvers:
+                  userGroups:
+                    - account.Field_Engineering
+                    - account.Harness_Partners
+                  minimumCount: 2
+                  disallowPipelineExecutor: false
+                approverInputs: []
+              timeout: 30m
+              failureStrategies:
+                - onFailure:
+                    errors:
+                      - Authorization
+                    action:
+                      type: StageRollback
+              when:
+                stageStatus: Success
+          - step:
+              name: Rollout Deployment
+              identifier: rolloutDeployment
+              type: K8sRollingDeploy
+              timeout: 10m
+              spec:
+                skipDryRun: false
+          - stepGroup:
+              name: Service Reliability
+              identifier: Service_Reliability
+              steps:
+                - step:
+                    type: Http
+                    name: API Verification
+                    identifier: Smart_Verification
+                    spec:
+                      url: http://<+pipeline.variables.externalDnsName>/<+pipeline.variables.githublogin>/data/api.php?func=verif
+                      method: GET
+                      headers: []
+                      outputVariables:
+                        - name: message
+                          value: <+json.object(httpResponseBody).message>
+                          type: String
+                        - name: level
+                          type: String
+                          value: <+json.object(httpResponseBody).level>
+                      assertion: <+json.object(httpResponseBody).level> == "ok"
+                      requestBody: test test test
+                      inputVariables: []
+                    timeout: 30s
+                    failureStrategies:
+                      - onFailure:
+                          errors:
+                            - AllErrors
+                          action:
+                            type: Ignore
+                - step:
+                    type: Verify
+                    name: Logs-Metrics Verification
+                    identifier: verify_dev
+                    spec:
+                      type: Rolling
+                      spec:
+                        sensitivity: MEDIUM
+                        duration: 5m
+                        deploymentTag: <+serviceConfig.artifacts.primary.tag>
+                    timeout: 2h
+                    failureStrategies:
+                      - onFailure:
+                          errors:
+                            - Verification
+                          action:
+                            type: StageRollback
+                            spec:
+                              timeout: 2h
+                              onTimeout:
+                                action:
+                                  type: StageRollback
+                      - onFailure:
+                          errors:
+                            - Unknown
+                          action:
+                            type: ManualIntervention
+                            spec:
+                              timeout: 2h
+                              onTimeout:
+                                action:
+                                  type: Ignore
+                    when:
+                      stageStatus: Success
+                      condition: <+pipeline.stages.Image_Deployment.spec.execution.steps.Service_Reliability.steps.Smart_Verification.output.outputVariables.level> == "error"
+        rollbackSteps:
+          - step:
+              name: Rollback Rollout Deployment
+              identifier: rollbackRolloutDeployment
+              type: K8sRollingRollback
+              timeout: 10m
+              spec:
+                skipDryRun: false
+      serviceDependencies: []
+    failureStrategies:
+      - onFailure:
+          errors:
+            - AllErrors
+          action:
+            type: StageRollback
+    variables: []
+    when:
+      pipelineStatus: Success
+  versionLabel: "6.0"
+
+# --- example 15 ---
+variable "platform_api_key" {}
+variable "accountId" {}
+variable "endpoint" {}
+variable "projectIdentifier" {}
+variable "orgIdentifier" {}
+variable "connectorIdentifier" {}
+variable "k8sMasterUrl" {}
+variable "secretIdentifier" {}
+variable "secretValue" {}
+variable "serviceIdentifier" {}
+variable "envIdentifier" {}
+variable "infraIdentifier" {}
+variable "pipelineIdentifier" {}
+terraform {
+    required_providers {
+        harness = {
+            source = "harness/harness"
+            version = "0.16.1"
+        }
+    }
+}
+provider "harness" {
+    endpoint   = "${var.endpoint}"
+    account_id = "${var.accountId}"
+    platform_api_key    = "${var.platform_api_key}"
+}
+resource "harness_platform_project" "test" {
+  identifier = "${var.projectIdentifier}"
+  name       = "${var.projectIdentifier}"
+  org_id     = "${var.orgIdentifier}"
+  color      = "#0063F7"
+}
+resource "time_sleep" "wait_30_seconds" {
+  depends_on = [harness_platform_project.test]
+  create_duration = "30s"
+}
+resource "harness_platform_secret_text" "inline" {
+  depends_on = [harness_platform_project.test, time_sleep.wait_30_seconds]
+  identifier  = "${var.secretIdentifier}"
+  name        = "${var.secretIdentifier}"
+  description = "example"
+  tags        = ["foo:bar"]
+  org_id      = "${var.orgIdentifier}"
+  project_id  = "${var.projectIdentifier}"
+  secret_manager_identifier = "harnessSecretManager"
+  value_type                = "Inline"
+  value                     = "${var.secretValue}"
+}
+resource "harness_platform_connector_kubernetes" "serviceAccount" {
+  depends_on = [harness_platform_project.test, harness_platform_secret_text.inline]
+  identifier  = "${var.connectorIdentifier}"
+  org_id      = "${var.orgIdentifier}"
+  project_id  = "${var.projectIdentifier}"
+  name        = "${var.connectorIdentifier}"
+  description = "description"
+  tags        = ["foo:bar"]
+  service_account {
+    master_url                = "${var.k8sMasterUrl}"
+    service_account_token_ref = "${var.secretIdentifier}"
+  }
+}
+resource "harness_platform_service" "example" {
+  depends_on = [harness_platform_project.test]
+  identifier  = "${var.serviceIdentifier}"
+  org_id      = "${var.orgIdentifier}"
+  project_id  = "${var.projectIdentifier}"
+  name        = "${var.serviceIdentifier}"
+  description = "description"
+  tags        = ["foo:bar"]
+  yaml = <<-EOT
+                service:
+                  name: "${var.serviceIdentifier}"
+                  identifier: "${var.serviceIdentifier}"
+                  tags: {}
+                  serviceDefinition:
+                    spec:
+                      manifests:
+                        - manifest:
+                            identifier: manifest
+                            type: K8sManifest
+                            spec:
+                              store:
+                                type: Git
+                                spec:
+                                  connectorRef: org.GitConnectorForAutomationTest
+                                  gitFetchType: Branch
+                                  paths:
+                                    - ng-automation/k8s/templates/
+                                  branch: master
+                              valuesPaths:
+                                - ng-automation/k8s/values.yaml
+                              skipResourceVersioning: false
+                      artifacts:
+                        primary:
+                          primaryArtifactRef: <+input>
+                          sources:
+                            - spec:
+                                connectorRef: org.DockerConnectorForAutomationTest
+                                imagePath: library/nginx
+                                tag: latest
+                              identifier: artifact
+                              type: DockerRegistry
+                    type: Kubernetes
+            EOT
+}
+resource "harness_platform_environment" "example" {
+  depends_on = [harness_platform_project.test]
+  identifier = "${var.envIdentifier}"
+  name       = "${var.envIdentifier}"
+  org_id     = "${var.orgIdentifier}"
+  project_id = "${var.projectIdentifier}"
+  tags       = ["foo:bar", "baz"]
+  type       = "PreProduction"
+  yaml = <<-EOT
+                environment:
+                  name: "${var.envIdentifier}"
+                  identifier: "${var.envIdentifier}"
+                  description: ""
+                  tags: {}
+                  type: PreProduction
+                  orgIdentifier: "${var.orgIdentifier}"
+                  projectIdentifier: "${var.projectIdentifier}"
+                  variables: []
+      EOT
+}
+resource "harness_platform_infrastructure" "example" {
+  depends_on = [harness_platform_project.test, harness_platform_environment.example]
+  identifier      = "${var.infraIdentifier}"
+  name            = "${var.infraIdentifier}"
+  org_id          = "${var.orgIdentifier}"
+  project_id      = "${var.projectIdentifier}"
+  env_id          = "${var.envIdentifier}"
+  type            = "KubernetesDirect"
+  deployment_type = "Kubernetes"
+  yaml            = <<-EOT
+                            infrastructureDefinition:
+                              name: "${var.infraIdentifier}"
+                              identifier: "${var.infraIdentifier}"
+                              description: ""
+                              tags: {}
+                              orgIdentifier: "${var.orgIdentifier}"
+                              projectIdentifier: "${var.projectIdentifier}"
+                              environmentRef: "${var.envIdentifier}"
+                              deploymentType: Kubernetes
+                              type: KubernetesDirect
+                              spec:
+                                connectorRef: org.KubernetesConnectorForAutomationTest
+                                namespace: default
+                                releaseName: release-<+INFRA_KEY>
+                              allowSimultaneousDeployments: true
+      EOT
+}
+resource "harness_platform_pipeline" "example" {
+  depends_on = [harness_platform_project.test]
+  identifier = "${var.pipelineIdentifier}"
+  org_id     = "${var.orgIdentifier}"
+  project_id = "${var.projectIdentifier}"
+  name       = "${var.pipelineIdentifier}"
+  yaml = <<-EOT
+                pipeline:
+                  name: "${var.pipelineIdentifier}"
+                  identifier: "${var.pipelineIdentifier}"
+                  projectIdentifier: "${var.projectIdentifier}"
+                  orgIdentifier: "${var.orgIdentifier}"
+                  tags: {}
+                  stages:
+                    - stage:
+                        name: stage
+                        identifier: stage
+                        description: ""
+                        type: Deployment
+                        spec:
+                          deploymentType: Kubernetes
+                          service:
+                            serviceRef: "${var.serviceIdentifier}"
+                            serviceInputs:
+                              serviceDefinition:
+                                type: Kubernetes
+                                spec:
+                                  artifacts:
+                                    primary:
+                                      primaryArtifactRef: <+input>
+                                      sources: <+input>
+                          environment:
+                            environmentRef: "${var.envIdentifier}"
+                            deployToAll: false
+                            infrastructureDefinitions:
+                              - identifier: "${var.infraIdentifier}"
+                          execution:
+                            steps:
+                              - step:
+                                  name: Rollout Deployment
+                                  identifier: rolloutDeployment
+                                  type: K8sRollingDeploy
+                                  timeout: 10m
+                                  spec:
+                                    skipDryRun: false
+                                    pruningEnabled: false
+                            rollbackSteps:
+                              - step:
+                                  name: Rollback Rollout Deployment
+                                  identifier: rollbackRolloutDeployment
+                                  type: K8sRollingRollback
+                                  timeout: 10m
+                                  spec:
+                                    pruningEnabled: false
+                        tags: {}
+                        failureStrategies:
+                          - onFailure:
+                              errors:
+                                - AllErrors
+                              action:
+                                type: StageRollback
+                        variables:
+                          - name: resourceNamePrefix
+                            type: String
+                            description: ""
+                            value: qwe
+  EOT
+}
+
+# --- example 16 ---
+pipeline:
+  tags: {}
+  stages:
+    - stage:
+        name: Create Resource
+        identifier: Create_Resource
+        description: Create harness resources using Harness Terraform Provider
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: TerraformPlan
+                  name: TerraformPlan
+                  identifier: TerraformPlan
+                  spec:
+                    provisionerIdentifier: createResource
+                    configuration:
+                      command: Apply
+                      configFiles:
+                        store:
+                          spec:
+                            connectorRef: org.GitHubRepoConnectorForAutomationTest
+                            gitFetchType: Branch
+                            branch: master
+                            folderPath: automation/terraform/K8sAutomation
+                          type: Github
+                      varFiles:
+                        - varFile:
+                            spec:
+                              content: |-
+                                platform_api_key = "Your Platform Api Token"
+                                accountId = "accountID"
+                                endpoint = "https://app.harness.io/gateway"
+                                projectIdentifier = "Project Name to be created"
+                                orgIdentifier = "Org where you want this project to be"
+                                connectorIdentifier = "K8s Connector Identifier"
+                                k8sMasterUrl = "K8s Master Url"
+                                serviceIdentifier = "Service Identifier"
+                                envIdentifier = "Environment Identifier"
+                                infraIdentifier = "Infra Definition Identifier"
+                                pipelineIdentifier = "Pipeline Identifier"
+                                secretIdentifier = "Secret Identifier"
+                                secretValue = "K8s ServiceAccount Token Secret Value"
+                            identifier: terraformVariables
+                            type: Inline
+                      secretManagerRef: harnessSecretManager
+                  timeout: 10m
+              - step:
+                  type: TerraformApply
+                  name: TerraformApply
+                  identifier: TerraformApply
+                  spec:
+                    configuration:
+                      type: InheritFromPlan
+                    provisionerIdentifier: createResource
+                  timeout: 10m
+        tags: {}
+  identifier: Harness_Terraform_Provider
+  name: Harness Terraform Provider
+  delegateSelectors: []
+  projectIdentifier: NGPipeAutoterraform_providerVcP4LI2gPm
+  orgIdentifier: Ng_Pipelines_K8s_Organisations

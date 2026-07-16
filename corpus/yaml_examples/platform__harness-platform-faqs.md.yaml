@@ -1,0 +1,85 @@
+# source: docs/platform/harness-platform-faqs.md  (https://developer.harness.io/docs/platform/harness-platform-faqs)
+
+# --- example 1 ---
+        - name: DELEGATE_NAME
+          value: string
+
+# --- example 2 ---
+ spec:
+     terminationGracePeriodSeconds: 600
+     restartPolicy: Always
+     containers:
+     - image: example/org:custom-delegate
+       imagePullPolicy: Always
+       name: delegate
+       securityContext:
+         allowPrivilegeEscalation: false
+         runAsUser: 0
+
+# --- example 3 ---
+- name: TMPDIR
+  value: /opt/harness-delegate/deployvol/tmp
+
+# --- example 4 ---
+- name: INIT_SCRIPT
+          value: "mkdir YOUR_PATH && ln -s YOUR_PATH/newdelegate.log delegate.log"
+
+# --- example 5 ---
+env:
+    - name: JAVA_OPTS
+      value: "-Xms64M -Xmx2G"
+
+# --- example 6 ---
+volumes:
+  - name: docker-sock
+    hostPath:
+      path: '/var/run/docker.sock'
+  - name: docker-directory
+    hostPath:
+      path: '/var/lib/docker'
+
+# --- example 7 ---
+volumeMounts:
+  - mountPath: /var/run/docker.sock
+    name: docker-sock
+    readOnly: false
+  - mountPath: '/var/lib/docker'
+    name: docker-directory
+    readOnly: false
+
+# --- example 8 ---
+env:
+  - name: JAVA_OPTS
+    value: "-Xms2G"
+
+# --- example 9 ---
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+# --- example 10 ---
+- name: WATCHER_JAVA_OPTS
+    value: "-Xmx512M"
+
+# --- example 11 ---
+environment:
+      - ACCOUNT_ID=XXXX
+      - DELEGATE_TOKEN=XXXX
+      - MANAGER_HOST_AND_PORT=https://app.harness.io
+      - DELEGATE_NAME=test
+      - NEXT_GEN=true
+      - DELEGATE_TYPE=DOCKER
+      - SCM_SKIP_SSL=true
+
+# --- example 12 ---
+- name: INIT_SCRIPT
+  value: |
+    rpm --import https://packages.microsoft.com/keys/microsoft.asc
+    rpm -Uvh 'https://packages.microsoft.com/config/rhel/8/packages-microsoft-prod.rpm'
+    microdnf install azure-cli
+
+# --- example 13 ---
+name: JAVA_OPTS
+value: "-Xms64M -Xmx8192M"

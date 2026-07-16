@@ -1,0 +1,92 @@
+# source: docs/continuous-integration/use-ci/custom-error-categorization.md  (https://developer.harness.io/docs/continuous-integration/use-ci/custom-error-categorization)
+
+# --- example 1 ---
+version: "1.0"
+ruleGroups:
+  - name: "Maven Build Error"
+    conditionExpression:
+      operator: "AND"
+      conditions:
+        - key: "standardOutput"
+          operand: "contains"
+          value: "BUILD FAILED"
+        - key: "errorCode"
+          operand: "is"
+          value: 1
+    actions:
+      - type: "setErrorCategory"
+        value: "APPLICATION_FAILURE"
+      - type: "setErrorSubcategory"
+        value: "DEPENDENCY_RESOLUTION_FAILED"
+      - type: "setErrorMessage"
+        value: "Maven build failed. Check pom.xml and resolve dependency issues."
+
+  - name: "NPM Dependency Error"
+    conditionExpression:
+      operator: "AND"
+      conditions:
+        - key: "standardErrorOutput"
+          operand: "contains"
+          value: "npm ERR!"
+        - key: "standardErrorOutput"
+          operand: "contains"
+          value: "404"
+    actions:
+      - type: "setErrorCategory"
+        value: "APPLICATION_FAILURE"
+      - type: "setErrorSubcategory"
+        value: "DEPENDENCY_ISSUE"
+      - type: "setErrorMessage"
+        value: "NPM dependency not found. Verify package names and registry configuration."
+
+  - name: "Out of Memory"
+    conditionExpression:
+      operator: "OR"
+      conditions:
+        - key: "standardErrorOutput"
+          operand: "contains"
+          value: "heap out of memory"
+        - key: "standardErrorOutput"
+          operand: "contains"
+          value: "Killed"
+    actions:
+      - type: "setErrorCategory"
+        value: "RESOURCE_LIMITS_FAILURE"
+      - type: "setErrorSubcategory"
+        value: "CONTAINER_OOM_KILLED"
+      - type: "setErrorMessage"
+        value: "Process killed due to out-of-memory. Increase memory limits for this step."
+
+  - name: "Docker Permission Error"
+    conditionExpression:
+      key: "standardErrorOutput"
+      operand: "regex"
+      value: "permission denied.*docker\\.sock"
+    actions:
+      - type: "setErrorCategory"
+        value: "INFRASTRUCTURE_FAILURE"
+      - type: "setErrorSubcategory"
+        value: "FILE_SYSTEM_PERMISSION_ERROR"
+      - type: "setErrorMessage"
+        value: "Docker socket permission denied. Ensure the user has access to /var/run/docker.sock."
+
+  - name: "Test Failures"
+    conditionExpression:
+      operator: "AND"
+      conditions:
+        - key: "standardOutput"
+          operand: "contains"
+          value: "FAILED"
+        - key: "standardOutput"
+          operand: "doesNotMatch"
+          value: "BUILD"
+        - key: "errorCode"
+          operand: "isNot"
+          value: 0
+    actions:
+      - type: "setErrorCategory"
+        value: "VERIFICATION_FAILURE"
+      - type: "setErrorSubcategory"
+        value: "UNIT_TESTS_FAILED"
+      - type: "setErrorMessage"
+        value: "Test suite failed. Review the failing test cases and fix assertions."

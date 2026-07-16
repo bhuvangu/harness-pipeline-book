@@ -1,0 +1,67 @@
+# source: docs/continuous-integration/development-guides/security/git-revert-from-pr.md  (https://developer.harness.io/docs/continuous-integration/development-guides/security/git-revert-from-pr)
+
+# --- example 1 ---
+pipeline:
+  name: git_revert_pipeline
+  identifier: git_revert_pipeline
+  projectIdentifier: default_project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: git-revert-stage
+        identifier: clone
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: false
+          execution:
+            steps:
+              - step:
+                  type: GitClone
+                  name: GitClone
+                  identifier: GitClone
+                  spec:
+                    connectorRef: YOUR_GITHUB_CONNECTOR_ID
+                    build:
+                      type: commitSha
+                      spec:
+                        commitSha: <+trigger.commitSha>
+              - step:
+                  type: Owasp
+                  name: Owasp Scan
+                  identifier: Owasp_Scan
+                  spec:
+                    mode: orchestration
+                    config: default
+                    target:
+                      type: repository
+                      workspace: /harness/YOUR_GIT_REPO
+                      detection: manual
+                      name: YOUR_GIT_REPO
+                      variant: main
+                    advanced:
+                      log:
+                        level: info
+                      fail_on_severity: high
+              - step:
+                  type: Plugin
+                  name: Git Revert Commit
+                  identifier: git_revert_commit
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/git-revert-commit:linux-amd64
+                    settings:
+                      git_pat: <+secrets.getValue("YOUR_GIT_PAT_SECRET")>
+                      commit_sha: <+codebase.commitSha>
+                  when:
+                    stageStatus: Failure
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          caching:
+            enabled: false
+            paths: []

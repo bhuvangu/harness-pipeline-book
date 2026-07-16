@@ -1,0 +1,81 @@
+# source: docs/platform/templates/use-template-labels.md  (https://developer.harness.io/docs/platform/templates/use-template-labels)
+
+# --- example 1 ---
+pipeline:
+  name: Deploy Application
+  identifier: deploy_app
+  stages:
+    - stage:
+        name: Build
+        identifier: build
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  name: Build Script
+                  identifier: build_script
+                  template:
+                    templateRef: buildStepTemplate
+                    label: canary
+
+# --- example 2 ---
+pipeline:
+  name: Build and Deploy
+  identifier: build_deploy
+  projectIdentifier: default_project
+  orgIdentifier: default
+  stages:
+    - stage:
+        name: Build Stage
+        identifier: build_stage
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  name: Build Application
+                  identifier: build_app
+                  template:
+                    templateRef: buildStepTemplate
+                    label: staging
+
+# --- example 3 ---
+pipeline:
+  name: Production Deployment
+  identifier: prod_deployment
+  projectIdentifier: default_project
+  orgIdentifier: default
+  stages:
+    - stage:
+        name: Deploy to Production
+        identifier: deploy_prod
+        template:
+          templateRef: prodDeploymentStage
+          label: prod
+
+# --- example 4 ---
+template:
+  name: Deployment Stage
+  identifier: deploymentStage
+  versionLabel: v2
+  type: Stage
+  projectIdentifier: default_project
+  orgIdentifier: default
+  spec:
+    type: Deployment
+    spec:
+      execution:
+        steps:
+          - step:
+              name: Deploy Application
+              identifier: deploy_app
+              template:
+                templateRef: deploymentStep
+                label: stable
+          - step:
+              name: Run Integration Tests
+              identifier: run_tests
+              template:
+                templateRef: testStep
+                label: canary

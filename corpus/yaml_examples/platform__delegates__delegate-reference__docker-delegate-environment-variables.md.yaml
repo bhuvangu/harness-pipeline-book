@@ -1,0 +1,5 @@
+# source: docs/platform/delegates/delegate-reference/docker-delegate-environment-variables.md  (https://developer.harness.io/docs/platform/delegates/delegate-reference/docker-delegate-environment-variables)
+
+# --- example 1 ---
+- name: DELEGATE_TASK_LIMIT
+  value: "50"

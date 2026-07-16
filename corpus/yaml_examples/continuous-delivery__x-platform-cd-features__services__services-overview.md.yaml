@@ -1,0 +1,79 @@
+# source: docs/continuous-delivery/x-platform-cd-features/services/services-overview.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/services/services-overview)
+
+# --- example 1 ---
+service:
+  name: nginx
+  identifier: nginx
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: nginx-base
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: account.Harness_K8sManifest
+                  gitFetchType: Branch
+                  paths:
+                    - cdng/
+                  repoName: <+input>
+                  branch: main
+              skipResourceVersioning: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: account.Harness_DockerHub
+                imagePath: library/nginx
+                tag: <+input>
+                digest: <+input>
+              identifier: harness dockerhub
+              type: DockerRegistry
+    type: Kubernetes
+
+# --- example 2 ---
+service:
+  name: redis
+  identifier: redis
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: redis
+            type: HelmChart
+            spec:
+              store:
+                type: Http
+                spec:
+                  connectorRef: org.bitnami
+              chartName: redis
+              chartVersion: ""
+              subChartName: ""
+              helmVersion: V3
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+        - manifest:
+            identifier: Redis Values
+            type: Values
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: account.Rohan_Github
+                  gitFetchType: Branch
+                  paths:
+                    - redis/values.yaml
+                  repoName: Product-Management
+                  branch: main
+      variables:
+        - name: namespace
+          type: String
+          description: "namespace for the redis service"
+          value: redis
+    type: Kubernetes
+  description: sample redis service

@@ -1,0 +1,27 @@
+# source: docs/continuous-delivery/get-started/tutorials/kubernetes-container-deployments/ownapp.md  (https://developer.harness.io/docs/continuous-delivery/get-started/tutorials/kubernetes-container-deployments/ownapp)
+
+# --- example 1 ---
+  kubectl apply -f gitops-agent.yml -n default
+
+# --- example 2 ---
+     service:
+       name: ownapp_service
+       identifier: ownappservice
+       serviceDefinition:
+         type: Kubernetes
+         spec: {}
+       gitOpsEnabled: true
+
+# --- example 3 ---
+     environment:
+       name: ownapp_env
+       identifier: ownappenv
+       description: ""
+       tags: {}
+       type: PreProduction
+       orgIdentifier: default
+       projectIdentifier: default_project
+       variables: []
+
+# --- example 4 ---
+  kubectl apply -f gitops-agent.yml -n default

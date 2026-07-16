@@ -1,0 +1,404 @@
+# source: docs/continuous-integration/development-guides/ci-windows.md  (https://developer.harness.io/docs/continuous-integration/development-guides/ci-windows)
+
+# --- example 1 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      type: CI
+      spec:
+        cloneCodebase: true
+        platform:
+          os: Windows
+          arch: Amd64
+        runtime:
+          type: Cloud
+          spec: {}
+
+# --- example 2 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      description: ""
+      type: CI
+      spec:
+        cloneCodebase: true
+        infrastructure:
+          type: KubernetesDirect
+          spec:
+            connectorRef: YOUR_K8S_CLUSTER_CONNECTOR_ID
+            namespace: YOUR_K8S_NAMESPACE
+            automountServiceAccountToken: true
+            nodeSelector:
+              kubernetes.io/os: windows
+            os: Windows
+
+# --- example 3 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      shell: Powershell
+      command: |-
+        dotnet add package Newtonsoft.json --version 12.0.1
+
+# --- example 4 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:7.0
+      shell: Powershell
+      command: |-
+        dotnet add package Newtonsoft.json --version 12.0.1
+
+# --- example 5 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+        key: cache-{{ checksum "packages.lock.json" }}
+        paths:
+          - C:\%LocalAppData%\NuGet\Cache
+      sharedPaths:
+        - C:\%LocalAppData%\NuGet\Cache
+
+# --- example 6 ---
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "packages.lock.json" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  ...
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  ...
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "packages.lock.json" }}
+                    sourcePaths:
+                      - C:\%LocalAppData%\NuGet\Cache
+                    archiveFormat: Tar
+
+# --- example 7 ---
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      shell: Powershell
+      command: |-
+        dotnet restore
+        dotnet build --no-restore
+        dotnet test C:\path\to\project.tests.csproj --no-build --verbosity normal
+
+# --- example 8 ---
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0
+      shell: Powershell
+      command: |-
+        dotnet restore
+        dotnet build --no-restore
+        dotnet test C:\path\to\project.tests.csproj --no-build --verbosity normal
+
+# --- example 9 ---
+- step:
+    type: Run
+    identifier: install_converter
+    name: install converter
+    spec:
+      shell: Powershell
+      command: |-
+        dotnet tool install -g trx2junit
+        export PATH="C:\Users\USER\.dotnet\tools"
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      shell: Powershell
+      command: |-
+        dotnet restore
+        dotnet build
+        dotnet test C:\path\to\project.tests.csproj --no-build --verbosity normal
+        trx2junit results.trx
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - results.xml
+
+# --- example 10 ---
+- step:
+    type: Run
+    identifier: install_converter
+    name: install converter
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0
+      shell: Powershell
+      command: |-
+        dotnet tool install -g trx2junit
+        export PATH="C:\Users\USER\.dotnet\tools"
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0
+      shell: Powershell
+      command: |-
+        dotnet restore
+        dotnet build
+        dotnet test C:\path\to\project.tests.csproj --no-build --verbosity normal
+        trx2junit results.trx
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - results.xml
+
+# --- example 11 ---
+- step:
+    type: Run
+    identifier: install_vs2022
+    name: install vs2022
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/windows/servercore:ltsc2019
+      shell: Powershell
+      command: |-
+        winget install --id Microsoft.VisualStudio.2022.Enterprise
+
+# --- example 12 ---
+- step:
+    type: Run
+    identifier: install_vs2022
+    name: install vs2022
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/windows/servercore:ltsc2019
+      shell: Powershell
+      command: |-
+        winget install --id Microsoft.VisualStudio.2019.Enterprise
+
+# --- example 13 ---
+- step:
+    type: Run
+    identifier: dotnet restore
+    name: dotnet restore
+    spec:
+      shell: Powershell ## Set to Bash, Powershell, Pwsh (PowerShell Core), Python, or Sh.
+      command: |- ## Enter your script as you would in a command line shell.
+        dotnet restore
+
+# --- example 14 ---
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0
+      shell: Powershell ## Set to Bash, Powershell, Pwsh (PowerShell Core), Python, or Sh.
+      command: |- ## Enter your script as you would in a command line shell.
+        dotnet restore
+
+# --- example 15 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: build and test
+        identifier: build_and_test
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+            key: cache-{{ checksum "packages.lock.json" }}
+            paths:
+              - C:\%LocalAppData%\NuGet\Cache
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: Dependencies
+                  spec:
+                    shell: Powershell
+                    command: |-
+                      dotnet add package Newtonsoft.json --version 12.0.1
+              - step:
+                  type: Run
+                  identifier: install_converter
+                  name: install converter
+                  spec:
+                    shell: Powershell
+                    command: |-
+                      dotnet tool install -g trx2junit
+                      export PATH="C:\Users\USER\.dotnet\tools"
+              - step:
+                  type: Run
+                  identifier: build_dotnet_app
+                  name: Build DotNet App
+                  spec:
+                    shell: Powershell
+                    command: |-
+                      dotnet restore
+                      dotnet build
+                      dotnet test C:\path\to\project.tests.csproj --no-build --verbosity normal
+                      trx2junit results.trx
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - results.xml
+          sharedPaths:
+            - C:\%LocalAppData%\NuGet\Cache
+          platform:
+            os: Windows
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+
+# --- example 16 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  tags: {}
+
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  tags: {}
+  stages:
+    - stage:
+        name: build and test
+        identifier: build_and_test
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "packages.lock.json" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: Dependencies
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:7.0
+                    shell: Powershell
+                    command: |-
+                      dotnet add package Newtonsoft.json --version 12.0.1
+              - step:
+                  type: Run
+                  identifier: install_converter
+                  name: install converter
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:6.0
+                    shell: Powershell
+                    command: |-
+                      dotnet tool install -g trx2junit
+                      export PATH="C:\Users\USER\.dotnet\tools"
+              - step:
+                  type: Run
+                  identifier: build_dotnet_app
+                  name: Build DotNet App
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:6.0
+                    shell: Powershell
+                    command: |-
+                      dotnet restore
+                      dotnet build
+                      dotnet test C:\path\to\project.tests.csproj --no-build --verbosity normal
+                      trx2junit results.trx
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - results.xml
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "packages.lock.json" }}
+                    sourcePaths:
+                      - C:\%LocalAppData%\NuGet\Cache
+                    archiveFormat: Tar
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_K8S_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_K8S_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector:
+                kubernetes.io/os: windows
+              os: Windows

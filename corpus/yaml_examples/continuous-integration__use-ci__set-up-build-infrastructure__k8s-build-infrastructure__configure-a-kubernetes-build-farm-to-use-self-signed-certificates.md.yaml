@@ -1,0 +1,240 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/k8s-build-infrastructure/configure-a-kubernetes-build-farm-to-use-self-signed-certificates.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/k8s-build-infrastructure/configure-a-kubernetes-build-farm-to-use-self-signed-certificates)
+
+# --- example 1 ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: addcerts
+     namespace: harness-delegate-ng
+   type: Opaque
+   stringData:
+     ca.bundle: |
+       -----BEGIN CERTIFICATE-----
+       XXXXXXXXXXXXXXXXXXXXXXXXXXX
+       -----END CERTIFICATE-------
+       -----BEGIN CERTIFICATE-----
+       XXXXXXXXXXXXXXXXXXXXXXXXXXX
+       -----END CERTIFICATE-------
+
+# --- example 2 ---
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     labels:
+       harness.io/name: abc-ca-kubernetes-delegate
+     name: abc-ca-kubernetes-delegate
+     namespace: abc-ca-kubernetes-delegate
+   spec:
+     replicas: 1
+     minReadySeconds: 120
+     selector:
+       matchLabels:
+         harness.io/name: abc-ca-kubernetes-delegate
+     template:
+       metadata:
+         labels:
+           harness.io/name: abc-ca-kubernetes-delegate
+         annotations:
+           # ...
+       spec:
+         terminationGracePeriodSeconds: 600
+         restartPolicy: Always
+         containers:
+           - image: harness/delegate:yy.mm.verno
+             imagePullPolicy: Always
+             name: delegate
+             securityContext:
+               # ...
+             ports:
+               # ...
+             resources:
+               # ...
+             livenessProbe:
+               # ...
+             startupProbe:
+               # ...
+             envFrom:
+               # ...
+             env:
+               # ...
+             volumeMounts:
+               ### ADD THE VOLUME MOUNT HERE
+               - name: certvol
+                 mountPath: /opt/harness-delegate/ca-bundle/ca.bundle
+                 subPath: ca.bundle
+         volumes:
+           ### ADD THE VOLUME HERE
+           - name: certvol
+             secret:
+               secretName: addcerts
+               items:
+                 - key: ca.bundle
+                   path: ca.bundle
+
+# --- example 3 ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: addcerts
+     namespace: harness-delegate-ng
+   type: Opaque
+   stringData:
+     ca.bundle: |
+       -----BEGIN CERTIFICATE-----
+       XXXXXXXXXXXXXXXXXXXXXXXXXXX
+       -----END CERTIFICATE-------
+       -----BEGIN CERTIFICATE-----
+       XXXXXXXXXXXXXXXXXXXXXXXXXXX
+       -----END CERTIFICATE-------
+
+# --- example 4 ---
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     labels:
+       harness.io/name: abc-ca-kubernetes-delegate
+     name: abc-ca-kubernetes-delegate
+     namespace: abc-ca-kubernetes-delegate
+   spec:
+     replicas: 1
+     minReadySeconds: 120
+     selector:
+       matchLabels:
+         harness.io/name: abc-ca-kubernetes-delegate
+     template:
+       metadata:
+         labels:
+           harness.io/name: abc-ca-kubernetes-delegate
+         annotations:
+           # ...
+       spec:
+         terminationGracePeriodSeconds: 600
+         restartPolicy: Always
+         containers:
+           - image: harness/delegate:yy.mm.verno
+             imagePullPolicy: Always
+             name: delegate
+             securityContext:
+               # ...
+             ports:
+               # ...
+             resources:
+               # ...
+             livenessProbe:
+               # ...
+             startupProbe:
+               # ...
+             envFrom:
+               # ...
+             env:
+               ### ADD DESTINATION_CA_PATH HERE
+               - name: DESTINATION_CA_PATH
+                 value: "/etc/ssl/certs/ca-bundle.crt,/kaniko/ssl/certs/additional-ca-cert-bundle.crt"
+             volumeMounts:
+               ### ADD THE VOLUME MOUNT HERE
+               - name: certvol
+                 mountPath: /opt/harness-delegate/ca-bundle/ca.bundle
+                 subPath: ca.bundle
+         volumes:
+           ### ADD THE VOLUME HERE
+           - name: certvol
+             secret:
+               secretName: addcerts
+               items:
+                 - key: ca.bundle
+                   path: ca.bundle
+
+# --- example 5 ---
+   spec:
+     containers:
+       - image: harness/delegate:yy.mm.verno
+         # ...
+         env:
+           # ADD ADDITIONAL_CERTS_PATH AND CI_MOUNT_VOLUMES HERE
+           - name: ADDITIONAL_CERTS_PATH
+             value: /tmp/ca.bundle
+           - name: CI_MOUNT_VOLUMES
+             value: "/tmp/ca.bundle:/etc/ssl/certs/ca-bundle.crt,/tmp/ca.bundle:/kaniko/ssl/certs/additional-ca-cert-bundle.crt"
+         volumeMounts:
+           # ADD VOLUME MOUNT HERE
+           - name: certvol
+             mountPath: /tmp/ca.bundle
+             subPath: ca.bundle
+     volumes:
+       # ADD VOLUME HERE
+       - name: certvol
+         secret:
+           secretName: addcerts
+           items:
+             - key: ca.bundle
+               path: ca.bundle
+
+# --- example 6 ---
+    spec:
+      containers:
+      - image: harness/delegate:yy.mm.verno
+        env:
+        - name: DESTINATION_CA_PATH
+          value: "/etc/docker/certs.d/my-registry.local.org:799/ca.crt,/etc/ssl/certs/ca-bundle.crt,/kaniko/ssl/certs/additional-ca-cert-bundle.crt"
+        volumeMounts:
+          - name: certvol
+            mountPath: /opt/harness-delegate/ca-bundle/ca.bundle
+            subPath:  ca.bundle
+      volumes:
+      - name: certvol
+        secret:
+            secretName: addcerts
+             items:
+             - key: ca.bundle
+               path: ca.bundle
+
+# --- example 7 ---
+sharedPaths:
+  - /etc/buildkit/certs/your.registry.com
+
+envVariables:
+  PLUGIN_BUILDER_CONFIG: /harness/buildkit.toml
+
+# --- example 8 ---
+- step:
+    type: Run
+    name: Prepare BuildKit Config
+    identifier: buildkit_config
+    spec:
+      connectorRef: account.harnessImage
+      image: alpine
+      shell: Sh
+      command: |-
+        # Registry address (update this to match your use case)
+        REG="your.registry.com"
+        CERT_PATH_BUILDX="/etc/buildkit/certs/${REG}"
+        BUILDKIT_TOML="/harness/buildkit.toml"
+
+        # Create cert paths
+        mkdir -p "$CERT_PATH_BUILDX"
+
+        # Concatenate all mounted PEMs into a single CA bundle
+        for cert in /harness-shared-certs-path/*.pem; do
+          cat "$cert" >> "$CERT_PATH_BUILDX/ca.crt"
+          echo >> "$CERT_PATH_BUILDX/ca.crt"
+        done
+
+        # Write buildkit.toml
+        echo "Writing buildkit.toml..."
+        cat <<EOF > "$BUILDKIT_TOML"
+        [registry."$REG"]
+          ca = ["$CERT_PATH_BUILDX/ca.crt"]
+        EOF
+
+        ls -lr "$CERT_PATH_BUILDX"
+        cat "$BUILDKIT_TOML"
+
+# --- example 9 ---
+- step:
+    type: BuildAndPushDockerRegistry
+    name: Docker Build
+    identifier: docker_build
+    spec:
+      ...
+      envVariables:
+        PLUGIN_BUILDER_CONFIG: /harness/buildkit.toml

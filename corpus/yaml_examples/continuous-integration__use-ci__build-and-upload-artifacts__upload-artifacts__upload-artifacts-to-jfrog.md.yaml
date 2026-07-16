@@ -1,0 +1,83 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-artifacts-to-jfrog.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-artifacts-to-jfrog)
+
+# --- example 1 ---
+  - step:
+      type: ArtifactoryUpload
+      name: ArtifactoryUpload_1
+      identifier: ArtifactoryUpload_1
+      spec:
+        connectorRef: YOUR_ARTIFACTORY_CONNECTOR_ID
+        target: groupId/artifactId/version
+        sourcePath: path/to/source
+
+# --- example 2 ---
+           variables:
+             - name: PLUGIN_BUILD_NAME
+               type: String
+               description: "Name of the build associated with the uploaded artifacts in JFrog"
+               required: false
+               value: <+pipeline.name> # You can use an expression or a fixed value.
+
+# --- example 3 ---
+           variables:
+             - name: PLUGIN_BUILD_NUMBER
+               type: String
+               description: "Build number associated with the uploaded artifacts in JFrog"
+               required: false
+               value: <+pipeline.executionID> # You can use an expression or a fixed value.
+
+# --- example 4 ---
+           variables:
+             - name: JFROG_CLI_HOME_DIR
+               type: String
+               description: "Change the path of where the JFrog is to a writable directory"
+               required: false
+               value: /harness/temp # the path to the directory that is writable.
+
+# --- example 5 ---
+- step:
+    type: Plugin
+    name: plugin
+    identifier: plugin
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/artifactory
+      settings:
+        access_token: YOUR_JFROG_TOKEN
+        url: YOUR_JFROG_ARTIFACTORY_URL
+        source: /path/to/source
+        target: /path/to/target
+        build_name: <+pipeline.identifier> # You can use an expression or a fixed value.
+        build_number: <+pipeline.sequenceId> # You can use an expression or a fixed value.
+        publish_build_info: true
+        targetProps: key1=123;projectName=ExampleApp # Optional metadata/properties
+
+# --- example 6 ---
+- step:
+    type: Plugin
+    name: AddBuildDependencyStep
+    identifier: AddBuildDependencyStep
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/artifactory
+      settings:
+        command: add-build-dependencies
+        access_token: YOUR_JFROG_TOKEN
+        url: YOUR_JFROG_ARTIFACTORY_URL
+        module: test_module
+        build_name: <+pipeline.identifier> # You can use an expression or a fixed value.
+        build_number: <+pipeline.sequenceId> # You can use an expression or a fixed value.
+        dependency: /harness/add_deps/\*\*/\*.jar
+        exclusions: /harness/add_deps/exclude_test/\*\*
+
+# --- example 7 ---
+               - step:
+                  type: Plugin
+                  name: publish artifact metadata
+                  identifier: publish_artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://complete/url/to/artifact/on/jfrog
+                      artifact_file: artifact.txt

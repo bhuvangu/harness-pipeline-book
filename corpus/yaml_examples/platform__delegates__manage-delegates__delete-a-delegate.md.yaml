@@ -1,0 +1,12 @@
+# source: docs/platform/delegates/manage-delegates/delete-a-delegate.md  (https://developer.harness.io/docs/platform/delegates/manage-delegates/delete-a-delegate)
+
+# --- example 1 ---
+...
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    harness.io/name: doc-demos
+  name: doc-demos
+  namespace: harness-delegate-ng
+...

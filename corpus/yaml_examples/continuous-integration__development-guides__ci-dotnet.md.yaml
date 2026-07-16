@@ -1,0 +1,470 @@
+# source: docs/continuous-integration/development-guides/ci-dotnet.md  (https://developer.harness.io/docs/continuous-integration/development-guides/ci-dotnet)
+
+# --- example 1 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      type: CI
+      spec:
+        cloneCodebase: true
+        platform:
+          os: Linux
+          arch: Amd64 ## Can be Amd64 or Arm64
+        runtime:
+          type: Cloud
+          spec: {}
+
+# --- example 2 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      description: ""
+      type: CI
+      spec:
+        cloneCodebase: true
+        infrastructure:
+          type: KubernetesDirect
+          spec:
+            connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+            namespace: YOUR_NAMESPACE
+            automountServiceAccountToken: true
+            nodeSelector: {}
+            os: Linux
+
+# --- example 3 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      shell: Sh
+      command: |-
+        dotnet add package Newtonsoft.json --version 12.0.1
+
+# --- example 4 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:7.0
+      command: |-
+        dotnet add package Newtonsoft.json --version 12.0.1
+
+# --- example 5 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+        key: cache-{{ checksum "packages.lock.json" }}
+        paths:
+          - "~/.local/share/NuGet/cache"
+      sharedPaths:
+        - ~/.local/share/NuGet/cache
+
+# --- example 6 ---
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "packages.lock.json" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  ...
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  ...
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "packages.lock.json" }}
+                    sourcePaths:
+                      - ~/.local/share/NuGet/cache
+                    archiveFormat: Tar
+
+# --- example 7 ---
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      shell: Sh
+      command: |-
+        dotnet restore
+        dotnet build --no-restore
+        dotnet test --no-build --verbosity normal
+
+# --- example 8 ---
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0
+      shell: Sh
+      command: |-
+        dotnet restore
+        dotnet build --no-restore
+        dotnet test --no-build --verbosity normal
+
+# --- example 9 ---
+- step:
+    type: Run
+    identifier: install_converter
+    name: install converter
+    spec:
+      shell: Sh
+      command: |-
+        dotnet tool install -g trx2junit
+        export PATH="$PATH:/root/.dotnet/tools"
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      shell: Sh
+      command: |-
+        dotnet restore
+        dotnet build
+        dotnet test --no-build --verbosity normal
+        trx2junit results.trx
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - results.xml
+
+# --- example 10 ---
+- step:
+    type: Run
+    identifier: install_converter
+    name: install converter
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0
+      shell: Sh
+      command: |-
+        dotnet tool install -g trx2junit
+        export PATH="$PATH:/root/.dotnet/tools"
+- step:
+    type: Run
+    identifier: build_dotnet_app
+    name: Build DotNet App
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0
+      shell: Sh
+      command: |-
+        dotnet restore
+        dotnet build
+        dotnet test --no-build --verbosity normal
+        trx2junit results.trx
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - results.xml
+
+# --- example 11 ---
+- step:
+    type: RunTests
+    identifier: runTestsWithIntelligence
+    name: runTestsWithIntelligence
+    spec:
+      language: Csharp
+      buildEnvironment: Core
+      frameworkVersion: "6.0"
+      buildTool: Dotnet
+      args: --no-build --verbosity normal ## Equivalent to 'dotnet test --no-build --verbosity normal' in a Run step or shell.
+      namespaces: aw,fc
+      runOnlySelectedTests: true
+      preCommand: |-
+        dotnet tool install -g trx2junit
+        export PATH="$PATH:/root/.dotnet/tools"
+        dotnet restore
+        dotnet build
+      postCommand: trx2junit results.trx
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - results.xml
+
+# --- example 12 ---
+- step:
+    type: RunTests
+    identifier: runTestsWithIntelligence
+    name: runTestsWithIntelligence
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0
+      language: Csharp
+      buildEnvironment: Core
+      frameworkVersion: "6.0"
+      buildTool: Dotnet
+      args: --no-build --verbosity normal ## Equivalent to 'dotnet test --no-build --verbosity normal' in a Run step or shell.
+      namespaces: aw,fc
+      runOnlySelectedTests: true
+      preCommand: |-
+        dotnet tool install -g trx2junit
+        export PATH="$PATH:/root/.dotnet/tools"
+        dotnet restore
+        dotnet build
+      postCommand: trx2junit results.trx
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - results.xml
+
+# --- example 13 ---
+- step:
+    type: Run
+    name: Install dotnet
+    identifier: install_dotnet
+    spec:
+      shell: Sh
+      command: |-
+        curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0
+        export DOTNET_WORKSPACE=$HOME/.dotnet
+        export PATH=$DOTNET_WORKSPACE:$PATH
+        dotnet --info
+
+# --- example 14 ---
+strategy:
+  matrix:
+    dotnetVersion:
+      - "8.0"
+      - "6.0"
+
+# --- example 15 ---
+- step:
+    type: Run
+    name: Install dotnet
+    identifier: install_dotnet
+    spec:
+      shell: Sh
+      command: |-
+        curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel <+matrix.dotnetVersion>
+        export DOTNET_WORKSPACE=$HOME/.dotnet
+        export PATH=$DOTNET_WORKSPACE:$PATH
+        dotnet --info
+
+# --- example 16 ---
+- step:
+    type: Run
+    name: dotnet version
+    identifier: dotnet_version
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:7.0
+      shell: Sh
+      command: |-
+        dotnet --info
+
+# --- example 17 ---
+- stage:
+    strategy:
+      matrix:
+        dotnetVersion:
+          - 7.0
+          - 6.0
+
+# --- example 18 ---
+- step:
+    type: Run
+    name: dotnet Version
+    identifier: dotnet_version
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:<+stage.matrix.dotnetVersion>
+      shell: Sh
+      command: |-
+        dotnet --info
+
+# --- example 19 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+            key: cache-{{ checksum "packages.lock.json" }}
+            paths:
+              - "~/.local/share/NuGet/cache"
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: Dependencies
+                  spec:
+                    shell: Sh
+                    command: |-
+                      dotnet add package Newtonsoft.json --version 12.0.1
+              - step:
+                  type: Run
+                  identifier: install_converter
+                  name: install converter
+                  spec:
+                    shell: Sh
+                    command: |-
+                      dotnet tool install -g trx2junit
+                      export PATH="$PATH:/root/.dotnet/tools"
+              - step:
+                  type: Run
+                  identifier: build_dotnet_app
+                  name: Build DotNet App
+                  spec:
+                    shell: Sh
+                    command: |-
+                      dotnet restore
+                      dotnet build
+                      dotnet test --no-build --verbosity normal
+                      trx2junit results.trx
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - results.xml
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          sharedPaths:
+            - ~/.local/share/NuGet/cache
+
+# --- example 20 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "packages.lock.json" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  name: dotnet version
+                  identifier: dotnet_version
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:7.0
+                    shell: Sh
+                    command: |-
+                      dotnet --info
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: Dependencies
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:7.0
+                    command: |-
+                      dotnet add package Newtonsoft.json -- version 12.0.1
+              - step:
+                  type: Run
+                  identifier: install_converter
+                  name: install converter
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:7.0
+                    shell: Sh
+                    command: |-
+                      dotnet tool install -g trx2junit
+                      export PATH="$PATH:/root/.dotnet/tools"
+              - step:
+                  type: Run
+                  identifier: build_dotnet_app
+                  name: Build DotNet App
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:7.0
+                    shell: Sh
+                    command: |-
+                      dotnet restore
+                      dotnet build
+                      dotnet test --no-build --verbosity normal
+                      trx2junit results.trx
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - results.xml
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "packages.lock.json" }}
+                    sourcePaths:
+                      - ~/.local/share/NuGet/cache
+                    archiveFormat: Tar

@@ -1,0 +1,792 @@
+---
+title: Helm Deployment FAQs
+description: This topic lists some FAQs related to Native and Harness managed Helm deployment
+sidebar_position: 6
+keywords:
+  - helm deployment
+  - service dashboard
+  - artifact version
+  - zero replicas
+  - instance sync
+  - replica count
+  - multi-cluster deployment
+---
+
+This article addresses some frequently asked questions about Helm and Native Helm deployments in Harness.
+
+### How can I deploy a specific resource in a Helm chart as part of Harness managed Helm rolling deployment?
+
+If it is a Helm deployment managed by Harness, you can use an Apply Step.
+
+You can take a specific file from the manifest and execute it separately from the normal deployment (before or after). To prevent the file from being included in the main part of the deployment, you include `# harness.io/skip-file-for-deploy` at the top of the file.
+
+### How do I run a Helm uninstall after a successful deployment?
+
+To run Helm uninstall manually after a successful deployment, you can leverage the Shell Script step and run the `Helm uninstall release-name` command from the delegate onto the cluster. To run the shell script onto the required cluster, you need to specify the Kubernetes cluster credentials for the delegate.
+
+For this use case, within the shell script, you can simply reference credentials as `${HARNESS_KUBE_CONFIG_PATH}`:
+
+`export KUBECONFIG=${HARNESS_KUBE_CONFIG_PATH} kubectl get pods -n pod-test`
+
+With this method, even when running the shell script on the delegate host, it can refer to the credentials of the Kubernetes cloud provider used inside the infrastructure definition associated with the workflow.
+
+### Can I override some values in the Helm chart during the deployment of a service in Kubernetes?
+
+Yes, you can override values in the Helm chart during the service deployment in Kubernetes.
+
+### How can I use values files to override Helm chart values during deployment?
+
+You can define your input values in separate files, known as values files. These files can be stored and optionally tracked in Git. Harness allows you to specify these values files in the Harness service definition used during the deployment.
+
+### What is the advantage of using values files over the '--set' option for Helm chart overrides?
+
+Using values files provides a more organized and maintainable way to manage overrides in Helm charts. It is considered a best practice, and it allows you to easily track and version your input values for deployments.
+
+### Does Harness have cache layer for the Helm chart repo index during deployment steps?
+
+Harness uses a caching mechanism to create a cache folder (based on the Harness connector Id) and store the repositories.yaml file.
+
+### How can we access the Helm repo name from the Helm connector?
+
+Harness does not have a direct variable exposed for reading the repo name from the connector. The connector variable is only available in a Harness custom deployment template.
+
+For normal usage Harness can make an API call to get the connector details and get the repo name from the "HelmRepoUrl" attribute.
+
+### Can I use Helm charts from public repositories like Helm Hub with Harness?
+
+Yes, you can use Helm charts from public Helm repositories like Helm Hub. Harness allows you to specify the Helm repository URL and chart version when configuring your deployment.
+
+### Is it possible to use Helm hooks in Harness Helm deployments?
+
+Yes, you can use Helm hooks in Helm deployments managed by Helm. This is available via the **Native Helm** service type.
+
+Helm hooks allow you to execute specific actions or scripts at different points in the Helm chart's lifecycle, such as before or after installing or upgrading a release. Harness supports the use of Helm hooks as part of your Helm deployment process.
+
+### What are deployment failed because the release name was invalid errors?
+
+The "invalid release name" error is due to the length of the release name exceeding the maximum limit of 53 characters.
+
+This limitation is imposed by [Helm](https://Helm.sh/docs/chart_template_guide/getting_started/#adding-a-simple-template-call).
+
+To resolve this issue, please ensure that your release name falls within the 53 character range.
+
+You can achieve this by using the following expression in **Release Name** to shorten the release name: `<+<+INFRA_KEY>.substring(0,7)>`.
+
+### Troubleshoot 401 Not Authorized issue with Helm connector.
+
+First, ensure the credentials that you have passed to the Helm HTTP or OCI connector are still valid.
+
+You can also `exec` into your Harness Delegate and run the `Helm repo add` command on the delegate to manually fetch the repo to see if the delegate can pull it.
+
+### The K8s delete command is not working with Native Helm.
+
+The K8s delete command/step does not work with Native Helm deployment because Harness has different logic to maintain versioning and rollback for Native Helm and k8s. In the case of the Native Helm, if the deployment fails, we’ll uninstall it ourselves. However, if the user wants to pass some command flags with uninstall, that can be passed by selecting uninstall and passing the relevant command flags. 
+
+Go to [Uninstall command flag](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/Helm/deploy-Helm-charts/#uninstall-command-flag) for more details.
+
+
+### How do I run Helm uninstall after a successful deployment?
+
+To run Helm uninstall manually after a successful deployment, you can leverage the shell script step and run the Helm uninstall ```release-name``` command from the delegate onto the cluster.
+To run the shell script onto the required cluster, we need to specify the k8s cluster credentials to delegate. 
+
+For this use case within the shell script, you can simply reference credentials as $\{HARNESS_KUBE_CONFIG_PATH}.
+
+```export KUBECONFIG=${HARNESS_KUBE_CONFIG_PATH} kubectl get pods -n pod-test```
+
+With this, even when running the shell script on the delegate host, it can refer to the credentials of the K8s cloud provider which is used inside the infrastructure definition associated with the workflow.
+
+
+### How release: \{\{ .Release.Name }} help in steady state check in Helm deployment?
+
+We perform a pod fetch based on this label, which allows us to show the deployed pods in the step output and also track the same for instance sync. If we don't add these, both won't work as expected.
+
+For more details, go to [Steady state check](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/Helm/native-Helm-quickstart/#spec-requirements-for-steady-state-check-and-versioning).
+
+
+### Can I override some values in the Helm chart during the deployment of a service in Kubernetes?
+
+Yes, you can override values in the Helm chart during the service deployment in Kubernetes.
+
+
+### How can I use the values files to override Helm chart values during deployment?
+
+You can define your input values in separate files known as values files. These files can be stored and optionally tracked in Git. Harness allows you to specify these values files in your service definition, which will be used during the deployment.
+
+
+### What is the advantage of using values files over '--set' option for Helm chart overrides?
+
+Using values files provides a more organized and maintainable way to manage overrides in Helm charts. It is considered a best practice, and it allows you to easily track and version your input values for deployments.
+
+
+### Why it is that you cannot use OCI Helm registries with Helm Chart triggers?
+OCI Helm does let us poll the repository for changes, we can get a list of chart versions, but we cannot poll and detect a new version. This capability hasn't been built by OCI Helm
+
+
+### Does Harness have cache layer for the Helm chart repo index during deployment steps?
+
+We have a caching mechanism where we create a cache folder (based on connectorID) and store the ```repositories.yaml``` file there.
+
+
+### How can we deploy a specific resource in a Helm chart as part of rolling deployment?
+
+If it is a Kubernetes/Helm, you can use an Apply Step
+ 
+Please refer more on this in [Documentation](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/deploy-manifests-using-apply-step/)
+ 
+You can take a specific file from the manifest and execute it separately (before or after) the normal deployment.  To prevent the file from being included in the normal part of the deployment, you would include this ```# harness.io/skip-file-for-deploy``` at the top of the file.
+
+
+### Can I use Helm charts with Harness GitOps?
+
+Yes, Harness GitOps supports Helm charts for defining and deploying Kubernetes applications. You can version-control Helm charts in your Git repository and use Harness to manage the deployment lifecycle.
+
+
+### Can I download pipeline or step execution logs via the UI? 
+
+Yes. A **Download Logs** option is available from the pipeline execution screen (select the three-dot menu in the top-right panel). Go to [Download execution logs](/docs/platform/pipelines/executions-and-logs/download-logs) to review the steps.
+
+
+### Service hooks for Kubernetes and Helm deployments to fetch Helm Chart dependencies. 
+
+This is possible.
+
+For more details please see: [Documentation](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/Helm/deploy-Helm-charts/#service-hooks).
+
+### How can we access Helm repo name from the Helm connector?
+
+We do not have a direct variable exposed for reading the repo name from the connector. The connector variable is only available in custom deployment template. For normal usage we can make an api call to get the connector details and get the repo name from the "HelmRepoUrl" attribute.
+
+### Is it possible to use Helm hooks in Harness Helm deployments?
+
+Yes, you can use Helm hooks in Harness Helm deployments. Helm hooks allow you to execute specific actions or scripts at different points in the Helm chart's lifecycle, such as before or after installing or upgrading a release. Harness supports the use of Helm hooks as part of your Helm deployment process.
+
+### How can customer execute a `Helm dependency update` command with Helm Command Flags ?
+
+For this specific use case please refer to our documentation [here](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/Helm/deploy-Helm-charts/#use-case-add-private-repositories-as-a-Helm-chart-dependency).
+
+
+### What do the fetch files step do in rollout deployment?
+
+The Fetch files task in the Rollout Deployment step leverages the GitHub connector configured in the service to fetch the manifests. Harness will also render and resolve any of the Harness variables defined in the values.yaml file of the service and add them to the manifest/Helm chart using Go/Helm templating. 
+
+Harness fetches any secrets referenced in the values.yaml file and resolves them in the manifest. Harness masks secret output in its logs.
+
+
+### Is there a built-in Harness variable for the Helm chart version in the pipeline?
+
+Yes, you can use the expression \<+trigger.manifest.version> to have the new chart version that initiated the Trigger passed in as the version to deploy. This expression can reference the chart version in your pipeline stage steps.
+
+For non-trigger-based execution, you can use the expression \<+manifests.MANIFEST_ID.Helm.version> to reference the Helm chart version in your pipeline stage steps. The MANIFEST_ID is located in service.serviceDefinition.spec.manifests.manifest.identifier in the Harness service YAML. You can also use Harness variable expressions or runtime inputs to pass in the Helm chart version at execution.
+
+
+### Why one cannot configure multiple manifests in non-Helm environment?
+
+At present, we only support Helm K8s and Helm deployments ( not charts as they are treated as artifacts) with multiple manifest services because , allowing for all swimlanes can cause a mega service that can deploy multiple applications and can cause problem in management of the same.
+
+
+### Limitations of Helm Chart dependencies on Git Source Repositories
+
+Helm chart dependencies are not supported in Git source repositories. Helm chart dependencies are supported in Helm Chart Repositories.
+
+### How can I use Canary with native Helm deployment strategy?
+
+You can only perform a rolling deployment strategy for Native Helm(no canary or blue-green).
+
+
+### How can one use HELM expressions?
+
+Please follow the following [Documentation](https://developer.harness.io/docs/platform/variables-and-expressions/harness-variables/#Helm-chart-expressions).
+
+### Is there a way to avoid using Helm template command in Kubernetes Helm deployment?
+
+For kubernetes Helm we will always run the template command as this is how we get the rendered manifest. The workflow using kubernetes Helm perform the final deployment using the rendered manifest and kubectl commands.
+ 
+If we do not want to use template command we need to be using native Helm type of deployment.
+
+
+### How to get Helm chart version from Helm based triggers?
+
+The Helm version is part of the trigger payload. The expression that conatains the Helm version is `<+trigger.manifest.version>` .
+
+
+### After a successful deployment with the namespace "x" and another failed deployment with the same namespace (x), we switched the namespace and now it seems it cannot properly do a Helm history.
+
+You can enable the Ignore Release History Failed Status option to have Harness ignore these errors and proceed with install/upgrade. More on this can be referred here: [Documentation](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/Helm/native-Helm-quickstart/#ignore-release-history-failed-status).
+
+
+### We want our Helm deployments through Harness to wait for the objects to be in the ready state and then only exit with status. Currently, it is executing Helm upgrade and exiting but we wanted to run something like this: Helm upgrade --install --atomic --timeout 20m \<release_name> \<chart_name> How can we do this with Harness?
+
+Using --atomic and --timeout flags to the Helm command in the "Command" field of the "Helm Deployment" step. This should work to ensure that the deployment waits for the objects to be in the ready state and then exits with status.
+ 
+However, please note that the --timeout flag specifies the time to wait for any individual Kubernetes operation (like creating a pod or service) to complete, not the time to wait for all objects to be in the ready state. So if you have a large number of objects to deploy, you may need to increase the timeout value accordingly.
+ 
+Also, please make sure that your Helm chart includes the necessary readiness probes for your objects to be considered ready by Kubernetes. Harness will wait for the readiness probes to pass before considering the deployment successful.
+
+
+### Helm Pipeline is failing with Helm: not found error.
+
+Check the Helm version you are trying to use is installed on selected delegate and also you can print and check $PATH variable if Helm binary path is set correctly.
+
+### How does Harness handle Helm chart dependencies in a Command Template?
+
+Harness automatically resolves and manages Helm chart dependencies when executing Helm commands based on your Helm Command Template configuration.
+
+
+### Is it possible to get through an expression the uninstall flags from a Helm service?
+
+One can try below example to find and uninstall the same :
+```sh
+commandFlagsJson='<+json.format(<+pipeline.stages.deploy.spec.manifests.Helm_hello_world.commandFlags>)>'
+commandType=$(echo $commandFlagsJson | jq '.[] | select(.commandType=="Uninstall") | .flag')
+
+echo $commandType
+```
+
+
+### How to read files under project's Helm folder during project deployment?
+
+We do not have a way to read the values file directly and access any variables from the same. It can only be read as part of the service deployment.
+
+If you need to access the file values you need to pull the file from your repo in a shell script step and then publish the corresponding value as output variable. 
+
+
+
+### Do we have a way to optionally exclude some values file fetch in the manifest based on condition?
+
+Currently we do not have a way to exclude or make the values file list optional. If you run a Helm deployment by specifying a values.yaml and if the yaml does not exist it will fail the deployment.
+
+
+### Why we are not getting values for new Helm manifest variables?
+
+The feature to get the newer variables for Helm manifest (currently behind CDS_HELM_FETCH_CHART_METADATA_NG)requires delegate versions to be 801xx or newer. If there is any delegate in the account which is older we do not enable the feature and the variables will not be populated even if the task runs on a newer version of delegate.
+
+
+
+### Is there a way to force Helm deployments to use Helm upgrade command instead of Helm install for first Helm deployment?
+
+Harness by default while performing the Helm deployment look for any previous installation, if it does not find one it consider the current deployment as first and then runs the Helm install command. From the next run it will run the Helm upgrade command, this behaviour is not configurable.
+
+### Is it considered an error when using Helm template "--show-only` `templates/secret.yaml my-chart" results in an empty manifest, even though the template exists, and how can one prevent or handle this error message?
+
+It will be feasible for them to consider adding a line at the top of their manifests to prevent rendering to be empty when using Helm template `--show-only`. This approach would not only address the error but also provide the advantage of skipping these objects during deployment. Please read more on this in the following [Documentation](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-kubernetes-category/ignore-a-manifest-file-during-deployment/#ignore-a-manifest)
+
+
+
+### How Can I Leverage the Uninstall Helm Flag Within a Custom Script?
+
+While it's not officially supported, you can obtain all Helm flags used in the Service step. Here's an example of how to retrieve them: `<+pipeline.stages.deploy.spec.manifests.Helm_hello_world.commandFlags>`
+
+
+### What recommendation can be made if a service's chart is currently on v3?
+
+If the chart is v3, the service should be configured for v3 as well. Harness no longer ships Helm v2; only Helm v3 is supported.
+
+
+### What is the default release name used for k8s/Helm deployment done via Harness pipeline?
+
+The default release name is ```release-<+INFRA_KEY_SHORT_ID>```
+
+
+### Does Harness support OpenTofu native steps in Continuous Module?
+
+No, Harness does not yet support OpenTofu native steps due to less usage to Terraform.
+Please read more on Native Helm in the following [Documentation](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/Helm/native-Helm-quickstart/).
+
+
+### What limitations in Go template rendering of manifests compared to Helm have been identified, and how has the decision been made to address this issue by running it as a Helm job ?
+
+Helm template can render the manifests but Go template cannot. There are limitations in the go template. One may run it as a Helm job.
+**Note**
+- In case of Helm template and application of network policy update with usage of Blue-Green or Canary deployments, please try to run the apply step and apply the network policies before deploying
+  Please read more on Apply Step in the following [Documentation](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/kubernetes-apply-step/)
+
+
+### In a Helm deployment with custom certificates, what is essential regarding DNS-compliant keys? ? How should delegates be restarted after modifying the secret for changes to take effect ?
+
+Please follow below suggestions:
+
+- Ensure that the secret containing custom certificates adheres strictly to DNS-compliant keys, avoiding underscores primarily. Following any modification to this secret, it is imperative to restart all delegates to seamlessly incorporate the changes.
+- Helm Installation Command:
+```sh
+Helm upgrade -i nikkelma-240126-del --namespace harness-delegate-ng --create-namespace \
+  harness-delegate/harness-delegate-ng \
+  --set delegateName=nikkelma-240126-del \
+  --set accountId=_specify_account_Id_ \
+  --set delegateToken=your_Delegatetoken_= \
+  --set managerEndpoint=https://app.harness.io/gratis \
+  --set delegateDockerImage=harness/delegate:version_mentioned \
+  --set replicas=1 --set upgrader.enabled=true \
+  --set-literal destinationCaPath=_mentioned_path_to_destination \
+  --set delegateCustomCa.secretName=secret_bundle
+```
+- CA Bundle Secret Creation (Undesirable):
+```sh
+kubectl create secret generic -n harness-delegate-ng ca-bundle --from-file=custom_certs.pem=./local_cert_bundle.pem
+```
+- CA Bundle Secret Creation (Desirable, no underscore in first half of from-file flag):
+```sh
+kubectl create secret generic -n harness-delegate-ng ca-bundle --from-file=custom-certs.pem=./local_cert_bundle.pem
+```
+Please read more on Custom Certs in the following [Documentation](https://developer.harness.io/docs/platform/delegates/secure-delegates/install-delegates-with-custom-certs/).
+
+### How to define Helm values files as optional during a deployment?
+
+Currently, we don't support this feature. We're currently working on this feature as a long-term one. For more information, go to [Allow Helm Values files on Deploys to be Optional](https://ideas.harness.io/continuous-delivery/p/allow-Helm-values-files-on-deploys-to-be-optional).
+
+
+### How does the default release naming scheme work when deploying multiple Helm charts with the same infrastructure definition?
+
+When deploying multiple Helm charts using the same infrastructure definition, the default release naming scheme can potentially use the same release name for each chart. However, Harness allows for customization of the release name using pipeline variables or runtime inputs. This flexibility ensures that each deployment can have a unique release name, preventing any confusion during the upgrade or rollback of charts.
+
+
+### Can we utilize kubernetes pruning for kubernetes Helm deployments?
+
+Kubernetes Helm deployments are similar to native kubernetes deployment once the template is rendered from the Helm chart. Hence we can take advantage of the pruning functionality for the templates which we want to remove if not present in the rendered manifest template.
+
+
+### Do we have pruning functionality available for native Helm deployments?
+
+Helm natively takes care of removing any template changes that is done to the chart between two Helm release. Hence we need not do any explicit action as Helm implicitly takes care of removing these resources.
+
+
+### Can we checkout Helm repos completely and not just the chart for Helm chart manifest?
+
+In the Helm manifest configuration we specify the Helm chart and only the charts are pulled as part of the fetch. Also even if we specify the manifest from source repo they need to confirm to standard Helm directory structure. If there are any config files in the repo that needs to be accessed for deployment it is recommended to fetch the files separately.
+
+
+### Does native Helm deployment support any plugin functionality?
+
+We do not have any built in plugin support for Helm deployments however we do have service hooks which can be used for any such functionality like using Helm secrets.
+
+
+### When Helm step runs install and upgrade command?
+
+For any Helm deployment it first tries to check if there is any existing Helm release, if it does not find any release it treats the deployment as first deployment and runs the Helm install command. If it finds the existing release it runs Helm upgrade command.
+
+
+### Is it normal for the k8s delete step with the release name option to delete only specific entities, unlike Helm uninstall, when the chart was initially deployed using the native Helm option?
+
+The current behavior is as expected. Initially, only Kubernetes delete with the release name label was supported. However, a feature request has been made to support Helm uninstall or delete, which would be a separate type of step.
+Please read more on this in the following [Documentation](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/delete-kubernetes-resources/)
+
+
+### For Helm Subchart support, if there are multiple Subcharts, is there a way to define and manage these additional Subcharts beyond the single field provided?
+
+The utilization of Multiple Helm Charts facilitates the deployment of individual standalone Helm Charts via a single service. These charts, akin to artifact sources, correspond to Helm Charts per environment. The Sub Chart feature becomes particularly beneficial when users possess an umbrella chart with dependencies, as exemplified in the provided [GitHub repository](https://github.com/thisrohangupta/custom-remote-test-repo/tree/main/parent-chart/charts). Upon accessing`/charts/`, both the primary chart and child chart can be obtained.
+One can also configure the YAML to add additional sub chart dependencies.
+Please read more on this in the following [Documentation](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/Helm/deploy-Helm-charts#using-subcharts)
+
+
+### How I can add runtime generated override file to a service before Helm rendering?
+
+The values file resolution will only happen once the actual deployment step runs. We can add values.yaml override from file store or any other source repo in the manifest and update the values.yaml using api call or cli with dynamic information. If we want to use any output variable from the pipeline we can use the same expression directly in the values.yaml and while fetching the file the expressions will be resolved. We just need to ensure that the steps from where the output variable expressions are copied executes before the actual deployment step runs.
+
+
+### What does fetch file step in Helm deployment actually fetch?
+
+The fetch file step in the Helm deployment fetches all the values.yaml and expands any variable expression that have been used inside the values.yaml.
+
+
+### How do we pass the initScript for delegates which are installed using default delegate Helm chart?
+
+We can create a values.yaml file and provide the initScript in that values.yaml and use this as a values.yaml override in Helm install command for delegate.
+
+
+### Is there a way to test the deletion of resources removed/renamed in the Helm chart?
+Yes, you can test the deletion of resources removed/renamed in the Helm chart by using the --prune flag with the Helm upgrade command. This flag will remove any resources that are no longer defined in the chart. You can also use the --dry-run flag to simulate the upgrade and see what changes will be made without actually applying them.
+
+
+### How I can add runtime generated override file to a service before Helm rendering?
+You can add an override file at runtime in service override or by utilizing override v2 enabled for your account. You can specify the path and branch of the override file during runtime. This is how you can perform overrides in the service before Helm rendering."
+
+
+### What is the recommended way to name Kubernetes jobs in Harness pipelines when using Rolling Deployment and native Helm deployment for the same chart?
+
+When deploying Kubernetes jobs in Harness pipelines, especially when utilizing Rolling Deployment alongside native Helm deployment for the same chart, it's essential to adopt a consistent naming convention for jobs to ensure successful tracking and management. While applying a unique suffix such as `{{ now | unixEpoch }}` can facilitate parallel job execution during Rolling Deployment, it can lead to tracking issues when Helm renders the chart with a different job name.
+
+The recommended approach is to use a naming convention that accounts for both scenarios.
+
+For Rolling Deployment, maintaining a unique suffix like `{{ now | unixEpoch }}` is suitable.
+
+For Native Helm deployment, it's advisable to utilize a name that remains consistent across deployments, such as `job-migration-db-{{ .Release.Revision }}`.
+
+
+### How can I configure the delegate to utilize a new version of the Helm binary?
+
+To integrate a new version of the Helm binary with the delegate:
+
+1. Install the desired version of the Helm binary on the delegate host.
+2. Set `HELM3_PATH` environment variable to point to the location of the newly installed Helm binary.
+
+   This can be accomplished by adding the following lines to the delegate's YAML file:
+
+   ```
+   - name: HELM3_PATH
+     value: /path/to/new/Helm/binary
+   ```
+
+   Replace `/path/to/new/Helm/binary` with the actual path to the newly installed Helm binary.
+
+3. Restart the delegate to apply the changes.
+
+
+### Why am I getting UPGRADE FAILED when trying to deploy my Helm Chart?
+
+```
+Error: UPGRADE FAILED: unable to build kubernetes objects from current release manifest: resource mapping not found for name: "$RESOURCE_NAME" namespace: "" from "": no matches for kind "HorizontalPodAutoscaler" in version "autoscaling/v2beta2" ensure CRDs are installed first
+```
+
+This error happens if you have recently upgraded your Kubernetes Cluster without ensuring that your Helm Releases' API Versions are supported in the new Kubernetes Cluster version. When attempting to upgrade them after, Helm will throw the above error due to the deprecated API no longer existing in the current Kubernetes Cluster. To fix this, you'll need to upgrade the API Version on the Helm Release manually by following the steps in the [Helm Documentation](https://Helm.sh/docs/topics/kubernetes_apis/#updating-api-versions-of-a-release-manifest).
+
+To avoid this in the future, please make sure to perform any Helm Release upgrades prior to upgrading your Kubernetes Cluster. A detailed list of deprecated and supported Kubernetes APIs can be found in the [Kubernetes Documentation](https://kubernetes.io/docs/reference/using-api/deprecation-guide/).
+
+
+### Helm Deploy failing with null pointer exception.
+
+This error usually occurs when running a Helm deployment on an expired delegate. You will run into errors in case of expired delegates. [Upgrade the delegate to the latest version](https://developer.harness.io/docs/platform/delegates/install-delegates/delegate-upgrades-and-expiration) and retry the execution.
+
+
+### Does Harness support Helm hooks (excluding service hooks)?
+
+The recommended approach is to remove Helm hooks and integrate them as shell script steps within the workflow. This method is applicable in both generations of Harness.
+
+For unchanged utilization of Helm hooks, native Helm deployment can be chosen. However, native Helm's ability to process hooks and deploy simultaneously is limited. This limitation stems from Helm's post-render functionality, which prevents Harness from processing hooks effectively.
+
+### Harness is pulling old Helm dependencies that are not in the Chart.yaml.
+
+Check the following:
+* Service configuration.
+* Whether you have configured the override.
+* Whether the chart is getting pulled from the correct location.
+* List of manifests.
+
+
+### Can I design a pipeline to deploy Helm charts hosted in a remote private Helm registry and using Kustomize to patch the Helm charts?
+
+Native Helm doesn't support Kustomize; however, you could use [service hooks](https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/Helm/deploy-Helm-charts/#service-hooks) for this.
+
+
+### Why have two charts been deployed in my cluster after running a Helm deployment two times?
+Helm chart deployment is release-specific. If the release names are different between two deployments it sees the new deployment as a new release and does not consider the one which was already installed and goes ahead and installs a new chart under the new release. This is default Helm behavior.
+
+
+### How do I handle chart dependencies if the dependent chart is in a different repo?
+If you are adding your dependency chart in a source repo you will have to clone it separately as part of the pre hook on delegate. Also, in Charts.yaml when you are mentioning the dependency you will need to specify the path of dependency chart where you downloaded.
+As the dependency update is a command run by using Helm it will be able to resolve the file path you provide if you have already downloaded the dependency chart.
+
+### How do I run Helm uninstall after a successful deployment?
+
+To run Helm uninstall manually after a successful deployment, you can leverage the shell script step and run the helm uninstall ```release-name``` command from the delegate onto the cluster.
+To run the shell script onto the required cluster, we need to specify the k8s cluster credentials to delegate. 
+
+For this use case within the shell script, you can simply reference credentials as $\{HARNESS_KUBE_CONFIG_PATH}.
+
+```export KUBECONFIG=${HARNESS_KUBE_CONFIG_PATH} kubectl get pods -n pod-test```
+
+With this, even when running the shell script on the delegate host, it can refer to the credentials of the K8s cloud provider which is used inside the infrastructure definition associated with the workflow.
+
+#### Is the "Enable Native Helm steady state for jobs" option a default setting for the steady state check?
+
+This selection is solely for verifying the steady state of a Kubernetes Job deployed via the Helm chart.
+
+### What is the CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG flag?
+
+The CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG is a Harness-specific implementation designed to wait for native Helm deployments until the pods have come up and are ready. This implementation also logs events from clusters, providing more detailed information about the deployment status.
+
+### How does CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG differ from using the --wait flag in Helm?
+
+Event Logging: The key difference is that CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG logs events from the cluster, giving detailed insights into the deployment process, whereas the --wait flag does not provide any events.
+
+Functionality: Both methods effectively wait for the pods to become ready, but the Harness flag provides additional logging information.
+
+### Is there any configuration required on the user side to enable CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG?
+
+No, there is no need to add any annotations in the deployment YAML to enable CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG. It is a built-in feature that can be utilized without additional configuration.
+
+### If my native Helm deployment fails, will the rollback delete resources created during the failed install/upgrade that are not in the rollback revision?
+
+Yes, the Helm rollback will restore the previous release version. This means only the resources from the last successful release will exist after the rollback. Any new resources created during the failed install/upgrade will be deleted if they are not part of the previous successful release.
+
+### How does Harness handle Helm chart hooks?
+
+Harness don’t handle helm hooks from our side in any way.
+
+### What happens if a deployment doesn't reach a steady state with CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG enabled?
+
+If a deployment doesn't reach a steady state, CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG will log the events and errors that occur, helping you diagnose and resolve the issues that prevented the deployment from completing successfully.
+
+### Why is the Service Dashboard not updating artifact versions for deployments with zero replicas?
+
+When deploying Helm charts with `replicas: 0` specified in the manifest, the Service Dashboard does not update to show the latest artifact version, even though the deployment succeeds and the correct artifact version is applied in the manifests.
+
+#### How instance sync works
+
+The Service Dashboard relies on instance sync tasks to track and display artifact information:
+
+1. After each deployment, Harness stores details of newly created instances (instance count, artifact details, etc.).
+2. If the instance count is non-zero, a perpetual task is created to update instance information every 10 minutes.
+3. This perpetual task keeps the Service Dashboard updated with the latest instance details.
+
+#### Why zero replicas cause issues
+
+When `replicas: 0` is specified in your Helm chart:
+- After a successful deployment, there are no active instances.
+- No instance information is available to sync.
+- The perpetual task is not created because the instance count is zero.
+- The Service Dashboard continues to show information from the previous artifact.
+
+This behavior is by design. The instance sync logic is designed to track active instances, and zero-replica deployments don't create instances to track.
+
+#### Impact
+
+- Deployments succeed and manifests are rendered with the correct artifact version.
+- The Service Dashboard does not reflect the updated artifact versions.
+- This affects both the UI and the corresponding API used for inventory management.
+- The issue occurs in multi-cluster setups when deploying to a single cluster (for example, when other CD stages are conditionally disabled).
+
+
+#### Recommended workarounds
+
+The following workarounds may help, though they may not be suitable for all use cases:
+
+1. **Deploy with a valid replica count**: Deploy with at least one replica to ensure proper instance tracking and Service Dashboard updates. Note that this may not be suitable if you need services to remain passive until manual scaling.
+
+2. **Use different artifact tags**: Use different artifact tags or versions to force dashboard updates.
+
+Supporting zero-replica deployments for artifact tracking would require significant changes to the instance sync logic, which is complex and would need extensive testing. An enhancement request (CDS-114667) has been created to address this limitation in a future release.
+
+### How to execute helm lookup expression in helm template?
+We can pass the helm template command option  `--dry-run=server`. These command options can be added in the helm manifest advanced configruation.
+
+### Is it possible to provide custom priority order for values.yaml while providing multiple values yaml file?
+We do not have any way to provide customer ordering. We follow a bottom up approach for values yaml priority in case of multiple values yaml provided where the last one gets the highest priority.
+
+### What happens if we do not pass any chart version to helm deployment having manifest with runtime input option for chart version?
+If chart version is not provided as runtime input the deployment is done using the latest chart version available for the specified chart in the given repo.
+
+### Why am I getting a Helm template error related to an invalid value in `_helpers.tpl`?
+
+The Helm template error "invalid value; expected string" in `_helpers.tpl` indicates that a non-string value (likely an integer) is being passed to a string function (e.g., `upper`).  Check the values file for unquoted numeric values used in string contexts.  The issue is likely related to how secrets are being managed and passed to the Helm template.
+
+### How can I deploy Helm charts to OpenShift using Harness?
+
+Deploying Helm charts to OpenShift using Harness can be done using the `oc apply` command, which is a superset of `kubectl`.  The commands should be largely interchangeable, but be mindful of OpenShift-specific resources like routes.
+
+### What is the new native Helm deployment support?
+
+Harness now supports native Helm deployments for blue-green and canary deployments. [https://developer.harness.io/docs/category/helm-step-reference](https://developer.harness.io/docs/category/helm-step-reference)
+
+### Why does leaving the Chart Version field blank in a Helm Deployment Input Set cause a failure?
+
+Leaving the Chart Version field blank in a Helm Deployment Input Set causes a failure because a value is required.  Harness does not automatically retrieve the latest chart version in this scenario.
+
+
+### How do I debug failed Helm chart deployments?
+Helm deployment failures may be caused by incorrect values, missing dependencies, or insufficient permissions. Check the Helm logs and verify the release configuration.
+
+### Why does Helm execution show excessive warnings during deployment?
+Large index files and resource limitations can cause excessive warnings. Increasing delegate memory and CPU can help mitigate performance issues.
+
+### Why is Helm deployment failing with a 137 exit when multiple concurrent deployments are being run?
+Concurrent execution failures may be due to large `index.yaml` files, exceeding recommended memory limits. Increasing delegate memory to at least 8GB may improve performance.
+
+### How to resolve the issue where a namespaced Helm chart is not found during deployment?
+If a namespace doesn’t exist, using the `--create-namespace` flag can resolve the issue. If the namespace was manually created, Helm may still fail, requiring further troubleshooting.
+
+### How to resolve the issue where a user reports an issue when deploying a Helm chart in a specific namespace?
+Users facing namespace errors should remove namespace objects from their manifest templates or ensure Helm correctly scopes installation to the specified namespace. 
+
+### Why does Helm uninstall runs after a failed initial deployment in Helm Deployment step?
+Helm recommends purging the initial release if any failure happens: [https://github.com/helm/helm/issues/3353#issuecomment-358367529](https://github.com/helm/helm/issues/3353#issuecomment-358367529). Hence, Harness purges the release if the first ever release fails in Helm Deployment step. If this is not done, then the user would be manually required to clean up the failed release, otherwise all subsequent releases would fail. Harness helps users avoid this manual effort and purges the failed initial release in this case.
+
+### Is switching between Kubernetes Deployment and Helm Deployment supported?
+
+**Yes, switching between Kubernetes Deployment and Helm Deployment types is supported**, but requires careful planning due to some important limitations and considerations.
+
+:::warning Important Considerations
+Switching between deployment types on the same infrastructure and namespace can lead to deployment failures due to immutable Kubernetes selector labels. Plan your migration carefully and consider using different namespaces or performing force deployments.
+:::
+
+#### Limitations and Considerations
+
+1. **Label Selector Handling**:
+   - When switching from Kubernetes to Helm deployments, leftover selector labels (particularly `harness.io/track: stable`) can cause deployment failures, especially when skipping canary steps.
+   - This happens because selector labels in Kubernetes are immutable and Helm's 3-way merge won't remove them from existing deployments.
+
+2. **Deployment Type Compatibility**:
+   - Canary flows typically work because Harness adds track labels in pod labels for canary deployments.
+   - Rolling deployments (skipping canary steps) may fail due to label selector mismatches between the existing deployment and the new manifests.
+
+3. **Maintenance Mode Deployments**:
+   - When services are in maintenance mode (replica: 0), skipping canary steps is often desired to avoid spinning up unnecessary pods.
+   - However, this scenario is most prone to selector mismatch issues when switching deployment types.
+
+#### Best Practices for Switching Deployment Types
+
+1. **Perform a Force Deployment**: 
+   - When switching deployment types, perform a forced fresh deployment (delete and redeploy) to remove stale selectors.
+   - This is especially important for services that are in maintenance mode or not serving traffic.
+
+2. **Enable "Skip Harness Label Selector" Setting**:
+   - For Kubernetes deployments, enable the ["Skip Harness label selector tracking" setting](/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-kubernetes-category/skip-harness-label-selector-tracking-on-kubernetes-deployments).
+   - This helps when you need to switch between canary and rolling deployment flows.
+
+3. **Use Different Release Names and Namespaces**:
+   - When deploying the same service using both Kubernetes and Helm deployment types, use different release names and consider using separate namespaces to avoid conflicts.
+   - Avoid deploying the same service to the same infrastructure using both deployment types simultaneously.
+
+4. **Check Delegate Version**:
+   - Ensure your delegate is updated to the latest version to benefit from fixes related to label handling.
+   - If you can't update the delegate, consider updating the `harness-helm-post-renderer` binary using the following commands in the delegate's INIT_SCRIPT:
+     ```bash
+     curl -f -s -L -o client-tools/harness-helm-post-renderer/v0.1.5/harness-helm-post-renderer \
+     https://app.harness.io/public/shared/tools/harness-helm-post-renderer/release/v0.1.5/bin/linux/amd64/harness-helm-post-renderer
+     export PATH=client-tools/harness-helm-post-renderer/v0.1.5/:$PATH
+     ```
+
+5. **Feature Flag Requirements**:
+   - Ensure the feature flag `CDS_HELM_STEADY_STATE_CHECK_1_16_V2_NG` is enabled for improved Helm steady state checks.
+   - Contact [Harness Support](mailto:support@harness.io) if you need this feature flag enabled.
+
+#### Troubleshooting Common Errors
+
+If you encounter errors like:
+```
+Error: UPGRADE FAILED: cannot patch "[resource]" with kind Deployment: Deployment.apps "[resource]" is invalid: spec.template.metadata.labels: Invalid value: map[string]string{"app":"[resource]", ..., "harness.io/track":"stable", ...}: selector does not match template labels
+```
+
+This indicates a label selector mismatch. Follow these steps:
+1. Check if `harness.io/track: stable` exists in your deployment's selector labels using:
+   ```bash
+   kubectl get deployment [deployment-name] -o yaml
+   ```
+2. Perform a force deployment by deleting the existing deployment first.
+3. Deploy again with your desired configuration.
+4. If the issue persists, verify that your Helm chart doesn't contain hardcoded `harness.io/track` labels in the selector.
+
+#### Migration Strategy
+
+For a smooth transition between deployment types:
+1. **Plan the migration** during maintenance windows when possible.
+2. **Test the switch** in non-production environments first.
+3. **Document your current configuration** before making changes.
+4. **Consider using different services** for different deployment types if you need both approaches.
+
+### How does Harness store and manage Helm configuration files on the delegate?
+
+When you run a Helm deployment, Harness handles different file types with distinct storage and lifecycle behaviors:
+
+**Manifest files**
+
+Stored in temporary directories during deployment execution and automatically cleaned up after the task completes.
+
+**Override files (values and secrets)**
+
+Stored persistently at `/repository/helm/overrides/${CONTENT_HASH}.yaml`, where `${CONTENT_HASH}` is an MD5 hash of the file content. Key characteristics:
+
+- Files use content-based naming, so identical configurations produce the same file path and overwrite previous versions
+- Different configurations generate different hashes, creating separate files
+- Files are **not automatically deleted** after deployment completion and persist on the delegate until manually removed
+- Harness does not provide built-in automatic cleanup (no cron jobs, post-hooks, or disk-based sweeps)
+
+**Impact on deployments**
+
+Persistent override files do not affect deployment correctness. Each deployment fetches fresh copies from source repositories or secrets managers, regenerates content hashes, and overwrites files as needed. Stale files from previous deployments cannot interfere with new executions.
+
+### How should I handle cleanup of Helm override files?
+
+**Do you need to clean up?**
+
+Manual cleanup is not required for functional deployments, but consider it if:
+- You have compliance or security requirements for sensitive file storage
+- Delegate disk space is limited
+- You deploy frequently with many unique configurations
+
+**Cleanup approaches**
+
+If cleanup is needed for your environment:
+
+- **OS-level scripts**: Create cron jobs or scripts to periodically remove files from `/repository/helm/overrides/` on the delegate
+- **Maintenance windows**: Schedule regular delegate maintenance to clear accumulated files
+- **Monitoring**: Set up disk usage alerts to prompt cleanup when thresholds are reached
+- **Built-in cleanup**: Contact Harness Support if you need an automated cleanup feature (tracked as a product enhancement)
+
+**Monitoring recommendations**
+
+Regularly monitor delegate disk space, especially in high-frequency deployment environments. Track the growth of `/repository/helm/overrides/` to identify when cleanup is necessary.
+
+### What security measures should I implement for Helm configuration files?
+
+**Built-in security**
+
+Harness provides baseline security for configuration files:
+
+- **Content-hash naming**: Files use MD5 hashes, making paths non-predictable
+- **Restricted permissions**: Files created with `600` permissions on Unix-like systems (owner read/write only)
+- **Fresh fetch**: Each deployment retrieves current data from sources, preventing use of outdated credentials
+
+**Enhanced security for compliance**
+
+If you have strict security or compliance requirements:
+
+- **Encrypted filesystems**: Run delegates on hosts with encrypted filesystems to protect data at rest
+- **Access controls**: Restrict filesystem access to delegate processes only
+- **Secrets managers**: Store sensitive values in integrated secrets managers (HashiCorp Vault, AWS Secrets Manager, Azure Key Vault) instead of values files to minimize persistent sensitive data
+- **Regular cleanup**: Implement cleanup procedures for `/repository/helm/overrides/` to limit exposure window for sensitive files
+- **Audit logging**: Enable delegate logging and monitor file access patterns
+
+### Why does Helm deployment fail with "validation: chart.metadata.version is invalid" but succeed on rerun?
+
+During Helm deployment, Harness fetches the Helm repository and reads the `index.yaml` file to resolve the requested chart and version. Helm performs strict validation on all chart entries in the repository index. If any chart entry contains an invalid version that does not follow [Semantic Versioning (SemVer)](https://semver.org/) format, Helm skips that entry while loading the index.
+
+**Example error:**
+
+```
+Failed to fetch chart "win-helm-chart" from repo "scl-helm". Exit code: [1].
+index.go:370: skipping loading invalid entry for chart "dgs-tracing-reactapp-test-ci" 
+"-alpha.01FMQMCB8M" from .../index.yaml: validation: chart.metadata.version 
+"-alpha.01FMQMCB8M" is invalid
+```
+
+When Helm encounters invalid entries, the repository index loads only partially. The requested chart or version may not be available to Helm, causing the deployment to fail.
+
+**Why deployments succeed on rerun:**
+
+Reruns can succeed due to Helm and Harness caching behavior:
+
+- The Helm chart or repository metadata may already exist in the delegate's local cache.
+- Helm may not need to fully re-parse the repository index.
+- Previously downloaded chart artifacts can be reused.
+
+This makes the behavior non-deterministic. Deployments may pass on rerun but fail again at any time, especially on a new or restarted delegate.
+
+**Reliability impact:**
+
+Although reruns may succeed intermittently, an inconsistent Helm repository can cause:
+
+- Random deployment failures across pipelines
+- Failures after delegate restarts or on new delegates
+- Issues during scaling or disaster recovery scenarios
+
+**Resolution:**
+
+To permanently resolve this issue:
+
+1. Update all Helm charts to use valid Semantic Versioning. Valid examples include `27.3.26`, `27.3.26-alpha.1`, and `1.0.0-rc.2`. Invalid versions include those starting with `-alpha`, `-beta`, or `-rc` without a base version number.
+
+2. Remove chart packages with invalid versions from the Helm repository.
+
+3. Regenerate the repository index:
+
+   ```bash
+   helm repo index . --url <helm-repo-url>
+   ```
+
+4. Refresh the Harness delegate Helm cache by restarting the delegate or clearing the cache.
+
+5. Verify chart availability before deployment:
+
+   ```bash
+   helm search repo <repo-name>/<chart-name> --versions
+   ```

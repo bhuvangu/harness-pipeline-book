@@ -1,0 +1,86 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/kubernetes-patch-step.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/kubernetes-patch-step)
+
+# --- example 1 ---
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: nginx-deployment
+    labels:
+      app: nginx
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: nginx
+    template:
+      metadata:
+        labels:
+          app: nginx
+      spec:
+        containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+          - containerPort: 80
+
+# --- example 2 ---
+  spec:
+    template:
+      spec:
+        containers:
+        - name: nginx
+          image: nginx:1.23.0-alpine
+
+# --- example 3 ---
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: nginx-deployment
+    labels:
+      app: nginx
+  spec:
+    replicas: 2
+    selector:
+      matchLabels:
+        app: nginx
+    template:
+      metadata:
+        labels:
+          app: nginx
+      spec:
+        containers:
+        - name: nginx
+          image: nginx:1.23.0-alpine
+          ports:
+          - containerPort: 80
+
+# --- example 4 ---
+    spec:
+      template:
+        spec:
+          containers:
+          - name: redis
+            image: redis:latest
+            ports:
+            - containerPort: 6379
+
+# --- example 5 ---
+              - step:
+                  type: K8sPatch
+                  name: K8sPatch_1
+                  identifier: K8sPatch_1
+                  spec:
+                    workload: tarun-ng/Deployment/<+name_of_resource>
+                    source:
+                      type: Inline | Harness Store | GIT
+                      spec:
+                        content: dsadas (considering Inline type)
+                    recordChangeCause: true
+                    mergeStrategyType: strategic | json | merge
+                    skipSteadyStateCheck: false
+                    commandFlags: 
+                      - commandType: Patch
+                        flag: sample
+                  failureStrategies:[]
+                  strategy:[]
+                  timeout: 10m

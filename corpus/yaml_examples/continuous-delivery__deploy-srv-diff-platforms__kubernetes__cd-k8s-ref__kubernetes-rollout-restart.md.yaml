@@ -1,0 +1,82 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/kubernetes-rollout-restart.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/kubernetes-rollout-restart)
+
+# --- example 1 ---
+- step:
+    type: K8sRollout
+    name: K8sRollout_Restart_ManifestPath_RuntimInput
+    identifier: K8sRollout_Restart_ManifestPath_RuntimInput
+    spec:
+      command: restart
+      resources:
+        type: ManifestPath
+        spec:
+          manifestPaths: <+input>
+    timeout: 10m
+
+# --- example 2 ---
+- step:
+    type: K8sRollout
+    name: K8sRollout_Pause_ManifestPath_fixedInput
+    identifier: K8sRollout_Pause_ManifestPath_fixedInput
+    spec:
+      command: pause
+      resources:
+        type: ManifestPath
+        spec:
+          manifestPaths:
+            - deployment.yaml
+
+# --- example 3 ---
+- step:
+    type: K8sRollout
+    name: K8sRollout_Status_ManifestPath_fixedInput
+    identifier: K8sRollout_Status_ManifestPath_fixedInput
+    spec:
+      command: status
+      resources:
+        type: ManifestPath
+        spec:
+          manifestPaths:
+            - deployment.yaml
+
+# --- example 4 ---
+- step:
+    type: K8sRollout
+    name: K8sRollout_Resume_ManifestPath_fixedInput
+    identifier: K8sRollout_History_ManifestPath_fixedInput
+    spec:
+      command: Resume
+      resources:
+        type: ManifestPath
+        spec:
+          manifestPaths:
+            - deployment.yaml
+    timeout: 10m
+
+# --- example 5 ---
+- step:
+    type: K8sRollout
+    name: K8sRollout_History_ManifestPath_fixedInput
+    identifier: K8sRollout_History_ManifestPath_fixedInput
+    spec:
+      command: history
+      resources:
+        type: ManifestPath
+        spec:
+          manifestPaths:
+            - deployment.yaml
+    timeout: 10m
+
+# --- example 6 ---
+- step:
+    type: K8sRollout
+    name: K8sRollout_Undo_ManifestPath_fixedInput
+    identifier: K8sRollout_History_ManifestPath_fixedInput
+    spec:
+      command: Undo
+      resources:
+        type: ManifestPath
+        spec:
+          manifestPaths:
+            - deployment.yaml
+    timeout: 10m

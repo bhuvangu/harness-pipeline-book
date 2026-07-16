@@ -1,0 +1,9 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/using-open-shift-with-harness-kubernetes.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/using-open-shift-with-harness-kubernetes)
+
+# --- example 1 ---
+...  
+  securityContext:  
+    runAsUser: 1000  
+    runAsGroup: 3000  
+    fsGroup: 2000  
+...

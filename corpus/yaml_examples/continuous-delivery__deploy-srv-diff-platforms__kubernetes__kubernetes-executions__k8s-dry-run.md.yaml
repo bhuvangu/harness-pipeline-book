@@ -1,0 +1,75 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/k8s-dry-run.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/k8s-dry-run)
+
+# --- example 1 ---
+              - step:
+                  type: K8sDryRun
+                  name: Output Service Manifests
+                  identifier: OutputService
+                  spec:
+                    encryptYamlOutput: false
+                  timeout: 10m
+
+# --- example 2 ---
+- step:
+    type: K8sDryRun
+    name: Dry Run with Command Flags
+    identifier: DryRun_1
+    spec:
+      encryptYamlOutput: false
+      commandFlags:
+        - commandType: Apply
+          flag: "--server-side --force-conflicts"
+    timeout: 10m
+
+# --- example 3 ---
+- step:
+    type: K8sDryRun
+    name: Dry Run with Expression
+    identifier: DryRun_1
+    spec:
+      commandFlags:
+        - commandType: Apply
+          flag: "<+pipeline.variables.validationMode>"
+    timeout: 10m
+
+# --- example 4 ---
+- step:
+    type: K8sDryRun
+    name: Dry Run with Runtime Input
+    identifier: DryRun_1
+    spec:
+      commandFlags:
+        - commandType: Apply
+          flag: <input>
+    timeout: 10m
+
+# --- example 5 ---
+- step:
+    type: K8sDryRun
+    name: Validate Server-Side Apply
+    identifier: ValidateSSA
+    spec:
+      encryptYamlOutput: false
+      commandFlags:
+        - commandType: Apply
+          flag: "--server-side --force-conflicts"
+    timeout: 10m
+- step:
+    type: HarnessApproval
+    name: Review Manifests
+    identifier: ReviewManifests
+    spec:
+      approvalMessage: Review the dry run output before deployment
+      approvers:
+        userGroups:
+          - devops_team
+    timeout: 1d
+- step:
+    type: K8sApply
+    name: Apply Manifests
+    identifier: ApplyManifests
+    spec:
+      commandFlags:
+        - commandType: Apply
+          flag: "--server-side --force-conflicts"
+    timeout: 10m

@@ -1,0 +1,77 @@
+# source: docs/continuous-integration/use-ci/run-tests/tests-v1/ti-test-splitting.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/tests-v1/ti-test-splitting)
+
+# --- example 1 ---
+       strategy: ## Declares a looping strategy.
+         parallelism: 8 ## Specify the number of workloads. This example creates 8 workloads.
+         maxConcurrency: 2 ## Optional setting to optimize parallelism. Limits the number of workloads that can run at once.
+
+# --- example 2 ---
+              - step:
+                  type: RunTests
+                  identifier: Run_Tests_with_Intelligence
+                  name: Run Tests with Intelligence
+                  spec:
+                    ...
+                    enableTestSplitting: true ## Required to enable test splitting.
+                    testSplitStrategy: ClassTiming ## Optional. Can be ClassTiming or TestCount. Default is ClassTiming.
+                    ...
+
+# --- example 3 ---
+                       reports:
+                         spec:
+                           paths:
+                             - "target/surefire-reports/result_<+strategy.iteration>.xml"
+                         type: JUnit
+
+# --- example 4 ---
+              - step:
+                  type: RunTests
+                  identifier: Run_Tests_with_Intelligence
+                  name: Run Tests with Intelligence
+                  spec:
+                    ...
+                    preCommand: |- ## Optional. Echo environment variables to differentiate parallel runs in build logs.
+                      echo $HARNESS_STAGE_INDEX
+                      echo $HARNESS_STAGE_TOTAL
+                    ...
+
+# --- example 5 ---
+    - stage:
+        type: CI
+        identifier: Build_and_Test
+        name: Build and Test
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RunTests
+                  identifier: Run_Tests_with_Intelligence
+                  name: Run Tests with Intelligence
+                  spec:
+                    language: Java ## Test splitting with TI is supported for all languages and tools that are supported by TI.
+                    buildTool: Maven
+                    envVariables: ## Optional environment variables to differentiate parallel runs.
+                      HARNESS_STAGE_INDEX: <+strategy.iteration> # Index of current parallel run.
+                      HARNESS_STAGE_TOTAL: <+strategy.iterations> # Total parallel runs.
+                    preCommand: |- ## Optional. Echo environment variables to differentiate parallel runs in build logs.
+                      echo $HARNESS_STAGE_INDEX
+                      echo $HARNESS_STAGE_TOTAL
+                    args: test
+                    runOnlySelectedTests: true ## Enable TI.
+                    enableTestSplitting: true ## Enable test splitting.
+                    testSplitStrategy: ClassTiming ## Optional. Can be ClassTiming or TestCount. Default is ClassTiming.
+                    postCommand: mvn package -DskipTests
+                    reports:
+                      spec:
+                        paths:
+                          - "target/surefire-reports/result_<+strategy.iteration>.xml" ## Use an expression to generate a unique results file for each parallel run.
+                      type: JUnit
+          platform:
+            arch: Amd64
+            os: Linux
+          runtime:
+            spec: {}
+            type: Cloud
+        strategy:
+          parallelism: 3 ## Set the number of groups to use for test splitting.

@@ -1,0 +1,378 @@
+# source: docs/continuous-integration/migration-guides/migrating-from-githubactions.md  (https://developer.harness.io/docs/continuous-integration/migration-guides/migrating-from-githubactions)
+
+# --- example 1 ---
+jobs:
+  job_1:
+   name: job_1
+   runs-on: ubuntu-latest
+   steps:
+      -  name: compile code
+         container:
+               image: python:3.10.6-alpine
+         run: |
+           python -m compileall ./
+
+# --- example 2 ---
+  stages:
+    - stage:
+        name: stage1
+        ...
+        spec:
+          ...
+          platform:
+            os: Linux
+            arch: Amd64
+          ...
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: compile code
+                  identifier: compile_code
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: python:3.10.6-alpine
+                    shell: Sh
+                    command: python -m compileall ./
+
+# --- example 3 ---
+name: Github_actions
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  job_1:
+   name: job_1
+   runs-on: ubuntu-latest
+   steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
+      - name: login to docker hub
+        uses: docker/login-action@v2
+        with: 
+          username: {{secrets.DOCKERHUB_USERNAME}}
+          password: {{secrets.DOCKERHUB_TOKEN}}
+          
+      -  name: step_1 
+         container:
+               image: openjdk:17.0-jdk
+         run: |
+           echo "this runs on openjdk"
+         services:
+          postgres:
+            image: postgres:10.8
+            env:
+              POSTGRES_USER: postgres
+              POSTGRES_DB: postgres
+              POSTGRES_PASSWORD: ""
+  job_2:
+     name: job_2
+     runs-on: ubuntu-latest
+     steps:
+      - name: step_2 
+        container:
+              image: node:13.0.0
+        run: |
+            echo "pipeline var:" $pipeline_var
+            echo "project level var:" $project_var
+            echo "secret example :" ${{ secrets.Db_Password)}}
+  job_3:
+     name: job_3
+     runs-on: ubuntu-latest
+     strategy:
+        matrix:
+           version: ["node","python","ubuntu"]
+     steps:
+      - name: matrix
+        run: |
+           echo "Testing on ${{ matrix.version }}
+
+# --- example 4 ---
+pipeline:
+  name: gha-test
+  identifier: ghatest
+  projectIdentifier: gha_test
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: account.myscm
+        repoName: test
+        build: <+input>
+  stages:
+    - stage:
+        name: stage1
+        identifier: stage1
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Background
+                  name: postgres-dependency
+                  identifier: postgresdependency
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: postgres:10.8
+                    shell: Sh
+                    envVariables:
+                      POSTGRES_USER: postgres
+                      POSTGRES_PASSWORD: <+secrets.getValue("DbPasswordSecret")>
+                      POSTGRES_DB: postgres
+              - step:
+                  type: Run
+                  name: Run_1
+                  identifier: Run_1
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "this runs on openjdk"
+    - stage:
+        name: stage2
+        identifier: stage2
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Run_2
+                  identifier: Run_2
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: node:13.0.0
+                    shell: Bash
+                    command: |-
+                      echo "pipeline var:" <+pipeline.variables.pipelinevar1>
+                      echo "project level var:" <+variable.proj_var>
+                      echo "secret example :" <+secrets.getValue("DbPasswordSecret")>
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+    - stage:
+        name: matrix stage
+        identifier: matrix_stage
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Run_3
+                  identifier: Run_3
+                  spec:
+                    shell: Bash
+                    command: echo "Testing on  <+matrix.testparam>"
+        strategy:
+          matrix:
+            testparam:
+              - node
+              - python
+              - ubuntu
+          maxConcurrency: 3
+  variables:
+    - name: pipelinevar1
+      type: String
+      description: ""
+      value: someval
+
+# --- example 5 ---
+name: Github_actions
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  job_1:
+   name: job_1
+   ...
+   steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+# --- example 6 ---
+pipeline:
+  ...
+      codebase:
+        connectorRef: account.myscm ## Codebase connector ID.
+        repoName: test ## A repo name. If set to <+input>, you can specify a repo when the pipeline runs.
+        build: <+input> ## This value means you'll specify the branch to pull when the pipeline runs.
+  stages:
+    - stage:
+        name: stage1
+        ...
+        spec:
+          cloneCodebase: true ## Indicates that this stage will clone the pipeline's default codebase. If set to false, the stage won't clone the codebase.
+
+# --- example 7 ---
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: my-dockerhub-connector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "this runs on openjdk"
+
+# --- example 8 ---
+  name: login to docker hub
+    uses: docker/login-action@v2
+    with:
+      username: {{ secrets.DOCKERHUB_USERNAME }}
+      password: {{ secrets.DOCKERHUB_TOKEN }}
+
+  name: build and push docker image
+    uses: docker/build-push-action@v3
+    with:
+      context:
+        file: ./pythondockerfile
+        push: true
+        tags: user/pythonsample:latest
+
+# --- example 9 ---
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: my-docker-hub-connector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "this runs on openjdk"
+
+# --- example 10 ---
+     - step:
+          type: BuildAndPushDockerRegistry
+          name: build and push to the docker registry
+          identifier: build_and_push_to_the_docker_registry
+          spec:
+            connectorRef: myDockerConnector
+            repo: myrepo/pythonsample
+             tags:
+                - latest
+             dockerfile: pythondockerfile
+
+# --- example 11 ---
+env:
+  ENV_VAR: value1
+
+jobs:
+  job_1:
+    runs-on: ubuntu-latest
+    env:
+      JOB_VAR: value2
+    steps:
+      - name: simple script
+        run: echo "$JOB_VAR $ENV_VAR"
+
+# --- example 12 ---
+              - step:
+                  type: Run
+                  name: test-variable
+                  identifier: test_variable
+                  spec:
+                    command: echo "environment variable: " <+variable.env_var>
+
+# --- example 13 ---
+              - step:
+                  type: Background
+                  name: Background_1
+                  identifier: Background_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: postgres:10.8
+                    envVariables:
+                      POSTGRES_USER: postgres
+                      POSTGRES_PASSWORD: <+secrets.getValue("DbPasswordSecret")>
+                      POSTGRES_DB: postgres
+
+# --- example 14 ---
+jobs:
+  example_matrix:
+    strategy:
+      matrix:
+        testparam: [node, python, ubuntu]
+    steps:
+      - name: simple script
+        run: echo "Testing on ${{ matrix.testparam }}"
+
+# --- example 15 ---
+  stages:
+    - stage:
+        name: Stage1
+        ...
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    shell: Bash
+                    command: echo "Testing on  <+matrix.testparam>"
+        strategy:
+          matrix:
+            testparam:
+              - node
+              - python
+              - ubuntu
+          maxConcurrency: 3
+
+# --- example 16 ---
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  gobuild:
+    if: contains(github.event.pull_request.labels.*.name, 'go') || contains(github.event.pull_request.labels.*.name, 'gojava')
+
+# --- example 17 ---
+trigger:
+  name: trigger
+  identifier: trigger
+  enabled: true
+  orgIdentifier: default
+  projectIdentifier: UNIQUE_IDENTIFIER
+  pipelineIdentifier: Project_Name
+  source:
+    type: Scheduled
+    spec:
+      type: Cron
+      spec:
+        expression: 45 13 13 09 2
+  inputYaml: |
+    pipeline:
+      identifier: Project_Name
+      properties:
+        ci:
+          codebase:
+            build:
+              type: branch
+              spec:
+                branch: main

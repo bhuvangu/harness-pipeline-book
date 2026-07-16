@@ -1,0 +1,136 @@
+# source: docs/continuous-integration/use-ci/use-drone-plugins/run-a-git-hub-action-in-cie.md  (https://developer.harness.io/docs/continuous-integration/use-ci/use-drone-plugins/run-a-git-hub-action-in-cie)
+
+# --- example 1 ---
+- step:
+    identifier: gcsuploader
+    name: gcsuploader
+    type: Plugin
+    spec:
+      connectorRef: YOUR_DOCKER_CONNECTOR_ID
+      image: plugins/github-actions
+      privileged: true
+      settings:
+        uses: google-github-actions/upload-cloud-storage@main # Specify the GitHub Action you want to use.
+        with: # Specify Action settings
+          path: pom.xml
+          destination: cie-demo-pipeline/github-action
+          credentials: <+stage.variables.GCP_SECRET_KEY_BASE64> ## This example uses a stage variable to store a secret.
+
+# --- example 2 ---
+- step:
+    type: Plugin
+    name: private action
+    identifier: private_action
+    spec:
+      connectorRef: dockerhub
+      image: plugins/github-actions
+      privileged: true
+      settings:
+        uses: myorg/private-action-step@v1
+        with:
+          path: pom.xml
+        env:
+          GITHUB_TOKEN: <+secrets.getValue("github_pat")>
+
+# --- example 3 ---
+              - parallel
+                  - step:
+                     identifier: gcsuploader
+                     name: gcsuploader
+                     type: Plugin
+                     spec:
+                       connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                       image: plugins/github-actions
+                       privileged: true
+                       settings:
+                         uses: google-github-actions/upload-cloud-storage@main
+                         with:
+                           path: pom.xml
+                           destination: cie-demo-pipeline/github-action
+                           credentials: <+stage.variables.GCP_SECRET_KEY_BASE64>
+                         env:
+                           XDG_CACHE_HOME: /home/ubuntu/.cache1
+                  - step:
+                     identifier: gcsuploader
+                     name: gcsuploader
+                     type: Plugin
+                     spec:
+                       connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                       image: plugins/github-actions
+                       privileged: true
+                       settings:
+                         uses: google-github-actions/upload-cloud-storage@main
+                         with:
+                           path: pom.xml
+                           destination: cie-demo-pipeline/github-action
+                           credentials: <+stage.variables.GCP_SECRET_KEY_BASE64>
+                         env:
+                           XDG_CACHE_HOME: /home/ubuntu/.cache2
+
+# --- example 4 ---
+- step:
+    type: Plugin
+    name: Action docker publish image
+    identifier: Action_docker_publish_image
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/github-actions
+      privileged: true
+      settings:
+        uses: elgohr/Publish-Docker-Github-Action@v4
+        with:
+          name: dockerhub/publish-docker-image
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          workdir: /harness
+
+# --- example 5 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Plugin
+                  name: Plugin_1
+                  identifier: Plugin_1
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    image: plugins/github-actions
+                    privileged: true
+                    settings:
+                      uses: google-github-actions/upload-cloud-storage@main ## Specify the Action to use.
+                      with: ## Specify Action settings
+                        path: pom.xml
+                        destination: cie-demo-pipeline/github-action
+                        credentials: <+stage.variables.GCP_SECRET_KEY_BASE64>
+          infrastructure: ## Specify your build infrastructure
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+        variables: ## This stage variable references a Harness secret.
+          - name: GCP_SECRET_KEY_BASE64
+            type: Secret
+            description: ""
+            required: false
+            value: YOUR_SECRET
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO
+        build: <+input>

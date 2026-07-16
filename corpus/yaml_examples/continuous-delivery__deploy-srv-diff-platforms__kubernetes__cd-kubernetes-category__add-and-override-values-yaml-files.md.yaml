@@ -1,0 +1,8 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-kubernetes-category/add-and-override-values-yaml-files.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-kubernetes-category/add-and-override-values-yaml-files)
+
+# --- example 1 ---
+name: myapp
+replicas: 2
+
+image: <+artifact.image>
+dockercfg: <+artifact.imagePullSecret>

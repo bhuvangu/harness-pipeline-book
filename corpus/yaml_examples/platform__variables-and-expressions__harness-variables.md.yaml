@@ -1,0 +1,97 @@
+# source: docs/platform/variables-and-expressions/harness-variables.md  (https://developer.harness.io/docs/platform/variables-and-expressions/harness-variables)
+
+# --- example 1 ---
+pipeline:
+  name: exp
+  identifier: exp
+  projectIdentifier: CD_Docs
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: ternarydemo
+        identifier: ternarydemo
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo <+stage.variables.myvar>
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+              - step:
+                  type: ShellScript
+                  name: ternary
+                  identifier: ternary
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo <+ <+stage.variables.myvar> == "1.1"?"pass":"fail" >
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        variables:
+          - name: myvar
+            type: String
+            description: ""
+            required: true
+            value: "1.1"
+
+# --- example 2 ---
+pipeline:
+  name: pipeline
+  identifier: pipeline
+  projectIdentifier: docs_play
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: custom
+        identifier: custom
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo {$executionUrl}
+                    environmentVariables:
+                      - name: executionUrl
+                        type: String
+                        value: <+pipeline.executionUrl>
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+
+# --- example 3 ---
+name: test
+replicas: 4
+image: <+artifacts.primary.image>
+dockercfg: <+artifacts.primary.imagePullSecret>
+createNamespace: true
+namespace: <+infra.namespace>
+# using expression <+infra.namespace>

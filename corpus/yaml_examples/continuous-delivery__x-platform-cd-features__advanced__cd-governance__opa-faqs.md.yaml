@@ -1,0 +1,24 @@
+# source: docs/continuous-delivery/x-platform-cd-features/advanced/cd-governance/opa-faqs.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/advanced/cd-governance/opa-faqs)
+
+# --- example 1 ---
+package pipeline
+
+template := "account.deploystagetemplate"
+stableVersion := "v2"
+
+
+# Deny a pipeline if the stage uses the template above
+# without the stable version stated
+deny[msg] {
+	stage = input.pipeline.stages[_].stage
+
+	# Check if the stage matches but doesn't have a template
+	stage.template.templateRef == template
+	stage.template.versionLabel != stableVersion
+
+	# Show a human-friendly error message
+	msg = sprintf(
+		"Stage %s, has template %s, with version %s, it should be version %s",
+		[stage.name, template, stage.template.versionLabel, stableVersion],
+	)
+}

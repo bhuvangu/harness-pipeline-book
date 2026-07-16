@@ -1,0 +1,37 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/containerized-steps/containerized-step-groups.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/containerized-steps/containerized-step-groups)
+
+# --- example 1 ---
+volumes:
+  - mountPath: /dir
+    type: ConfigMap
+    spec:
+      name: test_config
+      optional: false
+
+# --- example 2 ---
+volumes:
+  - mountPath: /dir/test
+    type: Secret
+    spec:
+      name: test
+      optional: false
+
+# --- example 3 ---
+connector:
+  name: Docker Hub with Pwd
+  identifier: Docker_Hub_with_Pwd
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: DockerRegistry
+  spec:
+    dockerRegistryUrl: https://docker.dev.harness.io/v2/
+    providerType: DockerHub
+    auth:
+      type: Anonymous
+    executeOnDelegate: true
+
+# --- example 4 ---
+entrypoint:
+  - dockerd-entrypoint.sh
+  - "--mtu=1450"

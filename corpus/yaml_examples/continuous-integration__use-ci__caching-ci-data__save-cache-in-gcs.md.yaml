@@ -1,0 +1,179 @@
+# source: docs/continuous-integration/use-ci/caching-ci-data/save-cache-in-gcs.md  (https://developer.harness.io/docs/continuous-integration/use-ci/caching-ci-data/save-cache-in-gcs)
+
+# --- example 1 ---
+              - step:
+                  type: SaveCacheGCS
+                  name: Save Cache to GCS_1
+                  identifier: SaveCachetoGCS_1
+                  spec:
+                    connectorRef: account.gcp
+                    bucket: ci_cache
+                    key: gcs-{{ checksum filePath1 }} # example cache key based on file checksum
+                    sourcePaths:
+                      - directory1 # example first directory to cache
+                      - directory2 # example second directory to cache
+                    archiveFormat: Tar
+
+# --- example 2 ---
+              - step:
+                  type: RestoreCacheGCS
+                  name: Restore Cache From GCS_1
+                  identifier: RestoreCacheFromGCS_1
+                  spec:
+                    connectorRef: account.gcp
+                    bucket: ci_cache
+                    key: gcs-{{ checksum filePath1 }} # example cache key based on file checksum
+                    archiveFormat: Tar
+
+# --- example 3 ---
+  stages:
+    - stage:
+        spec:
+          sharedPaths:
+            - /example/path # directory outside workspace to share between steps
+
+# --- example 4 ---
+                  spec:
+                    key: cache-{{ checksum "go.sum" }}
+
+# --- example 5 ---
+                  spec:
+                    sourcePaths:
+                      - /go/pkg/mod
+                      - /root/.cache/go-build
+
+# --- example 6 ---
+                  spec:
+                    key: cache-{{ checksum "package-lock.json" }}
+
+# --- example 7 ---
+                  spec:
+                    key: cache-{{ checksum "yarn.lock" }}
+
+# --- example 8 ---
+                  spec:
+                    sourcePaths:
+                      - node_modules
+
+# --- example 9 ---
+                  spec:
+                    key: cache-{{ checksum "pom.xml" }}
+
+# --- example 10 ---
+                  spec:
+                    sourcePaths:
+                      - /root/.m2
+
+# --- example 11 ---
+  stages:
+    - stage:
+        name: Build
+        identifier: Build
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RestoreCacheGCS
+                  name: Restore Cache From GCS_1
+                  identifier: RestoreCacheFromGCS_1
+                  spec:
+                    connectorRef: account.gcp
+                    bucket: ci_cache
+                    key: gcp-{{ checksum "package.json" }}
+                    archiveFormat: Tar
+...
+              - step:
+                  type: SaveCacheGCS
+                  name: Save Cache to GCS_1
+                  identifier: SaveCachetoGCS_1
+                  spec:
+                    connectorRef: account.gcp
+                    bucket: ci_cache
+                    key: gcp-{{ checksum "package.json" }}
+                    sourcePaths:
+                      - /harness/node_modules
+                    archiveFormat: Tar
+
+# --- example 12 ---
+    stages:  
+        - stage:  
+              identifier: GCS_Save_Cache  
+              name: GCS Save Cache  
+              type: CI  
+              variables:  
+                  - name: GCP_Access_Key  
+                    type: String  
+                    value: <+input>  
+                  - name: GCP_Secret_Key  
+                    type: Secret  
+                    value: <+input>  
+              spec:  
+                  sharedPaths:  
+                      - /.config  
+                      - /.gsutil  
+                  execution:  
+                      steps:  
+                          - step:  
+                                identifier: createBucket  
+                                name: create bucket  
+                                type: Run  
+                                spec:  
+                                    connectorRef: <+input>  
+                                    image: google/cloud-sdk:alpine  
+                                    command: |+  
+                                        echo $GCP_SECRET_KEY > secret.json  
+                                        cat secret.json  
+                                        gcloud auth -q activate-service-account --key-file=secret.json  
+                                        gsutil rm -r gs://harness-gcs-cache-tar || true  
+  
+                                        gsutil mb -p ci-play gs://harness-gcs-cache-tar  
+  
+                                    privileged: false  
+                          - step:  
+                                identifier: saveCacheTar  
+                                name: Save Cache  
+                                type: SaveCacheGCS  
+                                spec:  
+                                    connectorRef: <+input>  
+                                    bucket: harness-gcs-cache-tar  
+                                    key: cache-tar  
+                                    sourcePaths:  
+                                        - <+input>  
+                                    archiveFormat: Tar  
+...
+        - stage:  
+              identifier: gcs_restore_cache  
+              name: GCS Restore Cache  
+              type: CI  
+              variables:  
+                  - name: GCP_Access_Key  
+                    type: String  
+                    value: <+input>  
+                  - name: GCP_Secret_Key  
+                    type: Secret  
+                    value: <+input>  
+              spec:  
+                  sharedPaths:  
+                      - /.config  
+                      - /.gsutil  
+                  execution:  
+                      steps:  
+                          - step:  
+                                identifier: restoreCacheTar  
+                                name: Restore Cache  
+                                type: RestoreCacheGCS  
+                                spec:  
+                                    connectorRef: <+input>  
+                                    bucket: harness-gcs-cache-tar  
+                                    key: cache-tar  
+                                    archiveFormat: Tar  
+                                    failIfKeyNotFound: true
+
+# --- example 13 ---
+              - step:
+                  ...
+                  when:
+                    stageStatus: Success ## Execute this step if the stage execution is successful thus far.
+                    condition: <+strategy.iteration> == 0 ## And execute this step if this JEXL condition evaluates to true

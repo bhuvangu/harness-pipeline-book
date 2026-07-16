@@ -1,0 +1,138 @@
+# source: docs/platform/triggers/triggering-pipelines.md  (https://developer.harness.io/docs/platform/triggers/triggering-pipelines)
+
+# --- example 1 ---
+pipeline:
+  name: Trigger
+  identifier: Trigger
+  projectIdentifier: CD_Docs
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Custom
+        identifier: Custom
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: Echo
+                  identifier: Echo
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          echo "pipeline.triggerType: " <+pipeline.triggerType>
+                          echo "pipeline.executionId: " <+pipeline.executionId>
+                          echo "trigger.commitSha: " <+trigger.commitSha>
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+              - step:
+                  type: ShellScript
+                  name: Triggered by WEBHOOK
+                  identifier: Comparison_2
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo <+<+pipeline.triggerType> == "WEBHOOK" ? <+trigger.commitSha>:<+pipeline.executionId>>
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+              - step:
+                  type: ShellScript
+                  name: Triggered by MANUAL
+                  identifier: Comparison
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo <+<+pipeline.triggerType> == "MANUAL" ? <+pipeline.executionId>:<+trigger.commitSha>>
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+
+# --- example 2 ---
+trigger:
+  name: merge queue trigger
+  identifier: merge_queue_trigger
+  enabled: true
+  stagesToExecute: []
+  description: ""
+  tags: {}
+  encryptedWebhookSecretIdentifier: ""
+  orgIdentifier: default
+  projectIdentifier: YOUR_HARNESS_PROJECT
+  pipelineIdentifier: YOUR_PIPELINE_TO_TRIGGER
+  source:
+    type: Webhook
+    spec:
+      type: Github
+      spec:
+        type: Push
+        spec:
+          connectorRef: YOUR_GITHUB_CONNECTOR
+          autoAbortPreviousExecutions: false
+          payloadConditions:
+            - key: targetBranch
+              operator: StartsWith
+              value: gh-readonly-queue
+            - key: <+trigger.payload.head_commit>
+              operator: NotEquals
+              value: "null"
+          headerConditions: []
+          repoName: YOUR_GITHUB_REPO
+          actions: []
+  inputYaml: |
+    pipeline:
+      identifier: YOUR_PIPELINE_TO_TRIGGER
+      properties:
+        ci:
+          codebase:
+            build:
+              type: branch
+              spec:
+                branch: <+trigger.branch>
+
+# --- example 3 ---
+# No sendGitStatus configuration in stage
+stages:
+  - stage:
+      identifier: Build
+      type: CI
+      spec:
+        # ... stage configuration
+
+# --- example 4 ---
+stages:
+  - stage:
+      identifier: Build
+      type: CI
+      spec:
+        # ... stage configuration
+      advanced:
+        sendGitStatus:
+          enabled: true
+          name: "Quality Gate"
+
+# --- example 5 ---
+stages:
+  - stage:
+      identifier: Build
+      type: CI
+      spec:
+        # ... stage configuration
+      advanced:
+        sendGitStatus:
+          enabled: false

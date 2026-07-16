@@ -1,0 +1,194 @@
+# source: docs/continuous-integration/development-guides/ci-c.md  (https://developer.harness.io/docs/continuous-integration/development-guides/ci-c)
+
+# --- example 1 ---
+- step:
+    type: Run
+    name: Fetch Deps
+    identifier: Fetch_Deps
+    spec:
+      shell: Sh
+      command: python3 build/getdeps.py fetch --no-tests <+matrix.deps>
+    failureStrategies: []
+    strategy:
+      matrix:
+        deps:
+          - ninja
+          - cmake
+          - zlib
+          - zstd
+          - boost
+          - double-conversion
+          - fmt
+          - gflags
+          - glog
+          - googletest
+          - libevent
+        maxConcurrency: 1
+
+# --- example 2 ---
+- step:
+    type: Run
+    name: Fetch Deps
+    identifier: Fetch_Deps
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: python:latest
+      shell: Sh
+      command: python3 build/getdeps.py fetch --no-tests <+matrix.deps>
+    failureStrategies: []
+    strategy:
+      matrix:
+        deps:
+          - ninja
+          - cmake
+          - zlib
+          - zstd
+          - boost
+          - double-conversion
+          - fmt
+          - gflags
+          - glog
+          - googletest
+          - libevent
+        maxConcurrency: 1
+
+# --- example 3 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+
+# --- example 4 ---
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "pom.xml" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  ...
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  ...
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "pom.xml" }}
+                    sourcePaths:
+                      - /root/.m2
+                    archiveFormat: Tar
+
+# --- example 5 ---
+- step:
+    type: Run
+    name: build and test
+    identifier: build and test
+    spec:
+      shell: Sh
+      command: |-
+        cmake -S . -B build
+        ctest --test-dir $FILES --output-junit /target/reports/test_output.xml
+
+# --- example 6 ---
+- step:
+    type: Run
+    name: build and test
+    identifier: build and test
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: gradle:alpine
+      shell: Sh
+      command: |
+        cmake -S . -B build
+        ctest --test-dir $FILES --output-junit /target/reports/test_output.xml
+
+# --- example 7 ---
+reports:
+  type: JUnit
+  spec:
+    paths:
+      - target/reports/*.xml
+
+# --- example 8 ---
+- step:
+    type: Run
+    name: install
+    identifier: install
+    spec:
+      shell: Sh
+      command: |
+        sudo apt update
+        sudo apt install g++-12
+
+# --- example 9 ---
+- step:
+    type: Run
+    name: install
+    identifier: install
+    spec:
+      connectorRef:
+      image:
+      shell: Sh
+      command: |
+        sudo apt update
+        sudo apt install g++
+
+# --- example 10 ---
+pipeline:
+  name: Build C
+  identifier: Build_C
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: Build
+        identifier: Build
+        description: ""
+        type: CI
+        spec:
+          caching:
+            enabled: true
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Run_1
+                  identifier: Run_1
+                  spec:
+                    shell: Bash
+                    command: |-
+                      chmod 777 ./scripts/docker/build.sh
+                      ./scripts/docker/build.sh --bionic --remote PROJECT test_PROJECT
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: BuildAndPushDockerRegistry_1
+                  identifier: BuildAndPushDockerRegistry_1
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    repo: YOUR_DOCKER_HUB_USERNAME/DOCKER_REPO_NAME
+                    tags:
+                      - <+pipeline.sequenceId>

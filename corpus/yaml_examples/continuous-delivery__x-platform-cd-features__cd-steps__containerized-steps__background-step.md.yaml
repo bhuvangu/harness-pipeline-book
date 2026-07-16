@@ -1,0 +1,6 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/containerized-steps/background-step.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/containerized-steps/background-step)
+
+# --- example 1 ---
+entrypoint:
+  - dockerd-entrypoint.sh
+  - "--mtu=1450"

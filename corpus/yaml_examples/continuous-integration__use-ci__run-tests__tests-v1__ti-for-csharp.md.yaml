@@ -1,0 +1,144 @@
+# source: docs/continuous-integration/use-ci/run-tests/tests-v1/ti-for-csharp.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/tests-v1/ti-for-csharp)
+
+# --- example 1 ---
+- step:
+    type: RunTests
+    identifier: runTestsWithIntelligence
+    name: runTestsWithIntelligence
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: mcr.microsoft.com/dotnet/sdk:6.0 ## Specify if required by your build infrastructure.
+      language: Csharp
+      buildEnvironment: Core
+      frameworkVersion: "6.0"
+      buildTool: Dotnet ## Specify Dotnet or Nunit.
+      args: --no-build --verbosity normal ## Equivalent to 'dotnet test --no-build --verbosity normal' in a Run step or shell.
+      namespaces: aw,fc
+      runOnlySelectedTests: true ## Must be 'true' to enable TI.
+      preCommand: |-
+        dotnet tool install -g trx2junit
+        export PATH="$PATH:/root/.dotnet/tools"
+        dotnet restore
+        dotnet build
+      postCommand: trx2junit results.trx
+      reports: ## Reports must be in JUnit XML format.
+        type: JUnit
+        spec:
+          paths:
+            - results.xml
+
+# --- example 2 ---
+pipeline:
+  name: Test Intelligence Demo
+  identifier: testintelligencedemo
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        build: <+input>
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+  stages:
+    - stage:
+        type: CI
+        identifier: Build_and_Test
+        name: Build and Test
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RunTests
+                  identifier: runTestsWithIntelligence
+                  name: runTestsWithIntelligence
+                  spec:
+                    language: Csharp
+                    buildEnvironment: Core
+                    frameworkVersion: "6.0"
+                    buildTool: Dotnet ## Specify Dotnet or Nunit.
+                    args: --no-build --verbosity normal ## Equivalent to 'dotnet test --no-build --verbosity normal' in a Run step or shell.
+                    namespaces: aw,fc
+                    runOnlySelectedTests: true ## Must be 'true' to enable TI.
+                    preCommand: |-
+                      dotnet tool install -g trx2junit
+                      export PATH="$PATH:/root/.dotnet/tools"
+                      dotnet restore
+                      dotnet build
+                    postCommand: trx2junit results.trx
+                    reports: ## Reports must be in JUnit XML format.
+                      type: JUnit
+                      spec:
+                        paths:
+                          - results.xml
+          platform:
+            arch: Amd64
+            os: Linux
+          runtime:
+            spec: {}
+            type: Cloud
+
+# --- example 3 ---
+pipeline:
+  name: Test Intelligence Demo
+  identifier: testintelligencedemo
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        build: <+input>
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+  stages:
+    - stage:
+        type: CI
+        identifier: Build_and_Test
+        name: Build and Test
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RunTests
+                  identifier: runTestsWithIntelligence
+                  name: runTestsWithIntelligence
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:6.0 ## Specify if required by your build infrastructure.
+                    language: Csharp
+                    buildEnvironment: Core
+                    frameworkVersion: "6.0"
+                    buildTool: Dotnet ## Specify Dotnet or Nunit.
+                    args: --no-build --verbosity normal ## Equivalent to 'dotnet test --no-build --verbosity normal' in a Run step or shell.
+                    namespaces: aw,fc
+                    runOnlySelectedTests: true ## Must be 'true' to enable TI.
+                    preCommand: |-
+                      dotnet tool install -g trx2junit
+                      export PATH="$PATH:/root/.dotnet/tools"
+                      dotnet restore
+                      dotnet build
+                    postCommand: trx2junit results.trx
+                    reports: ## Reports must be in JUnit XML format.
+                      type: JUnit
+                      spec:
+                        paths:
+                          - results.xml
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+
+# --- example 4 ---
+              - step:
+                  type: RunTests
+                  name: runTests
+                  identifier: runTest
+                  spec:
+                    language: Csharp
+                    buildEnvironment: Framework
+                    frameworkVersion: "5.0"
+                    buildTool: Nunitconsole
+                    ...

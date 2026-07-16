@@ -1,0 +1,23 @@
+# source: docs/platform/delegates/delegate-concepts/delegate-overview.md  (https://developer.harness.io/docs/platform/delegates/delegate-concepts/delegate-overview)
+
+# --- example 1 ---
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    harness.io/app: harness-delegate
+    harness.io/account: xxxx
+    harness.io/name: test
+  name: test-zeaakf
+  namespace: harness-delegate
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      harness.io/app: harness-delegate
+
+# --- example 2 ---
+env:
+  - name: DELEGATE_TASK_CAPACITY
+    value: "2"

@@ -1,0 +1,11 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/tanzu/tanzu-app-services-quickstart.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/tanzu/tanzu-app-services-quickstart)
+
+# --- example 1 ---
+Copy
+Edit
+applications:
+  - name: dummy-app
+    memory: 256M
+    instances: 1
+    services:
+      - harness-autoscaler

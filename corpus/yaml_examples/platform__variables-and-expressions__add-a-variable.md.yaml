@@ -1,0 +1,9 @@
+# source: docs/platform/variables-and-expressions/add-a-variable.md  (https://developer.harness.io/docs/platform/variables-and-expressions/add-a-variable)
+
+# --- example 1 ---
+  variables:
+    - name: sourceToken
+      type: Secret
+      description: Access token for the source repo.
+      required: true
+      value: <+input>

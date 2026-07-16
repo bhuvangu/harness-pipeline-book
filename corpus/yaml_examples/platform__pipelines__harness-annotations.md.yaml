@@ -1,0 +1,55 @@
+# source: docs/platform/pipelines/harness-annotations.md  (https://developer.harness.io/docs/platform/pipelines/harness-annotations)
+
+# --- example 1 ---
+- step:
+    identifier: build_and_test
+    type: Run
+    name: Build and Test
+    spec:
+    connectorRef: my-k8s-connector
+    image: harness/ci-addon:latest
+    shell: Bash
+    command: |-
+        # Step 1: Create markdown content for our reports
+        # A comprehensive build report
+        cat > build-results.md << 'EOF'
+        # 🚀 Build Pipeline Results
+        ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
+        > **Note:** View full build logs [here](https://example.com).
+        ## 🧪 Test Summary
+        - **Total Tests:** 247
+        - **Passed:** ✅ **245**
+        - **Failed:** ❌ **2**
+        - **Coverage:** **92.4%**
+        EOF
+
+        # A detailed coverage report
+        cat > coverage.md << 'EOF'
+        # 📈 Coverage Summary
+        - **Line:** 92.4%
+        - **Branch:** 88.1%
+        EOF
+
+        # A linting report
+        cat > lint-report.md << 'EOF'
+        # 🧹 Lint Report
+        ![Lint Status](https://img.shields.io/badge/lint-fail-red.svg)
+        - **Errors:** 3
+        - **Warnings:** 12
+        EOF
+
+        # Step 2: Publish the annotations using hcli
+
+        # Publish the main build report with a WARNING style and high priority
+        hcli annotate --context "build-validation" --style "warning" --summary-file "build-results.md" --priority 8
+
+        # Publish a simple, successful annotation with an inline summary
+        hcli annotate --context "unit-tests" --style "success" --summary "All 245 unit tests passed." --priority 7
+
+        # Publish the coverage and lint reports as separate annotations
+        hcli annotate --context "coverage-report" --style "info" --summary-file "coverage.md" --priority 5
+        hcli annotate --context "lint-results" --style "warning" --summary-file "lint-report.md" --priority 6
+
+        # Step 3: Append additional notes to an existing context
+        echo "Flaky tests have been quarantined." > extra-notes.md
+        hcli annotate --context "build-validation" --summary-file "extra-notes.md" --mode "append"

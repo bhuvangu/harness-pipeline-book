@@ -1,0 +1,474 @@
+# source: docs/platform/templates/templates-best-practices.md  (https://developer.harness.io/docs/platform/templates/templates-best-practices)
+
+# --- example 1 ---
+template:
+  name: Cleanup Demo
+  identifier: Cleanup_Demo
+  versionLabel: 0.0.1
+  type: Step
+  projectIdentifier: Cleanup
+  orgIdentifier: default
+  spec:
+    type: K8sDelete
+    spec:
+      deleteResources:
+        type: ReleaseName
+        spec:
+          deleteNamespace: true
+    timeout: 10m
+
+# --- example 2 ---
+pipeline:
+  name: Multi Service Deployment Demo
+  identifier: Multi_Service_Deployment_Demo
+  projectIdentifier: Cleanup
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Deploy
+        identifier: Deploy
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <+input>
+            serviceInputs: <+input>
+          execution:
+            steps:
+              - step:
+                  name: Rollout Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+
+              ## Step template reference in a pipeline
+              ## You will provide the templateRef and version to configure for the step
+
+              - step:
+                  name: Cleanup Demo
+                  identifier: CleanupDemo
+                  template:
+                    templateRef: Cleanup_Demo
+                    versionLabel: 0.0.1
+            rollbackSteps:
+              - step:
+                  name: Rollback Rollout Deployment
+                  identifier: rollbackRolloutDeployment
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec:
+                    pruningEnabled: false
+          environment:
+            environmentRef: staging
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: productstaging
+                inputs:
+                  identifier: productstaging
+                  type: KubernetesDirect
+                  spec:
+                    namespace: <+input>.allowedValues(dev,qa,prod)
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+  allowStageExecutions: true
+
+# --- example 3 ---
+template:
+  name: CD Deploy
+  identifier: CD_Deploy
+  versionLabel: "1.0"
+  type: Stage
+  tags: {}
+  spec:
+    type: Deployment
+    spec:
+      deploymentType: Kubernetes
+      service:
+        serviceRef: <+input>
+        serviceInputs: <+input>
+      environment:
+        environmentRef: <+input>
+        deployToAll: false
+        environmentInputs: <+input>
+        infrastructureDefinitions: <+input>
+      execution:
+        steps:
+          - step:
+              name: Rollout Deployment
+              identifier: rolloutDeployment
+              type: K8sRollingDeploy
+              timeout: 10m
+              spec:
+                skipDryRun: false
+                pruningEnabled: false
+          - step:
+              type: Http
+              name: Health Check
+              identifier: Health_Check
+              spec:
+                url: https://app.harness.io
+                method: GET
+                headers: []
+                outputVariables: []
+              timeout: 10s
+        rollbackSteps:
+          - step:
+              name: Rollback Rollout Deployment
+              identifier: rollbackRolloutDeployment
+              type: K8sRollingRollback
+              timeout: 10m
+              spec:
+                pruningEnabled: false
+    failureStrategies:
+      - onFailure:
+          errors:
+            - AllErrors
+          action:
+            type: StageRollback
+    when:
+      pipelineStatus: Success
+      condition: <+input>
+
+# --- example 4 ---
+name: Multi Service Deployment Demo
+  identifier: Multi_Service_Deployment_Demo
+  projectIdentifier: Multi Service
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Deploy
+        identifier: Deploy
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <+input>
+            serviceInputs: <+input>
+          execution:
+            steps:
+              - step:
+                  name: Rollout Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  timeout: 10m
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+              - step:
+                  name: Cleanup Demo
+                  identifier: CleanupDemo
+                  template:
+                    templateRef: Cleanup_Demo
+                    versionLabel: 0.0.1
+            rollbackSteps:
+              - step:
+                  name: Rollback Rollout Deployment
+                  identifier: rollbackRolloutDeployment
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec:
+                    pruningEnabled: false
+          environment:
+            environmentRef: staging
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: productstaging
+                inputs:
+                  identifier: productstaging
+                  type: KubernetesDirect
+                  spec:
+                    namespace: <+input>.allowedValues(dev,qa,prod)
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+    - stage:
+        name: Dev Deploy
+        identifier: Dev_Deploy
+
+## Stage templates are referenced in the pipeline. For an account level template, use the prefix account.<templateIdentifier>. For an organization template, use the prefix org.<templateIdentifier>.
+        template:
+          templateRef: account.CD_Deploy
+          versionLabel: "1.0"
+          templateInputs:
+            type: Deployment
+            spec:
+              service:
+                serviceRef: <+input>
+                serviceInputs: <+input>
+              environment:
+                environmentRef: <+input>
+                environmentInputs: <+input>
+                infrastructureDefinitions: <+input>
+            when:
+              condition: <+input>
+  allowStageExecutions: true
+
+# --- example 5 ---
+template:
+  ## The name is the name of the pipeline when it's linked with a pipeline template
+  name: "Golden Pipeline"
+  type: Pipeline
+  projectIdentifier: sandbox
+  orgIdentifier: default
+  spec:
+    stages:
+      - stage:
+          name: Deploy to Dev
+          identifier: Deploy_to_Dev
+          template:
+            templateRef: Deploy_Stage
+            versionLabel: "1.0"
+            templateInputs:
+              type: Deployment
+              spec:
+                service:
+                  serviceRef: <+input>
+                  serviceInputs: <+input>
+                environment:
+                  environmentRef: <+input>
+                  environmentInputs: <+input>
+                  serviceOverrideInputs: <+input>
+                  infrastructureDefinitions: <+input>
+      - stage:
+          name: Deploy to QA
+          identifier: Deploy_to_QA
+          template:
+            templateRef: Deploy_Stage
+            versionLabel: "1.0"
+            templateInputs:
+              type: Deployment
+              spec:
+                service:
+                  serviceRef: <+input>
+                  serviceInputs: <+input>
+                environment:
+                  environmentRef: <+input>
+                  environmentInputs: <+input>
+                  serviceOverrideInputs: <+input>
+                  infrastructureDefinitions: <+input>
+      - stage:
+          name: Approve
+          identifier: Approve
+          description: ""
+          type: Approval
+          spec:
+            execution:
+              steps:
+                - step:
+                    name: Approve
+                    identifier: Approve
+                    type: HarnessApproval
+                    timeout: 1d
+                    spec:
+                      approvalMessage: |-
+                        Please review the following information
+                        and approve the pipeline progression
+                      includePipelineExecutionHistory: true
+                      approvers:
+                        minimumCount: 1
+                        disallowPipelineExecutor: false
+                        userGroups:
+                          - account._account_all_users
+                      approverInputs: []
+          tags: {}
+      - stage:
+          name: Deploy to Prod
+          identifier: Deploy_to_Prod
+          template:
+            templateRef: Deploy_Stage
+            versionLabel: "1.0"
+            templateInputs:
+              type: Deployment
+              spec:
+                service:
+                  serviceRef: <+input>
+                  serviceInputs: <+input>
+                environment:
+                  environmentRef: <+input>
+                  environmentInputs: <+input>
+                  serviceOverrideInputs: <+input>
+                  infrastructureDefinitions: <+input>
+
+  ## Below is the identifier for the pipeline template and the version label
+  identifier: End_2_End_Pipeline
+  versionLabel: "1.0"
+
+# --- example 6 ---
+resource "harness_platform_template" "inline" {
+  identifier    = "identifier"
+  org_id        = harness_platform_project.test.org_id
+  project_id    = harness_platform_project.test.id
+  name          = "name"
+  comments      = "comments"
+  version       = "ab"
+  is_stable     = true
+  template_yaml = <<-EOT
+template:
+      name: "name"
+      identifier: "identifier"
+      versionLabel: ab
+      type: Pipeline
+      projectIdentifier: ${harness_platform_project.test.id}
+      orgIdentifier: ${harness_platform_project.test.org_id}
+      tags: {}
+      spec:
+        stages:
+          - stage:
+              name: dvvdvd
+              identifier: dvvdvd
+              description: ""
+              type: Deployment
+              spec:
+                deploymentType: Kubernetes
+                service:
+                  serviceRef: <+input>
+                  serviceInputs: <+input>
+                environment:
+                  environmentRef: <+input>
+                  deployToAll: false
+                  environmentInputs: <+input>
+                  serviceOverrideInputs: <+input>
+                  infrastructureDefinitions: <+input>
+                execution:
+                  steps:
+                    - step:
+                        name: Rollout Deployment
+                        identifier: rolloutDeployment
+                        type: K8sRollingDeploy
+                        timeout: 10m
+                        spec:
+                          skipDryRun: false
+                          pruningEnabled: false
+                  rollbackSteps:
+                    - step:
+                        name: Rollback Rollout Deployment
+                        identifier: rollbackRolloutDeployment
+                        type: K8sRollingRollback
+                        timeout: 10m
+                        spec:
+                          pruningEnabled: false
+              tags: {}
+              failureStrategies:
+                - onFailure:
+                    errors:
+                      - AllErrors
+                    action:
+                      type: StageRollback
+
+      EOT
+
+# --- example 7 ---
+template:
+  name: Sample Template
+  identifier: Sample_Template
+  versionLabel: 0.0.1
+  type: Step
+  projectIdentifier: CD_Product_Team
+  orgIdentifier: default
+  description: "Shell Script Template"
+  tags: {}
+  spec:
+    type: ShellScript
+    timeout: 10m
+    spec:
+      shell: Bash
+      onDelegate: true
+      source:
+        type: Inline
+        spec:
+          script: |-
+            echo "Hello World"
+
+            echo "This is Git to Harness, Hello!"
+      environmentVariables: []
+      outputVariables: []
+      executionTarget: {}
+
+# --- example 8 ---
+resource "harness_platform_template" "remote" {
+  identifier = "identifier"
+  org_id     = harness_platform_project.test.org_id
+  project_id = harness_platform_project.test.id
+  name       = "name"
+  comments   = "comments"
+  version    = "ab"
+  is_stable  = true
+  git_details {
+    branch_name    = "main"
+    commit_message = "Commit"
+    file_path      = "file_path"
+    connector_ref  = "account.connector_ref"
+    store_type     = "REMOTE"
+    repo_name      = "repo_name"
+  }
+  template_yaml = <<-EOT
+template:
+      name: "name"
+      identifier: "identifier"
+      versionLabel: ab
+      type: Pipeline
+      projectIdentifier: ${harness_platform_project.test.id}
+      orgIdentifier: ${harness_platform_project.test.org_id}
+      tags: {}
+      spec:
+        stages:
+          - stage:
+              name: dvvdvd
+              identifier: dvvdvd
+              description: ""
+              type: Deployment
+              spec:
+                deploymentType: Kubernetes
+                service:
+                  serviceRef: <+input>
+                  serviceInputs: <+input>
+                environment:
+                  environmentRef: <+input>
+                  deployToAll: false
+                  environmentInputs: <+input>
+                  serviceOverrideInputs: <+input>
+                  infrastructureDefinitions: <+input>
+                execution:
+                  steps:
+                    - step:
+                        name: Rollout Deployment
+                        identifier: rolloutDeployment
+                        type: K8sRollingDeploy
+                        timeout: 10m
+                        spec:
+                          skipDryRun: false
+                          pruningEnabled: false
+                  rollbackSteps:
+                    - step:
+                        name: Rollback Rollout Deployment
+                        identifier: rollbackRolloutDeployment
+                        type: K8sRollingRollback
+                        timeout: 10m
+                        spec:
+                          pruningEnabled: false
+              tags: {}
+              failureStrategies:
+                - onFailure:
+                    errors:
+                      - AllErrors
+                    action:
+                      type: StageRollback
+
+      EOT
+}

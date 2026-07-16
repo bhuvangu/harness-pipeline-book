@@ -1,0 +1,16 @@
+# source: docs/continuous-delivery/x-platform-cd-features/environments/create-environment-groups.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/environments/create-environment-groups)
+
+# --- example 1 ---
+environmentGroup:
+  name: demoEnvGroup
+  identifier: demoEnvGroup
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  envIdentifiers:
+    - test
+    - testenv1
+    - org.testE
+    - account.CDCNGAuto_EnvNg59wFkWCjQQ
+    - account.CDCNGAuto_EnvNgdCz0sFChIM

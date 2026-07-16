@@ -1,0 +1,36 @@
+# source: docs/platform/connectors/ticketing-systems/connect-to-jira.md  (https://developer.harness.io/docs/platform/connectors/ticketing-systems/connect-to-jira)
+
+# --- example 1 ---
+      connector:
+        name: scopedJiraApiToken
+        identifier: scopedJiraApiTokenID
+        description: "scoped API token-based Harness connector for Jira"
+        accountIdentifier: YOUR_ACCOUNT_IDENTIFIER
+        orgIdentifier: YOUR_ORG_IDENTIFIER 
+        projectIdentifier: YOUR_PROJECT_IDENTIFIER
+        type: Jira
+        spec:
+          jiraUrl: https://api.atlassian.com/ex/jira/{cloud_id} # Replace {cloud_id} with your actual Cloud ID from Jira
+          auth:
+            type: UsernamePassword
+            spec:
+              username: YOUR_EMAIL_ADDRESS_FOR_JIRA_LOGIN
+              passwordRef: YOUR_TEXT_SECRET_CONTAINING_SCOPED_API_TOKEN
+          ignoreTestConnection: false
+
+# --- example 2 ---
+     connector:
+        name: jiraPat
+        identifier: jiraPat
+        description: ""
+        orgIdentifier: default
+        projectIdentifier: myproject
+        type: Jira
+        spec:
+          jiraUrl: https://jira.dev.example.io/
+          delegateSelectors:
+            - test
+          auth:
+            type: PersonalAccessToken
+            spec:
+              patRef: pat

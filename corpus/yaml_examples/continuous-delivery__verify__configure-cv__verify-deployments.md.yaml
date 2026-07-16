@@ -1,0 +1,10 @@
+# source: docs/continuous-delivery/verify/configure-cv/verify-deployments.md  (https://developer.harness.io/docs/continuous-delivery/verify/configure-cv/verify-deployments)
+
+# --- example 1 ---
+isCustomWebhookNotificationEnabled: true
+customWebhookNotification:
+  notificationDeliveryMode: PLATFORM
+  webhookUrl: https://your-webhook-endpoint.com/path
+  headers:
+    - key: X-Custom-Header
+      value: your-header-value

@@ -1,0 +1,409 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/define-your-kubernetes-target-infrastructure.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/define-your-kubernetes-target-infrastructure)
+
+# --- example 1 ---
+connector:
+  name: doc-immut
+  identifier: docimmut
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: K8sCluster
+  spec:
+    credential:
+      type: InheritFromDelegate
+    delegateSelectors:
+      - doc-immut
+
+# --- example 2 ---
+infrastructureDefinition:
+  name: Cluster 1
+  identifier: Kubernetes
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  environmentRef: Kubernetes
+  deploymentType: Kubernetes
+  type: KubernetesDirect
+  spec:
+    connectorRef: docimmut
+    namespace: default
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
+
+# --- example 3 ---
+connector:
+  name: kubernetes-delegate
+  identifier: kubernetesdelegate
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Gcp
+  spec:
+    credential:
+      type: InheritFromDelegate
+    delegateSelectors:
+      - kubernetes-delegate
+    executeOnDelegate: true
+
+# --- example 4 ---
+infrastructureDefinition:
+  name: K8s GKE
+  identifier: K8s_GKE
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  environmentRef: k8s_env
+  deploymentType: Kubernetes
+  type: KubernetesGcp
+  spec:
+    connectorRef: kubernetesdelegate
+    cluster: <+input>
+    namespace: test
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
+
+# --- example 5 ---
+infrastructureDefinition:
+  name: K8s GKE
+  identifier: K8s_GKE
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  environmentRef: k8s_env
+  deploymentType: Kubernetes
+  type: KubernetesGcp
+  spec:
+    connectorRef: kubernetesdelegate
+    project: <+input>
+    cluster: <+input>
+    namespace: test
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
+
+# --- example 6 ---
+infrastructureDefinition:
+  name: K8s Azure
+  identifier: K8s_Azure
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  environmentRef: k8s_env
+  deploymentType: Kubernetes
+  type: KubernetesAzure
+  spec:
+    connectorRef: account.foo
+    subscriptionId: <+input>
+    resourceGroup: <+input>
+    cluster: <+input>
+    namespace: mynamespace
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
+
+# --- example 7 ---
+infrastructureDefinition:
+  name: K8s EKS
+  identifier: K8s_EKS
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  environmentRef: k8s_env
+  deploymentType: Kubernetes
+  type: KubernetesAws
+  spec:
+    connectorRef: eks
+    cluster: ap-south-1/Cluster-test
+    namespace: mynamespace
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
+
+# --- example 8 ---
+connector:
+  name: Rancher
+  identifier: Rancher
+  description: ""
+  accountIdentifier: ACCOUNT_ID
+  orgIdentifier: default
+  projectIdentifier: Docs
+  type: Rancher
+  spec:
+    credential:
+      type: ManualConfig
+      spec:
+        rancherUrl: https://rancher-internal.QA.MY_COMPANY.io/
+        auth:
+          type: BearerToken
+          spec:
+            passwordRef: TOKEN_NAME
+
+# --- example 9 ---
+infrastructureDefinition:
+  name: Rancher
+  identifier: Rancher
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: Docs
+  environmentRef: Kubernetes
+  deploymentType: Kubernetes
+  type: KubernetesRancher
+  spec:
+    connectorRef: Rancher
+    cluster: <+input>
+    namespace: <+input>
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
+
+# --- example 10 ---
+provider "kubernetes" {
+  config_context_cluster = "docs-tf"  # Name of your Kubernetes cluster
+  host                   = "<KUBE_HOST>"     # Kubernetes API server host
+  client_certificate     = "<CLIENT_CERT>"   # Path to client certificate
+  client_key             = "<CLIENT_KEY>"    # Path to client key
+  cluster_ca_certificate = "<CLUSTER_CA>"    # Path to cluster CA certificate
+}
+
+resource "kubernetes_namespace" "example" {
+  metadata {
+    name = "example-namespace"
+  }
+}
+...
+
+output "default_namespace" {
+  value = kubernetes_namespace.example.metadata[0].name
+}
+
+# --- example 11 ---
+provider "kubernetes" {
+  config_context_cluster = "docs-tf"  # Name of your Kubernetes cluster
+  host                   = "<KUBE_HOST>"     # Kubernetes API server host
+  client_certificate     = "<CLIENT_CERT>"   # Path to client certificate
+  client_key             = "<CLIENT_KEY>"    # Path to client key
+  cluster_ca_certificate = "<CLUSTER_CA>"    # Path to cluster CA certificate
+}
+
+resource "kubernetes_namespace" "example" {
+  metadata {
+    name = "example-namespace"
+  }
+}
+
+resource "kubernetes_service_account" "example" {
+  metadata {
+    name      = "example-service-account"
+    namespace = kubernetes_namespace.example.metadata[0].name
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "example" {
+  metadata {
+    name      = "example-cluster-role-binding"
+    namespace = kubernetes_namespace.example.metadata[0].name
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account.example.metadata[0].name
+    namespace = kubernetes_namespace.example.metadata[0].name
+  }
+}
+
+resource "kubernetes_deployment" "example" {
+  metadata {
+    name      = "example-deployment"
+    namespace = kubernetes_namespace.example.metadata[0].name
+  }
+
+  spec {
+    replicas = 2
+
+    selector {
+      match_labels = {
+        app = "example-app"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "example-app"
+        }
+      }
+
+      spec {
+        container {
+          image = "nginx:latest"
+          name  = "example-container"
+        }
+      }
+    }
+  }
+}
+
+output "default_namespace" {
+  value = kubernetes_namespace.example.metadata[0].name
+}
+
+# --- example 12 ---
+provider "google" {
+project = "your-gcp-project-id"
+region  = "us-central1"
+}
+
+resource "google_container_cluster" "kubernetes_cluster" {
+name               = "my-k8s-cluster"
+location           = "us-central1"
+initial_node_count = 3
+
+master_auth {
+username = ""
+password = ""
+
+client_certificate_config {
+issue_client_certificate = false
+}
+}
+}
+
+resource "google_container_namespace" "kubernetes_namespace" {
+name      = "my-namespace"
+project   = "your-gcp-project-id"
+location  = "us-central1"
+cluster   = google_container_cluster.kubernetes_cluster.name
+}
+
+output "cluster_name" {
+value = google_container_cluster.kubernetes_cluster.name
+}
+
+output "namespace_name" {
+value = google_container_namespace.kubernetes_namespace.name
+}
+
+# --- example 13 ---
+provider "azurerm" {
+features {}
+}
+
+resource "azurerm_resource_group" "aks_rg" {
+name     = "my-aks-rg"
+location = "East US"
+}
+
+resource "azurerm_kubernetes_cluster" "aks_cluster" {
+name                = "my-aks-cluster"
+location            = azurerm_resource_group.aks_rg.location
+resource_group_name = azurerm_resource_group.aks_rg.name
+dns_prefix          = "my-aks-cluster"
+
+default_node_pool {
+name       = "default"
+node_count = 3
+vm_size    = "Standard_DS2_v2"
+}
+
+tags = {
+environment = "dev"
+}
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "aks_node_pool" {
+name                = "my-aks-node-pool"
+kubernetes_cluster  = azurerm_kubernetes_cluster.aks_cluster.name
+resource_group_name = azurerm_resource_group.aks_rg.name
+vm_size             = "Standard_DS2_v2"
+node_count          = 3
+os_disk_size_gb     = 30
+tags = {
+environment = "dev"
+}
+}
+
+resource "azurerm_kubernetes_namespace" "aks_namespace" {
+name                = "my-namespace"
+depends_on          = [azurerm_kubernetes_cluster.aks_cluster]
+resource_group_name = azurerm_resource_group.aks_rg.name
+kubernetes_cluster  = azurerm_kubernetes_cluster.aks_cluster.name
+}
+
+output "cluster_name" {
+value = azurerm_kubernetes_cluster.aks_cluster.name
+}
+
+output "namespace_name" {
+value = azurerm_kubernetes_namespace.aks_namespace.name
+}
+
+# --- example 14 ---
+provider "aws" {
+  region = "us-west-2"  # Replace with your desired AWS region
+}
+
+resource "aws_eks_cluster" "eks_cluster" {
+  name     = "my-eks-cluster"
+  role_arn = "arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_EKS_CLUSTER_ROLE"  # Replace with your EKS cluster role ARN
+
+  vpc_config {
+    subnet_ids = ["subnet-xxxxxxxx", "subnet-yyyyyyyy"]  # Replace with your desired subnet IDs
+  }
+}
+
+resource "aws_eks_node_group" "eks_node_group" {
+  cluster_name    = aws_eks_cluster.eks_cluster.name
+  node_group_name = "my-eks-node-group"
+  instance_type   = "t3.medium"  # Replace with your desired instance type
+  desired_size    = 3
+  min_size        = 1
+  max_size        = 5
+
+  remote_access {
+    ec2_ssh_key = "my-eks-key"  # Replace with the name of your EC2 key pair
+  }
+}
+
+resource "kubernetes_namespace" "eks_namespace" {
+  metadata {
+    name = "my-namespace"
+  }
+
+  depends_on = [
+    aws_eks_cluster.eks_cluster,
+    aws_eks_node_group.eks_node_group,
+  ]
+}
+
+output "cluster_name" {
+  value = aws_eks_cluster.eks_cluster.name
+}
+
+output "namespace_name" {
+  value = kubernetes_namespace.eks_namespace.metadata.0.name
+}
+
+# --- example 15 ---
+name: myApp
+replicas: 2
+
+image: <+artifact.image>
+
+createNamespace: true
+namespace: <+infra.namespace>
+
+# --- example 16 ---
+ {{- if .Values.createNamespace}}
+apiVersion: v1
+kind: Namespace
+metadata:
+ name: {{.Values.namespace}}
+{{- end}}

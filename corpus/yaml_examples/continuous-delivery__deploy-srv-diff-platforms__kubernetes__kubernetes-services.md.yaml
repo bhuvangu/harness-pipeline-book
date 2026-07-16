@@ -1,0 +1,895 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-services.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-services)
+
+# --- example 1 ---
+service:
+  name: Kubernetes
+  identifier: Kubernetes
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: Docker_Hub_with_Pwd
+                imagePath: library/nginx
+                tag: <+input>
+              identifier: nginx
+              type: DockerRegistry
+      manifests:
+        - manifest:
+            identifier: nginx
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: harnessdocs2
+                  gitFetchType: Branch
+                  paths:
+                    - default-k8s-manifests/Manifests/Files/templates
+                  branch: main
+              valuesPaths:
+                - default-k8s-manifests/Manifests/Files/ng-values.yaml
+              skipResourceVersioning: false
+  gitOpsEnabled: false
+
+# --- example 2 ---
+resource "harness_platform_service" "example" {
+  identifier  = "identifier"
+  name        = "name"
+  description = "test"
+  org_id      = "org_id"
+  project_id  = "project_id"
+
+  ## SERVICE V2 UPDATE
+  ## We now take in a YAML that can define the service definition for a given Service
+  ## It isn't mandatory for Service creation
+  ## It is mandatory for Service use in a pipeline
+
+  yaml = <<-EOT
+                service:
+                  name: name
+                  identifier: identifier
+                  serviceDefinition:
+                    spec:
+                      manifests:
+                        - manifest:
+                            identifier: manifest1
+                            type: K8sManifest
+                            spec:
+                              store:
+                                type: Github
+                                spec:
+                                  connectorRef: <+input>
+                                  gitFetchType: Branch
+                                  paths:
+                                    - files1
+                                  repoName: <+input>
+                                  branch: master
+                              skipResourceVersioning: false
+                      configFiles:
+                        - configFile:
+                            identifier: configFile1
+                            spec:
+                              store:
+                                type: Harness
+                                spec:
+                                  files:
+                                    - <+org.description>
+                      variables:
+                        - name: var1
+                          type: String
+                          value: val1
+                        - name: var2
+                          type: String
+                          value: val2
+                    type: Kubernetes
+                  gitOpsEnabled: false
+              EOT
+}
+
+# --- example 3 ---
+service:
+  name: Helm Chart
+  identifier: Helm_Chart
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: nginx
+            type: HelmChart
+            spec:
+              store:
+                type: Http
+                spec:
+                  connectorRef: Bitnami
+              chartName: nginx
+              helmVersion: V3
+              skipResourceVersioning: false
+              commandFlags:
+                - commandType: Template
+                  flag: mychart -x templates/deployment.yaml
+    type: Kubernetes
+
+# --- example 4 ---
+resource "harness_platform_service" "example" {
+  identifier  = "identifier"
+  name        = "name"
+  description = "test"
+  org_id      = "org_id"
+  project_id  = "project_id"
+
+  ## SERVICE V2 UPDATE
+  ## We now take in a YAML that can define the service definition for a given Service
+  ## It isn't mandatory for Service creation
+  ## It is mandatory for Service use in a pipeline
+
+  yaml = <<-EOT
+                service:
+                  name: Helm Chart
+                  identifier: Helm_Chart
+                  tags: {}
+                  serviceDefinition:
+                    spec:
+                      manifests:
+                        - manifest:
+                            identifier: nginx
+                            type: HelmChart
+                            spec:
+                              store:
+                                type: Http
+                                spec:
+                                  connectorRef: Bitnami
+                              chartName: nginx
+                              helmVersion: V3
+                              skipResourceVersioning: false
+                              commandFlags:
+                                - commandType: Template
+                                  flag: mychart -x templates/deployment.yaml
+                    type: Kubernetes
+              EOT
+}
+
+# --- example 5 ---
+service:
+  name: Kustomize
+  identifier: Kustomize
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      manifests:
+        - manifest:
+            identifier: kustomize
+            type: Kustomize
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: Kustomize
+                  gitFetchType: Branch
+                  folderPath: kustomize/helloworld
+                  branch: main
+              pluginPath: ""
+              skipResourceVersioning: false
+  gitOpsEnabled: false
+
+# --- example 6 ---
+resource "harness_platform_service" "example" {
+  identifier  = "identifier"
+  name        = "name"
+  description = "test"
+  org_id      = "org_id"
+  project_id  = "project_id"
+
+  ## SERVICE V2 UPDATE
+  ## We now take in a YAML that can define the service definition for a given Service
+  ## It isn't mandatory for Service creation
+  ## It is mandatory for Service use in a pipeline
+
+  yaml = <<-EOT
+              service:
+                name: Kustomize
+                identifier: Kustomize
+                serviceDefinition:
+                  type: Kubernetes
+                  spec:
+                    manifests:
+                      - manifest:
+                          identifier: kustomize
+                          type: Kustomize
+                          spec:
+                            store:
+                              type: Github
+                              spec:
+                                connectorRef: Kustomize
+                                gitFetchType: Branch
+                                folderPath: kustomize/helloworld
+                                branch: main
+                            pluginPath: ""
+                            skipResourceVersioning: false
+                gitOpsEnabled: false
+            EOT
+}
+
+# --- example 7 ---
+service:
+  name: OpenShift Template
+  identifier: OpenShift
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: nginx
+            type: OpenshiftTemplate
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /OpenShift/templates/example-template.yml
+              skipResourceVersioning: false
+    type: Kubernetes
+
+# --- example 8 ---
+resource "harness_platform_service" "example" {
+  identifier  = "identifier"
+  name        = "name"
+  description = "test"
+  org_id      = "org_id"
+  project_id  = "project_id"
+
+  ## SERVICE V2 UPDATE
+  ## We now take in a YAML that can define the service definition for a given Service
+  ## It isn't mandatory for Service creation
+  ## It is mandatory for Service use in a pipeline
+
+  yaml = <<-EOT
+              service:
+                name: OpenShift Template
+                identifier: OpenShift
+                tags: {}
+                serviceDefinition:
+                  spec:
+                    manifests:
+                      - manifest:
+                          identifier: nginx
+                          type: OpenshiftTemplate
+                          spec:
+                            store:
+                              type: Harness
+                              spec:
+                                files:
+                                  - /OpenShift/templates/example-template.yml
+                            skipResourceVersioning: false
+                  type: Kubernetes
+              EOT
+}
+
+# --- example 9 ---
+service:
+  name: k8s_service
+  identifier: k8s_service
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates/deployment.yaml
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: myartifact
+              type: Har
+              spec:
+                registryRef: dev
+                type: docker
+                spec:
+                  imagePath: my-app
+                  tag: <+input>
+                  digest: ""
+
+# --- example 10 ---
+connector:
+  name: Docker Hub with Pwd
+  identifier: Docker_Hub_with_Pwd
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: DockerRegistry
+  spec:
+    dockerRegistryUrl: https://index.docker.io/v2/
+    providerType: DockerHub
+    auth:
+      type: UsernamePassword
+      spec:
+        username: johndoe
+        passwordRef: Docker_Hub_Pwd
+    executeOnDelegate: false
+
+# --- example 11 ---
+service:
+  name: Example K8s2
+  identifier: Example_K8s2
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates/deployment.yaml
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: Docker_Hub_with_Pwd
+                imagePath: library/nginx
+                tag: stable-perl
+              identifier: myimage
+              type: DockerRegistry
+  gitOpsEnabled: false
+
+# --- example 12 ---
+curl --location --request POST 'https://app.harness.io/gateway/ng/api/connectors?accountIdentifier=123456' \
+--header 'Content-Type: text/yaml' \
+--header 'x-api-key: pat.123456.123456' \
+--data-raw 'connector:
+  name: dockerhub
+  identifier: dockerhub
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: APISample
+  type: DockerRegistry
+  spec:
+    dockerRegistryUrl: https://index.docker.io/v2/
+    providerType: DockerHub
+    auth:
+      type: Anonymous'
+
+# --- example 13 ---
+connector:
+  name: GCR
+  identifier: GCR
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Gcp
+  spec:
+    credential:
+      type: InheritFromDelegate
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+
+# --- example 14 ---
+service:
+  name: Google Artifact
+  identifier: Google_Artifact
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      manifests:
+        - manifest:
+            identifier: manifests
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - account:/Templates
+              valuesPaths:
+                - account:/values.yaml
+              skipResourceVersioning: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: GCR
+                imagePath: docs-play/todolist-sample
+                tag: <+input>
+                registryHostname: gcr.io
+              identifier: myapp
+              type: Gcr
+  gitOpsEnabled: false
+
+# --- example 15 ---
+connector:
+  name: Google Artifact Registry
+  identifier: Google_Artifact_Registry
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Gcp
+  spec:
+    credential:
+      type: InheritFromDelegate
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+
+# --- example 16 ---
+service:
+  name: Google Artifact Registry
+  identifier: Google_Artifact_Registry
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: myapp
+              spec:
+                connectorRef: Google_Artifact_Registry
+                repositoryType: docker
+                project: docs-play
+                region: us-central1
+                repositoryName: quickstart-docker-repo
+                package: quickstart-docker-repo
+                version: <+input>
+              type: GoogleArtifactRegistry
+    type: Kubernetes
+
+# --- example 17 ---
+connector:
+  name: ECR
+  identifier: ECR
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Aws
+  spec:
+    credential:
+      type: ManualConfig
+      spec:
+        accessKey: xxxxx
+        secretKeyRef: secretaccesskey
+      region: us-east-1
+    delegateSelectors:
+      - doc-immut
+    executeOnDelegate: true
+
+# --- example 18 ---
+service:
+  name: ECR
+  identifier: ECR
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /values.yaml
+              valuesPaths:
+                - /Templates
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: ECR
+                imagePath: todolist-sample
+                tag: "1.0"
+                region: us-east-1
+              identifier: myapp
+              type: Ecr
+    type: Kubernetes
+
+# --- example 19 ---
+connector:
+  name: ACR-docs
+  identifier: ACRdocs
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Azure
+  spec:
+    credential:
+      type: ManualConfig
+      spec:
+        applicationId: xxxxx-xxxx-xxxx-xxxx-xxxxx
+        tenantId: xxxxx-xxxx-xxxx-xxxx-xxxxx
+        auth:
+          type: Secret
+          spec:
+            secretRef: acrvalue
+    azureEnvironmentType: AZURE
+    executeOnDelegate: false
+
+# --- example 20 ---
+service:
+  name: Azure with ACR
+  identifier: Azure
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: ACRdocs
+                tag: <+input>
+                subscriptionId: <+input>
+                registry: <+input>
+                repository: <+input>
+              identifier: myapp
+              type: Acr
+    type: Kubernetes
+
+# --- example 21 ---
+connector:
+  name: Harness Nexus
+  identifier: Harness_Nexus
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: HttpHelmRepo
+  spec:
+    helmRepoUrl: https://nexus3.dev.harness.io/repository/test-helm/
+    auth:
+      type: UsernamePassword
+      spec:
+        username: harnessadmin
+        passwordRef: nexus3pwd
+    delegateSelectors:
+      - gcpdocplay
+
+# --- example 22 ---
+service:
+  name: Nexus Example
+  identifier: Nexus_Example
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: account.Harness_Nexus
+                repository: todolist
+                repositoryFormat: docker
+                tag: "4.0"
+                spec:
+                  artifactPath: nginx
+                  repositoryPort: "6661"
+              identifier: myapp
+              type: Nexus3Registry
+    type: Kubernetes
+
+# --- example 23 ---
+connector:
+  name: artifactory-tutorial-connector
+  identifier: artifactorytutorialconnector
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Artifactory
+  spec:
+    artifactoryServerUrl: https://harness.jfrog.io/artifactory/
+    auth:
+      type: Anonymous
+    executeOnDelegate: false
+
+# --- example 24 ---
+service:
+  name: Artifactory Example
+  identifier: Artifactory_Example
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: artifactorytutorialconnector
+                artifactPath: alpine
+                tag: 3.14.2
+                repository: bintray-docker-remote
+                repositoryUrl: harness-docker.jfrog.io
+                repositoryFormat: docker
+              identifier: myapp
+              type: ArtifactoryRegistry
+    type: Kubernetes
+
+# --- example 25 ---
+connector:
+  name: GitHub Packages
+  identifier: GitHub_Packages
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Github
+  spec:
+    url: https://github.com/johndoe/myapp.git
+    validationRepo: https://github.com/johndoe/test.git
+    authentication:
+      type: Http
+      spec:
+        type: UsernameToken
+        spec:
+          username: johndoe
+          tokenRef: githubpackages
+    apiAccess:
+      type: Token
+      spec:
+        tokenRef: githubpackages
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+    type: Repo
+
+# --- example 26 ---
+service:
+  name: Github Packages
+  identifier: Github_Packages
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: myapp
+              spec:
+                connectorRef: GitHub_Packages
+                org: ""
+                packageName: tweetapp
+                packageType: container
+                version: latest
+              type: GithubPackageRegistry
+    type: Kubernetes
+
+# --- example 27 ---
+connector:
+  name: GitHub Packages
+  identifier: GitHub_Packages
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Github
+  spec:
+    url: https://github.com/johndoe/myapp.git
+    validationRepo: https://github.com/johndoe/test.git
+    authentication:
+      type: Http
+      spec:
+        type: UsernameToken
+        spec:
+          username: johndoe
+          tokenRef: githubpackages
+    apiAccess:
+      type: Token
+      spec:
+        tokenRef: githubpackages
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+    type: Repo
+
+# --- example 28 ---
+name: <+stage.name>
+replicas: 2
+
+image: <+artifacts.primary.image>
+# dockercfg: <+artifacts.primary.imagePullSecret>
+
+createNamespace: true
+namespace: <+infra.namespace>
+
+serviceType: LoadBalancer
+
+servicePort: 80
+serviceTargetPort: 80
+
+env:
+  config:
+    key1: value10
+  secrets:
+    key2: value2
+
+# --- example 29 ---
+name: <+stage.variables.name>
+replicas: 2
+
+image: <+artifacts.primary.image>
+dockercfg: <+artifacts.primary.imagePullSecret>
+
+createNamespace: true
+namespace: <+infra.namespace>
+
+# --- example 30 ---
+...
+{{- if .Values.dockercfg}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{.Values.name}}-dockercfg
+  annotations:
+    harness.io/skip-versioning: true
+data:
+  .dockercfg: {{.Values.dockercfg}}
+type: kubernetes.io/dockercfg
+---
+{{- end}}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.Values.name}}-deployment
+spec:
+  replicas: {{int .Values.replicas}}
+  selector:
+    matchLabels:
+      app: {{.Values.name}}
+  template:
+    metadata:
+      labels:
+        app: {{.Values.name}}
+    spec:
+      {{- if .Values.dockercfg}}
+      imagePullSecrets:
+      - name: {{.Values.name}}-dockercfg
+      {{- end}}
+      containers:
+      - name: {{.Values.name}}
+        image: {{.Values.image}}
+...
+
+# --- example 31 ---
+name: <+serviceVariables.appname>
+replicas: 2
+
+image: <+artifacts.primary.image>
+# dockercfg: <+artifacts.primary.imagePullSecret>
+
+createNamespace: true
+namespace: <+infra.namespace>
+
+serviceType: LoadBalancer
+
+servicePort: 80
+serviceTargetPort: 80
+
+env:
+  config:
+    key1: value10
+  secrets:
+    key2: value2
+
+# --- example 32 ---
+      manifests:
+        - manifest:
+            identifier: test
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: account.gitconnector
+                  gitFetchType: Branch
+                  paths:
+                    - path_to_manifest
+                  repoName: test
+                  branch: test
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+              optionalValuesYaml: true
+
+# --- example 33 ---
+- manifest:
+            identifier: values_test
+            type: Values
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: account.github_connector
+                  gitFetchType: Branch
+                  paths:
+                    - path_to_file
+                  branch: main
+              optionalValuesYaml: true

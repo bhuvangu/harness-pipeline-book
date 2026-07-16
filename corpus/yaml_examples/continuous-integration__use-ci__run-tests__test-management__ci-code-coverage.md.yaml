@@ -1,0 +1,68 @@
+# source: docs/continuous-integration/use-ci/run-tests/test-management/ci-code-coverage.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/test-management/ci-code-coverage)
+
+# --- example 1 ---
+- step:
+    type: Run
+    name: Run Tests with Coverage
+    spec:
+      shell: Sh
+      command: |-
+        # Install dependencies
+        pip install pytest pytest-cov
+
+        # Run tests with coverage
+        pytest tests/ \
+          --junitxml=test-results.xml \
+          --cov=src \
+          --cov-report=lcov:lcov.info \
+          -v
+
+        # Upload test results
+        hcli test-reports upload test-results.xml
+
+        # Upload coverage to Harness
+        hcli cov upload --file=lcov.info
+
+        # Quality gate (optional)
+        hcli cov wait-until --gt=70 --patch-gt=80 --timeout=1m
+
+# --- example 2 ---
+- step:
+    type: Run
+    name: Run Tests with Coverage
+    spec:
+      shell: Sh
+      command: |-
+        # Run tests with JaCoCo coverage
+        ./gradlew test jacocoTestReport
+
+        # Upload test results
+        hcli test-reports upload "build/test-results/test/*.xml"
+
+        # Upload coverage
+        hcli cov upload --file=build/reports/jacoco/test/jacocoTestReport.xml
+
+        # Quality gate (optional)
+        hcli cov wait-until --gt=70 --patch-gt=80 --timeout=1m
+
+# --- example 3 ---
+- step:
+    type: Run
+    name: Run Tests with Coverage
+    spec:
+      shell: Sh
+      command: |-
+        # Install JUnit reporter
+        go install github.com/jstemmer/go-junit-report/v2@latest
+
+        # Run tests with coverage
+        go test -v -coverprofile=coverage.out ./... 2>&1 | go-junit-report > report.xml
+
+        # Upload test results
+        hcli test-reports upload report.xml
+
+        # Upload coverage
+        hcli cov upload --file=coverage.out
+
+        # Quality gate (optional)
+        hcli cov wait-until --gt=70 --patch-gt=80 --timeout=1m

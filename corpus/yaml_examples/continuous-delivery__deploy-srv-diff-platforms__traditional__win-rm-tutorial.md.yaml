@@ -1,0 +1,244 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/traditional/win-rm-tutorial.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/traditional/win-rm-tutorial)
+
+# --- example 1 ---
+infrastructureDefinition:
+  name: pdc
+  identifier: pdc
+  orgIdentifier: default
+  projectIdentifier: project_id
+  environmentRef: env_id
+  deploymentType: Ssh
+  type: Pdc
+  spec:
+    connectorRef: abc
+    credentialsRef: credentials_ref
+    hostFilter:
+      type: HostAttributes
+      spec:
+        value:
+          region: us-east-1
+          name: node-1
+        matchCriteria: ALL
+  allowSimultaneousDeployments: false
+
+# --- example 2 ---
+infrastructureDefinition:
+  name: pdc
+  identifier: pdc
+  orgIdentifier: default
+  projectIdentifier: project_id
+  environmentRef: env_ref
+  deploymentType: Ssh
+  type: Pdc
+  spec:
+    connectorRef: abc
+    credentialsRef: credentials_ref
+    hostFilter:
+      type: HostAttributes
+      spec:
+        value:
+          region: us-east-1
+          name: node-1
+        matchCriteria: ANY
+  allowSimultaneousDeployments: false
+
+# --- example 3 ---
+infrastructureDefinition:
+  name: infra_name
+  identifier: infra_id
+  orgIdentifier: default
+  projectIdentifier: project_name
+  environmentRef: env_name
+  deploymentType: WinRm
+  type: Pdc
+  spec:
+    hostGroups:
+      - identifier: hostGroup_1
+        hosts:
+          - host1
+          - host2
+          - host3
+        credentialRef: credential-1
+      - identifier: hostGroup_2
+        hosts:
+          - host4
+        credentialRef: credential-2
+      - identifier: hostGroup_3
+        pdcConnectorRef: pdcRef-1
+        credentialRef: credential-3
+        hostFilter:
+          type: All
+          spec: {}
+    delegateSelectors: []
+  allowSimultaneousDeployments: false
+
+# --- example 4 ---
+service:
+  name: winrm-service
+  identifier: winrmservice
+  serviceDefinition:
+    type: WinRm
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: winrm
+              type: Har
+              spec:
+                registryRef: YOUR_REGISTRY
+                type: generic
+                spec:
+                  artifact: iis-hello-app
+                  version: "1.0"
+                  fileName: iis-hello-app.zip
+  gitOpsEnabled: false
+
+# --- example 5 ---
+infrastructureDefinition:
+  name: winrm
+  identifier: winrm
+  orgIdentifier: default
+  projectIdentifier: YOUR_PROJECT
+  environmentRef: YOUR_ENVIRONMENT
+  deploymentType: WinRm
+  type: Pdc
+  spec:
+    credentialsRef: YOUR_WINRM_CREDENTIAL
+    hostFilter:
+      type: All
+      spec: {}
+    hosts:
+      - YOUR_HOST_IP
+  allowSimultaneousDeployments: false
+
+# --- example 6 ---
+pipeline:
+  name: iis-winrm
+  identifier: iiswinrm
+  projectIdentifier: YOUR_PROJECT
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: deploy-iis
+        identifier: deploy_iis
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: WinRm
+          service:
+            serviceRef: YOUR_SERVICE
+            serviceInputs:
+              serviceDefinition:
+                type: WinRm
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: YOUR_ENVIRONMENT
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: YOUR_INFRASTRUCTURE
+          execution:
+            steps:
+              - stepGroup:
+                  name: Phase
+                  identifier: Phase
+                  strategy:
+                    repeat:
+                      items: <+stage.output.hosts>
+                      maxConcurrency: 1
+                      partitionSize: 1
+                      unit: Count
+                  steps:
+                    - stepGroup:
+                        name: Phase Group
+                        identifier: phase_group
+                        strategy:
+                          repeat:
+                            items: <+repeat.partition>
+                        steps:
+                          - step:
+                              name: Deploy
+                              identifier: Deploy
+                              timeout: 10m
+                              template:
+                                templateRef: account.Default_IIS_Application_PowerShell
+                                templateInputs:
+                                  type: Command
+                                  spec:
+                                    environmentVariables:
+                                      - name: ReleaseNo
+                                        type: String
+                                        value: "0.1"
+                                      - name: AppPoolName
+                                        type: String
+                                        value: DefaultAppPool
+                                      - name: AppPoolDotNetVersion
+                                        type: String
+                                        value: v4.0
+                                      - name: DownloadDirectory
+                                        type: String
+                                        value: $env:TEMP
+                                      - name: AppPhysicalDirectory
+                                        type: String
+                                        value: $env:SYSTEMDRIVE
+                                      - name: DestinationDirectory
+                                        type: String
+                                        value: "%USERPROFILE%\\<+service.name>\\<+env.name>"
+            rollbackSteps:
+              - stepGroup:
+                  name: Phase
+                  identifier: Phase
+                  strategy:
+                    repeat:
+                      items: <+stage.output.hosts>
+                      maxConcurrency: 1
+                      partitionSize: 1
+                      unit: Count
+                  steps:
+                    - stepGroup:
+                        name: Phase Group Rollback
+                        identifier: phase_group
+                        strategy:
+                          repeat:
+                            items: <+repeat.partition>
+                        steps:
+                          - step:
+                              name: Rollback
+                              identifier: Deploy
+                              timeout: 10m
+                              template:
+                                templateRef: account.Default_IIS_Application_PowerShell
+                                templateInputs:
+                                  type: Command
+                                  spec:
+                                    environmentVariables:
+                                      - name: ReleaseNo
+                                        type: String
+                                        value: "0.1"
+                                      - name: AppPoolName
+                                        type: String
+                                        value: DefaultAppPool
+                                      - name: AppPoolDotNetVersion
+                                        type: String
+                                        value: v4.0
+                                      - name: DownloadDirectory
+                                        type: String
+                                        value: $env:TEMP
+                                      - name: AppPhysicalDirectory
+                                        type: String
+                                        value: $env:SYSTEMDRIVE
+                                      - name: DestinationDirectory
+                                        type: String
+                                        value: "%USERPROFILE%\\<+service.name>\\<+env.name>"
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback

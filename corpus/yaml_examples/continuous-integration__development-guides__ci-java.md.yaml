@@ -1,0 +1,239 @@
+# source: docs/continuous-integration/development-guides/ci-java.md  (https://developer.harness.io/docs/continuous-integration/development-guides/ci-java)
+
+# --- example 1 ---
+              - step:
+                   type: Run
+                   name: build
+                   identifier: build
+                   spec:
+                     connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                     image: maven:3.8-jdk-11
+                     shell: Sh
+                     command: |-
+                       mvn clean package dependency:copy-dependencies
+                   - step:
+                       type: Run
+                       name: check dependencies
+                       identifier: check_dependencies
+                       spec:
+                         connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                         image: maven:3.8-jdk-11
+                         shell: Sh
+                         command: |-
+                           mvn dependency-check:check -U -DskipTests
+                         reports:
+                           type: JUnit
+                           spec:
+                             paths:
+                               - /harness/target/*.xml
+
+# --- example 2 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+
+# --- example 3 ---
+spec:
+  key: cache-{{ checksum "pom.xml" }}
+
+# --- example 4 ---
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "pom.xml" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  ...
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  ...
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "pom.xml" }}
+                    sourcePaths:
+                      - /root/.m2
+                    archiveFormat: Tar
+
+# --- example 5 ---
+- step:
+    type: Run
+    name: build
+    identifier: build
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: maven:3.8-jdk-11
+      shell: Sh
+      command: |
+        mvn clean package dependency:copy-dependencies
+- step:
+    type: Run
+    name: run test
+    identifier: run_test
+    spec:
+      shell: Sh
+      command: |-
+        mvn test
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - target/surefire-reports/*.xml
+
+# --- example 6 ---
+              - step:
+                  type: Test
+                  name: RunTestsWithIntelligence
+                  identifier: RunTestsWithIntelligence
+                  spec:
+                    command: |-
+                      mvn test
+                      mvn package -DskipTests
+                    shell: Sh
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: maven:3.8-jdk-11
+                    intelligenceMode: true
+                    reports:
+                      - "target/surefire-reports/*.xml"
+
+# --- example 7 ---
+reports:
+  type: JUnit
+  spec:
+    paths:
+      - target/surefire-reports/*.xml
+
+# --- example 8 ---
+- step:
+    type: Run
+    name: Install Java
+    identifier: install_java
+    spec:
+      shell: Sh
+      command: |-
+        mkdir -p $HOME/java
+        curl -fsSL "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse" | tar xz -C $HOME/java --strip-components=1
+        export JAVA_HOME=$HOME/java
+        export PATH=$JAVA_HOME/bin:$PATH
+        java -version
+
+# --- example 9 ---
+strategy:
+  matrix:
+    javaVersion:
+      - "17"
+      - "21"
+
+# --- example 10 ---
+- step:
+    type: Run
+    name: Install Java
+    identifier: install_java
+    spec:
+      shell: Sh
+      command: |-
+        mkdir -p $HOME/java
+        curl -fsSL "https://api.adoptium.net/v3/binary/latest/<+matrix.javaVersion>/ga/linux/x64/jdk/hotspot/normal/eclipse" | tar xz -C $HOME/java --strip-components=1
+        export JAVA_HOME=$HOME/java
+        export PATH=$JAVA_HOME/bin:$PATH
+        java -version
+
+# --- example 11 ---
+- step:
+    type: Run
+    name: Java Version
+    identifier: java_version
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: maven:3.9-eclipse-temurin-17
+      shell: Sh
+      command: |-
+        java -version
+        mvn --version
+
+# --- example 12 ---
+strategy:
+  matrix:
+    javaVersion:
+      - "17"
+      - "21"
+
+# --- example 13 ---
+- step:
+    type: Run
+    name: Java Version
+    identifier: java_version
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: maven:3.9-eclipse-temurin-<+matrix.javaVersion>
+      shell: Sh
+      command: |-
+        java -version
+        mvn --version
+
+# --- example 14 ---
+pipeline:
+  name: Build java
+  identifier: Build_java
+  projectIdentifier: default
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: Build
+        identifier: Build
+        description: ""
+        type: CI
+        spec:
+          caching:
+            enabled: true
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Test
+                  name: RunTestsWithIntelligence
+                  identifier: RunTestsWithIntelligence
+                  spec:
+                    command: |-
+                      mvn test
+                      mvn package -DskipTests
+                    shell: Sh
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: maven:3.8-jdk-11
+                    intelligenceMode: true
+                    reports:
+                      - "target/surefire-reports/*.xml"
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: BuildAndPushDockerRegistry_1
+                  identifier: BuildAndPushDockerRegistry_1
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    repo: YOUR_DOCKER_HUB_USERNAME/DOCKER_REPO_NAME
+                    tags:
+                      - <+pipeline.sequenceId>

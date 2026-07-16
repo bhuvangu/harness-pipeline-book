@@ -1,0 +1,170 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/aws/aws-lambda-deployments.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/aws/aws-lambda-deployments)
+
+# --- example 1 ---
+service:
+  name: helloworld
+  identifier: helloworld
+  description: "Hello World AWS Lambda"
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests: # Harness introduces a function definition to define the properties of your AWS Lambda function
+        - manifest:
+            identifier: lambdaFunctionDefinition
+            type: AwsLambdaFunctionDefinition
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: rohitgithub
+                  gitFetchType: Branch
+                  paths:
+                    - serverless/aws-lambda/createFunction.json
+                  branch: master
+      artifacts: # The artifact is the packaged .zip or Docker image you wish to deploy to AWS
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: awscp
+                bucketName: mylambda
+                region: us-east-2
+                filePath: <+serviceVariables.workload_name>
+              identifier: test
+              type: AmazonS3
+      variables:
+        - name: workload_name
+          type: String
+          description: "sample variable definition"
+          value: workloadNameValue
+    type: AwsLambda
+
+# --- example 2 ---
+infrastructureDefinition:
+  name: aws-lambda
+  identifier: awslambda
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: serverlesstest
+  environmentRef: aws
+  deploymentType: AwsLambda
+  type: AwsLambda
+  spec:
+    connectorRef: awscp
+    region: us-east-2
+  allowSimultaneousDeployments: false
+
+# --- example 3 ---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template for provisioning a Lambda function
+
+Resources:
+  MyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: MyLambdaFunction
+      Runtime: python3.8
+      Handler: index.handler
+      Role: !GetAtt MyLambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              return {
+                  'statusCode': 200,
+                  'body': 'Hello from Lambda!'
+              }
+
+  MyLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: MyLambdaPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: logs:CreateLogGroup
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/MyLambdaFunction:*"
+
+Outputs:
+  region_name:
+    Value: !Ref AWS::Region
+    Description: AWS region where the Lambda function is deployed
+
+# --- example 4 ---
+steps:
+  - step:
+      name: Deploy Aws Lambda
+      identifier: deployawslambda
+      type: AwsLambdaDeploy
+      timeout: 10m
+      spec: {}
+
+# --- example 5 ---
+rollbackSteps:
+  - step:
+      name: Aws Lambda rollback
+      identifier: awslambdarollback
+      type: AwsLambdaRollback
+      timeout: 10m
+      spec: {}
+
+# --- example 6 ---
+          execution:
+            steps:
+              - step:
+                  name: Lambda Canary Deploy
+                  identifier: canaryDeployAwsLambda
+                  type: AwsLambdaCanaryDeploy
+                  timeout: 10m
+                  spec: {}
+              - step:
+                  name: Lambda Traffic Shift
+                  identifier: trafficShift10
+                  type: AwsLambdaTrafficShift
+                  timeout: 10m
+                  spec:
+                    trafficPercentage: 10
+              - step:
+                  type: HarnessApproval
+                  name: HarnessApproval_1
+                  identifier: HarnessApproval_1
+                  spec:
+                    approvalMessage: Please review the following information and approve the pipeline progression
+                    includePipelineExecutionHistory: true
+                    isAutoRejectEnabled: false
+                    approvers:
+                      userGroups:
+                        - account.account_admins
+                      minimumCount: 1
+                      disallowPipelineExecutor: false
+                    approverInputs: []
+                  timeout: 1d
+              - step:
+                  name: Lambda Traffic Shift
+                  identifier: trafficShift100
+                  type: AwsLambdaTrafficShift
+                  timeout: 10m
+                  spec:
+                    trafficPercentage: 100
+            rollbackSteps:
+              - step:
+                  name: Rollback Canary Deploy
+                  identifier: rollbackCanaryDeploy
+                  type: AwsLambdaCanaryRollback
+                  timeout: 10m
+                  spec: {}

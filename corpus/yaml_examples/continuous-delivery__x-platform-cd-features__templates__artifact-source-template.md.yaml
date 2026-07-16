@@ -1,0 +1,50 @@
+# source: docs/continuous-delivery/x-platform-cd-features/templates/artifact-source-template.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/templates/artifact-source-template)
+
+# --- example 1 ---
+template:
+  name: Todo List
+  identifier: Todo_List
+  versionLabel: "1"
+  type: ArtifactSource
+  projectIdentifier: CD_Docs
+  orgIdentifier: default
+  tags: {}
+  spec:
+    type: DockerRegistry
+    spec:
+      imagePath: harness/todolist-sample
+      tag: <+input>
+      connectorRef: Docker_Hub_with_Pwd
+
+# --- example 2 ---
+service:
+  name: Example K8s
+  identifier: Example_K8s
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - name: todolist
+              identifier: todolist
+              template:
+                templateRef: Todo_List
+                versionLabel: "1"
+                templateInputs:
+                  type: DockerRegistry
+                  spec:
+                    tag: <+input>
+      manifests:
+        - manifest:
+            identifier: manifest
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates/deployment.yaml
+              skipResourceVersioning: false
+  gitOpsEnabled: false

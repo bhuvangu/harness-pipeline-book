@@ -1,0 +1,68 @@
+# source: docs/continuous-integration/shared/build-and-push-runtime-flags.md  (https://developer.harness.io/docs/continuous-integration/shared/build-and-push-runtime-flags)
+
+# --- example 1 ---
+              - step:
+                  identifier: buildandpush
+                  name: buildandpush
+                  type: BuildAndPush---
+                  spec:
+                    ...
+                    envVariables:
+                      PLUGIN_SKIP_TLS_VERIFY: true
+
+# --- example 2 ---
+- step:
+    identifier: pushGAR
+    name: push GAR
+    type: BuildAndPushGAR ## Type depends the selected Build and Push step, such as Docker, GAR, ACR, and so on.
+    spec: ## Some parts of 'step.spec' vary by Build and Push step type (Docker, GAR, ACR, etc).
+      connectorRef: GAR_CONNECTOR
+      host: "us-docker.pkg.dev/gar-prod-setup/harness-public"
+      projectID: "some-gcp-project"
+      imageName: "some-image-name"
+      tags:
+        - "1.0"
+        - "1.2"
+      buildArgs:
+        foo: bar
+        hello: world
+      labels:
+        foo: bar
+        hello: world
+      target: dev-env
+      context: "."
+      dockerfile: "harnessDockerfile"
+      remoteCacheImage: "test/cache"
+      envVariables: ## Specify plugin runtime flags as environment variables under 'step.spec'.
+        PLUGIN_TAR_PATH: ./harnesstarpath
+        PLUGIN_IMAGE_DOWNLOAD_RETRY: "2"
+        PLUGIN_COMPRESSED_CACHING: "false"
+        PLUGIN_USE_NEW_RUN: "true"
+        PLUGIN_GARBAGE: yoyo
+
+# --- example 3 ---
+variables:
+  - name: PLUGIN_CUSTOM_DNS
+    type: String
+    description: ""
+    required: false
+    value: "vvv.xxx.yyy.zzz"
+
+# --- example 4 ---
+- step:
+    identifier: buildAndPush
+    type: BuildAndPushDockerRegistry
+    name: Build and Push Docker Image
+    spec:
+      connectorRef: dockerConnector
+      repo: dockerRepo/imageName
+      tags:
+        - ci-<+pipeline.executionId>
+      envDockerSecrets:
+        USERNAME: a_user # Reference in Dockerfile:reference to env variable
+        PASSWORD: a_pass
+      fileDockerSecrets:
+        docker_user2: <+secrets.getValue("myusername")> # File secret defined in Harness
+        docker_pass2: <+secrets.getValue("mydockerpass")>
+        docker_user3: /harness/test.txt # path to local file in workspace containing the secret
+      caching: true

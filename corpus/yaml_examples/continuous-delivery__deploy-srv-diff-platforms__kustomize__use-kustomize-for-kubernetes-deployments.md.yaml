@@ -1,0 +1,111 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kustomize/use-kustomize-for-kubernetes-deployments.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kustomize/use-kustomize-for-kubernetes-deployments)
+
+# --- example 1 ---
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+
+# --- example 2 ---
+resources:
+  - ../../application
+namePrefix: nonpro-
+configMapGenerator:
+  - name: example-config
+    namespace: default
+    #behavior: replace
+    files:
+      - configs/config.json
+patchesStrategicMerge:
+  - env.yaml
+
+# --- example 3 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-deploy
+spec:
+  template:
+    spec:
+      containers:
+        - name: example-app
+          env:
+            - name: ENVIRONMENT
+              value: Production
+
+# --- example 4 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-deploy
+  namespace: default
+  labels:
+    app: example-app
+  annotations:
+spec:
+  selector:
+    matchLabels:
+      app: example-app
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: example-app
+    spec:
+      containers:
+        - name: example-app
+          image: harness/todolist-sample:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+
+# --- example 5 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-deploy
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - name: example-app
+          image: <+serviceConfig.serviceDefinition.spec.variables.image>
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-deploy
+  namespace: default
+spec:
+  replicas: <+serviceConfig.serviceDefinition.spec.variables.replica>
+
+# --- example 6 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-deploy
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+        - name: example-app
+          image: <+secrets.getValue("image")>
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: example-service
+  namespace: default
+spec:
+  selector:
+    app: <+secrets.getValue("appName")>

@@ -1,0 +1,441 @@
+# source: docs/continuous-delivery/x-platform-cd-features/failure-strategy-service-env.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/failure-strategy-service-env)
+
+# --- example 1 ---
+pipeline:
+  projectIdentifier: testServiceInfraRetry
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: t1
+        identifier: t1
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: ser1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+invalidRef>
+                      sources: <+input>
+          environment:
+            environmentRef: env1
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: infra1
+                inputs:
+                  identifier: infra1
+                  type: KubernetesDirect
+                  spec:
+                    connectorRef: <+input>
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "forward"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "rollback"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: Retry
+                spec:
+                  retryCount: 2
+                  retryIntervals:
+                    - 10s
+                  onRetryFailure:
+                    action:
+                      type: MarkAsFailure
+  identifier: serviceRetryWithoutPostAction
+  name: serviceRetryWithMarkASFailure
+
+# --- example 2 ---
+pipeline:
+  identifier: infraPipelineRollback
+  projectIdentifier: testServiceInfraRetry
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        identifier: t1
+        type: Deployment
+        name: t1
+        description: ""
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: ser1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: testArtifact
+                      sources: <+input>
+          environment:
+            environmentRef: env1
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: infra1
+                inputs:
+                  identifier: infra1
+                  type: KubernetesDirect
+                  spec:
+                    connectorRef: account.KubernetesAccLvl
+          execution:
+            steps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  name: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "forward"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  name: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "rollback"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: Abort
+    - stage:
+        identifier: t2
+        type: Deployment
+        name: t2
+        description: ""
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: ser1
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: testArtifact
+                      sources: <+input>
+          environment:
+            environmentRef: env1
+            deployToAll: false
+            provisioner:
+              steps:
+                - step:
+                    identifier: dc
+                    type: ShellScriptProvision
+                    name: dc
+                    spec:
+                      source:
+                        type: Inline
+                        spec:
+                          script: echo "DC"
+                      environmentVariables: []
+                    timeout: 10m
+              rollbackSteps:
+                - step:
+                    identifier: ShellScriptProvision_1
+                    type: ShellScriptProvision
+                    name: ShellScriptProvision_1
+                    spec:
+                      source:
+                        type: Inline
+                        spec:
+                          script: echo "pRol"
+                      environmentVariables: []
+                    timeout: 10m
+            infrastructureDefinitions:
+              - identifier: infra1
+                inputs:
+                  identifier: infra1
+                  type: KubernetesDirect
+                  spec:
+                    connectorRef: <+cds>
+          execution:
+            steps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  name: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: exit 1
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  name: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "rollback"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: PipelineRollback
+  name: infraPipelineRollback
+
+# --- example 3 ---
+pipeline:
+  identifier: testMultiService
+  name: testMultiService
+  projectIdentifier: testServiceInfraRetry
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        identifier: ds
+        type: Deployment
+        name: ds
+        description: ""
+        spec:
+          deploymentType: Kubernetes
+          multiDeploymentConfig:
+            onFailure: RunAll
+          services:
+            values:
+              - serviceRef: ser1
+                serviceInputs:
+                  serviceDefinition:
+                    type: Kubernetes
+                    spec:
+                      artifacts:
+                        primary:
+                          primaryArtifactRef: <+invalid>
+              - serviceRef: ser2
+                serviceInputs:
+                  serviceDefinition:
+                    type: Kubernetes
+                    spec:
+                      artifacts:
+                        primary:
+                          primaryArtifactRef: testArtifact
+            metadata:
+              parallel: false
+          environments:
+            metadata:
+              parallel: true
+            values:
+              - environmentRef: env1
+                deployToAll: false
+                infrastructureDefinitions:
+                  - identifier: infra2
+                    inputs:
+                      identifier: infra2
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: <+WCD>
+                  - identifier: infra1
+                    inputs:
+                      identifier: infra1
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: account.KubernetesAccLvlConnectorForAutomationTest
+          execution:
+            steps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  name: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "CD"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+            rollbackSteps: []
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: Retry
+                spec:
+                  retryCount: 1
+                  retryIntervals:
+                    - 10s
+                  onRetryFailure:
+                    action:
+                      type: MarkAsFailure
+
+# --- example 4 ---
+multiDeploymentConfig:
+  onFailure: <value>
+
+# --- example 5 ---
+multiDeploymentConfig:
+  onFailure: RunAll
+
+# --- example 6 ---
+multiDeploymentConfig:
+  onFailure: SkipQueued
+
+# --- example 7 ---
+pipeline:
+  identifier: testMatrixP0
+  name: testMatrixPO
+  projectIdentifier: defaultProject
+  orgIdentifier: default
+  tags: {}
+
+  stages:
+    - stage:
+        identifier: service
+        type: Deployment
+        name: service
+        description: ""
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: <+matrix.service>
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: artifactIden
+                      sources:
+                        - identifier: artifactIden
+                          type: Gcr
+                          spec:
+                            tag: "49"
+          environment:
+            environmentRef: env
+            deployToAll: false
+          infrastructureDefinitions:
+            - identifier: <+matrix.infra>
+              inputs:
+                identifier: <+matrix.infra>
+                type: Kubernetes
+                spec:
+                  connectorRef: <+invalid>
+          execution:
+            steps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  name: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "deploy"
+                        environmentVariables: []
+                        outputVariables: []
+                    timeout: 10m
+            rollbackSteps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  name: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "rollback"
+                        environmentVariables: []
+                        outputVariables: []
+                    timeout: 10m
+          failureStrategies:
+            - onFailure:
+                errors:
+                  - AllErrors
+                action:
+                  type: Retry
+                  spec:
+                    retryCount: 1
+                    retryIntervals:
+                      - 10s
+                onRetryFailure:
+                  action:
+                    type: StageRollback
+          strategy:
+            onFailure: SkipQueued
+            matrix:
+              service:
+                - rollingDeploy2
+                - rollingDeploy1
+              infra:
+                - infral
+                - infra2
+            maxConcurrency: 2

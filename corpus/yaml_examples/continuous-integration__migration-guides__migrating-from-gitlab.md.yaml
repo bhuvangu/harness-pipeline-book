@@ -1,0 +1,412 @@
+# source: docs/continuous-integration/migration-guides/migrating-from-gitlab.md  (https://developer.harness.io/docs/continuous-integration/migration-guides/migrating-from-gitlab)
+
+# --- example 1 ---
+step1:
+  stage: stage1
+    image: openjdk:17.0-jdk
+  only:
+  - /^dev-.*$/
+  except:
+  - branches
+  script:
+  - echo "this runs on openjdk"
+
+# --- example 2 ---
+    - stage:
+        name: Stage1
+        ...
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: my-docker-hub-connector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "this runs on openjdk"
+
+# --- example 3 ---
+image: docker:latest
+variables:
+  pipelinevar1: someval
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: "$POSTGRES_PASS"
+  POSTGRES_DB: postgres
+
+services:
+- docker:postgres:10.8
+
+stages:
+- stage1
+- stage2
+- matrixstage
+
+before_script:
+- docker login $REGISTRY  -u $REGISTRY_USER -p $REGISTRY_USER_PASSWORD
+
+step1:
+  stage: stage1
+    image: openjdk:17.0-jdk
+  only:
+  - /^dev-.*$/
+  except:
+  - branches
+  script:
+  - echo "this runs on openjdk"
+
+step1:
+  stage: stage2
+    image: node:13.0.0
+  only:
+  - /^prod-.*$/
+  except:
+  - branches
+  script:
+echo "project level var:" "$PROJ_VAR"
+echo "pipeline var:" "$PIPELINE_VAR"
+echo "secret example :" "$DB_PASSWORD"
+ 
+ 
+step1:
+  stage: matrixstage
+  only:
+  - /^prod-.*$/
+  except:
+  - branches
+  script:
+echo "Testing matrix"
+  parallel:
+    matrix:
+      - PLATFORM: [windows, mac, linux]
+
+# --- example 4 ---
+pipeline:
+  name: gitlab test
+  identifier: gitlab_test
+  projectIdentifier: gitlab_test
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Stage1
+        identifier: stage1
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Background
+                  name: Background_1
+                  identifier: Background_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: postgres:10.8
+                    envVariables:
+                      POSTGRES_USER: postgres
+                      POSTGRES_PASSWORD: <+secrets.getValue("DbPasswordSecret")>
+                      POSTGRES_DB: postgres
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "this runs on openjdk"
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+    - stage:
+        name: Stage2
+        identifier: Stage2
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: node:13.0.0
+                    shell: Bash
+                    command: |-
+                      echo "pipeline var:" <+pipeline.variables.pipelinevar1>
+                      echo "project level var:" <+variable.proj_var>
+                      echo "secret example :" <+secrets.getValue("DbPasswordSecret")>
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+        variables: []
+    - stage:
+        name: matrix stage
+        identifier: Stage4
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    shell: Bash
+                    command: echo "Testing on  <+matrix.testparam>"
+                  failureStrategies: []
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+        strategy:
+          matrix:
+            testparam:
+              - node
+              - python
+              - ubuntu
+          maxConcurrency: 3
+  properties:
+    ci:
+      codebase:
+        connectorRef: account.myscm
+        repoName: test
+        build: <+input>
+  variables:
+    - name: pipelinevar1
+      type: String
+      description: ""
+      value: someval
+
+# --- example 5 ---
+step1:
+  stage: stage1
+    image: openjdk:17.0-jdk
+
+# --- example 6 ---
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: my-docker-hub-connector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "this runs on openjdk"
+
+# --- example 7 ---
+  stages:
+    - stage:
+        name: Test
+        ...
+    - stage:
+        name: Build
+        ...
+    - stage:
+        name: Upload
+        ...
+
+# --- example 8 ---
+image: golang:latest
+
+stages:
+  - test
+  - build
+
+format:
+  stage: test
+  script:
+    - go fmt $(go list ./... | grep -v /vendor/)
+    - go vet $(go list ./... | grep -v /vendor/)
+    - go test -race $(go list ./... | grep -v /vendor/)
+
+compile:
+  stage: build
+  script:
+    - mkdir -p mybinaries
+    - go build -o mybinaries ./...
+  artifacts:
+    paths:
+      - mybinaries
+
+# --- example 9 ---
+ stages:
+   - stage:
+       name: test
+       identifier: test
+       description: ""
+       type: CI
+       spec:
+         cloneCodebase: true
+         platform:
+           os: Linux
+           arch: Amd64
+         runtime:
+           type: Cloud
+           spec: {}
+         execution:
+           steps:
+             - step:
+                 type: Run
+                 name: test-step
+                 identifier: teststep
+                 spec:
+                   shell: Sh
+                   command: |
+                     go fmt $(go list ./... | grep -v /vendor/)
+                     go vet $(go list ./... | grep -v /vendor/)
+                     go test -race $(go list ./... | grep -v /vendor/)
+   - stage:
+       name: build
+       identifier: build
+       type: CI
+       spec:
+         cloneCodebase: true
+         platform:
+           os: Linux
+           arch: Amd64
+         runtime:
+           type: Cloud
+           spec: {}
+         execution:
+           steps:
+             - step:
+                 type: Run
+                 name: build-step
+                 identifier: buildstep
+                 spec:
+                   shell: Sh
+                   command: |
+                     mkdir -p mybinaries
+                     go build -o mybinaries ./...
+         sharedPaths:
+           - mybinaries
+
+# --- example 10 ---
+test_variable:
+  stage: test
+  script:
+    - echo "$CI_JOB_STAGE" #Uses pre-defined variable
+
+# Custom variable definition in .gitlab-ci.yml file
+
+variables:
+  SA_PASSWORD: $SA_PASSWORD
+
+# --- example 11 ---
+              - step:
+                  type: Run
+                  name: test-variable
+                  identifier: test_variable
+                  spec:
+                    command: echo "environment variable: " <+variable.env_var>
+
+# --- example 12 ---
+              - step:
+                  type: Background
+                  name: Background_1
+                  identifier: Background_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: postgres:10.8
+                    envVariables:
+                      POSTGRES_USER: postgres
+                      POSTGRES_PASSWORD: <+secrets.getValue("DbPasswordSecret")>
+                      POSTGRES_DB: postgres
+
+# --- example 13 ---
+  stages:
+    - parallel:
+        - stage:
+            name: Stage1
+            ...
+        - stage:
+            name: Stage2
+            ...
+    - stage:
+        name: Stage3
+        ...
+    - stage:
+        name: Stage4
+        ...
+
+# --- example 14 ---
+test:
+  stage: test
+  script: run-test $PLATFORM
+  parallel:
+    matrix:
+      - PLATFORM: [windows, mac, linux]
+
+# --- example 15 ---
+  stages:
+    - stage:
+        name: Stage1
+        identifier: Stage1
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: dockerconectorref
+                    image: dockerimage:tag
+                    shell: Bash
+                    command: echo "Testing on  <+matrix.testparam>"
+        strategy:
+          matrix:
+            testparam:
+              - node
+              - python
+              - ubuntu
+          maxConcurrency: 3
+
+# --- example 16 ---
+trigger_pipeline:
+  stage: deploy
+  script:
+    - 'curl --fail --request POST --form token=$MY_TRIGGER_TOKEN --form ref=main "https://gitlab.example.com/api/v4/projects/123456/trigger/pipeline"'
+  rules:
+    - if: $CI_COMMIT_TAG
+  environment: production
+
+# --- example 17 ---
+trigger:
+  name: make build
+  identifier: make_build
+  enabled: true
+  orgIdentifier: default
+  projectIdentifier: DhrubaCI
+  pipelineIdentifier: Demo3
+  source:
+    type: Scheduled
+    spec:
+      type: Cron
+      spec:
+        expression: 45 13 13 09 2
+  inputYaml: |
+    pipeline:
+      identifier: Demo3
+      properties:
+        ci:
+          codebase:
+            build:
+              type: branch
+              spec:
+                branch: main

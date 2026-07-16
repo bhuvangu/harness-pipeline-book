@@ -1,0 +1,45 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/ticketing-systems/update-service-now-tickets-in-cd-stages.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/ticketing-systems/update-service-now-tickets-in-cd-stages)
+
+# --- example 1 ---
+  tags: {}
+  stages:
+    - stage:
+        name: test
+        identifier: test
+        description: ""
+        type: Approval
+        spec:
+          execution:
+            steps:
+              - step:
+                  name: create
+                  identifier: create
+                  type: ServiceNowCreate
+                  timeout: 5m
+                  spec:
+                    connectorRef: account.testSNow
+                    ticketType: problem
+                    fields:
+                      - name: description
+                        value: create ticket
+                      - name: short_description
+                        value: Try out expressions and update in the doc
+                    createType: Normal
+              - step:
+                  type: ServiceNowUpdate
+                  name: ServiceNowUpdate_1
+                  identifier: ServiceNowUpdate_1
+                  spec:
+                    useServiceNowTemplate: false
+                    connectorRef: account.testSNow
+                    ticketType: problem
+                    ticketNumber: <+execution.steps.create.ticket.ticketNumber>
+                    fields:
+                      - name: description
+                        value: close
+                      - name: short_description
+                        value: close the ticket
+                      - name: state
+                        value: "4"
+                  timeout: 10m
+        tags: {}

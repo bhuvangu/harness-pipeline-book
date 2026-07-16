@@ -1,0 +1,69 @@
+# source: docs/continuous-delivery/x-platform-cd-features/environments/environment-overview.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/environments/environment-overview)
+
+# --- example 1 ---
+environment:
+  name: dev
+  identifier: dev
+  description: account wide dev environment
+  tags:
+    status: non-regulated
+  type: PreProduction
+  variables:
+    - name: port
+      type: String
+      value: "8080"
+      description: ""
+    - name: namespace
+      type: String
+      value: <+service.name>-dev
+      description: "namespace environment variable"
+
+# --- example 2 ---
+infrastructureDefinition:
+  name: dev-k8s
+  identifier: dev
+  description: development Kubernetes cluster
+  tags: {}
+  environmentRef: dev
+  deploymentType: Kubernetes
+  type: KubernetesDirect
+  spec:
+    connectorRef: account.Harness_Kubernetes_Cluster
+    namespace: <+service.name>-dev
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
+
+# --- example 3 ---
+environment:
+  name: prod
+  identifier: prod
+  description: production environment for the organization
+  tags:
+    status: regulated
+  type: Production
+  orgIdentifier: default
+  variables:
+    - name: namespace
+      type: String
+      value: <+service.name>-prod
+      description: "namespace for prod environment"
+    - name: port
+      type: String
+      value: "8080"
+      description: "port for prod environment"
+
+# --- example 4 ---
+infrastructureDefinition:
+  name: prod-k8s
+  identifier: prodk8s
+  description: production kubernetes cluster
+  tags: {}
+  orgIdentifier: default
+  environmentRef: prod
+  deploymentType: Kubernetes
+  type: KubernetesDirect
+  spec:
+    connectorRef: account.Harness_Kubernetes_Cluster
+    namespace: production
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false

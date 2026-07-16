@@ -1,0 +1,4 @@
+# source: docs/platform/delegates/troubleshooting/certificate-issues.md  (https://developer.harness.io/docs/platform/delegates/troubleshooting/certificate-issues)
+
+# --- example 1 ---
+     MANAGER_HOST_AND_PORT: https://YOUR_SUBDOMAIN.harness.io/gratis

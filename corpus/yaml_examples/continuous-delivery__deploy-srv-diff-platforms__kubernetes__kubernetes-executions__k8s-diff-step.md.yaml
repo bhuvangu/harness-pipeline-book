@@ -1,0 +1,9 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/k8s-diff-step.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/k8s-diff-step)
+
+# --- example 1 ---
+- step:
+    type: K8sDiff
+    name: K8sDiff
+    identifier: K8sDiff
+    spec: {}
+    timeout: 10m

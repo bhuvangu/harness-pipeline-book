@@ -1,0 +1,22 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/rollback.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/rollback)
+
+# --- example 1 ---
+rollbackSteps:
+  - stepGroup:
+      name: Azure Container Apps Rollback Step Group
+      identifier: aca_rollback
+      steps:
+        - step:
+            name: Azure Container Apps Rollback
+            identifier: AcaRollbackStep
+            type: AzureContainerAppsRollback
+            timeout: 30m
+            spec:
+              connectorRef: account.harnessImage
+              image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+              imagePullPolicy: Always
+      stepGroupInfra:
+        type: KubernetesDirect
+        spec:
+          connectorRef: <+input>
+          namespace: default

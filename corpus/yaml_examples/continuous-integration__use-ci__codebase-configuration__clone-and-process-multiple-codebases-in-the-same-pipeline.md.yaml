@@ -1,0 +1,138 @@
+# source: docs/continuous-integration/use-ci/codebase-configuration/clone-and-process-multiple-codebases-in-the-same-pipeline.md  (https://developer.harness.io/docs/continuous-integration/use-ci/codebase-configuration/clone-and-process-multiple-codebases-in-the-same-pipeline)
+
+# --- example 1 ---
+    - step:
+        type: GitClone
+        name: clone second repo
+        identifier: clone_second_repo
+        spec:
+          connectorRef: account.git
+          repoName: myOrg/mySecondRepo
+          build:
+            type: branch
+            spec:
+              branch: main
+
+# --- example 2 ---
+              - step:
+                  type: Run
+                  identifier: clone
+                  name: clone
+                  spec:
+                    shell: Sh
+                    command: |-
+                      git clone https://GH_PERSONAL_ACCESS_TOKEN@github.com/ACCOUNT_NAME/REPO_NAME.git
+
+# --- example 3 ---
+pipeline:
+  name: Clone two repos
+  identifier: Clone_two_repos
+  projectIdentifier: my_project
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: account.git1
+        repoName: my-code-repo
+        build: <+input>
+  stages:
+    - stage:
+        name: build from two repos
+        identifier: build_from_two_repos
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: GitClone
+                  name: clone second repo
+                  identifier: clone_second_repo
+                  spec:
+                    connectorRef: account.git2
+                    build:
+                      type: branch
+                      spec:
+                        branch: main
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: BuildAndPushDockerRegistry_1
+                  identifier: BuildAndPushDockerRegistry_1
+                  spec:
+                    connectorRef: mydockerhubconnector
+                    repo: username/imagerepo
+                    tags:
+                      - <+pipeline.executionId>
+                    dockerfile: /path/to/dockerfile
+
+# --- example 4 ---
+    stages:
+        - stage:
+              name: Build Test and Push
+              identifier: Build_Test_and_Push
+              type: CI
+              spec:
+                  cloneCodebase: true
+                  infrastructure:
+                      type: KubernetesDirect
+                      spec:
+                          connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+                          namespace: YOUR_NAMESPACE
+                          automountServiceAccountToken: true
+                  execution:
+                      steps:
+                          - step:
+                                type: Run
+                                name: git-clone-and-copy-dockerfile
+                                identifier: git-clone-and-copy-dockerfile
+                                spec:
+                                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                                    image: alpine:latest
+                                    shell: Sh
+                                    command: |+
+                                        # This stage clones the default codebase, which copies all app files and folders to the stage workspace.
+                                        # To build the image, the pipeline needs to clone the repo with the Dockerfile
+                                        # And then copy the Dockerfile to the current folder.
+
+                                        apk add git
+                                        git --version
+                                        git clone https://github.com/$GITHUB_USERNAME/$DOCKERFILE_REPO
+
+                                        # We now have Docker repo at the current folder:
+
+                                        find .
+
+                                        # Copy Dockerfile to current folder, where the Docker Build step can find it:
+
+                                        cp $DOCKER_REPO/$APP_REPO/Dockerfile .
+                                    privileged: true
+                          - step:
+                                type: BuildAndPushDockerRegistry
+                                name: build-my-backend-service
+                                identifier: buildmybackendservice
+                                spec:
+                                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                                    repo: <+input>
+                                    tags:
+                                        - <+pipeline.sequenceId>
+                                        - latest
+                                    optimize: true
+              variables:
+                  - name: GITHUB_USERNAME
+                    type: Secret
+                    value: myGitHubAccount
+                  - name: APP_REPO
+                    type: String
+                    value: myCodeRepo
+                  - name: DOCKERFILE_REPO
+                    type: String
+                    value: myGitHubRepo
+              failureStrategies: []

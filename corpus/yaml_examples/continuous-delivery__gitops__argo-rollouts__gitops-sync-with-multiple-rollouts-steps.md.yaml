@@ -1,0 +1,167 @@
+# source: docs/continuous-delivery/gitops/argo-rollouts/gitops-sync-with-multiple-rollouts-steps.md  (https://developer.harness.io/docs/continuous-delivery/gitops/argo-rollouts/gitops-sync-with-multiple-rollouts-steps)
+
+# --- example 1 ---
+pipeline:
+  name: RolloutStepExample
+  identifier: RolloutStepExample
+  projectIdentifier: projectidentifier
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: gs1
+        identifier: gs1
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          gitOpsEnabled: true
+          service:
+            serviceRef: svc1
+          execution:
+            steps:
+              - step:
+                  type: UpdateGitOpsApp
+                  name: Update Rollout Image
+                  identifier: Update_Rollout_Image
+                  spec:
+                    targetRevision: master
+                    kustomize:
+                      images:
+                        - argoproj/load-tester:latest
+                        - argoproj/rollouts-demo:yellow
+                      replicas: []
+                    applicationName: app-rollout-example
+                    agentId: qaargoagent
+                  timeout: 10m
+              - step:
+                  type: GitOpsSync
+                  name: GitOpsSync_1
+                  identifier: GitOpsSync_1
+                  spec:
+                    prune: false
+                    dryRun: false
+                    applyOnly: false
+                    forceApply: false
+                    applicationsList:
+                      - applicationName: app-rollout-example
+                        agentId: qaargoagent
+                    retryStrategy: {}
+                    retry: false
+                    syncOptions:
+                      skipSchemaValidation: false
+                      autoCreateNamespace: false
+                      pruneResourcesAtLast: false
+                      applyOutOfSyncOnly: false
+                      replaceResources: false
+                      prunePropagationPolicy: foreground
+                  timeout: 10m
+              - step:
+                  type: GitOpsRollout
+                  name: Resume First Pause for Rollout
+                  identifier: Resume_First_Pause_for_Rollout
+                  spec:
+                    appName: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].appName>
+                    agentIdentifier: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].agentIdentifier>
+                    namespace: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].namespace>
+                    rolloutName: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].rolloutName>
+                    waitUntilHealthStatus:
+                      healthStatus: Suspended
+                    autoRolloutAction: resume
+                  timeout: 10m
+                  failureStrategies:
+                    - onFailure:
+                        errors:
+                          - AllErrors
+                        action:
+                          type: Ignore
+              - step:
+                  type: Wait
+                  name: Any intermediate steps
+                  identifier: Any_intermediate_steps
+                  spec:
+                    duration: 30s
+              - step:
+                  type: GitOpsRollout
+                  name: Resume Second Pause for Rollout
+                  identifier: Resume_Second_Pause_for_Rollout
+                  spec:
+                    appName: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].appName>
+                    agentIdentifier: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].agentIdentifier>
+                    namespace: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].namespace>
+                    rolloutName: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].rolloutName>
+                    waitUntilHealthStatus:
+                      healthStatus: Suspended
+                    autoRolloutAction: resume
+                  timeout: 10m
+                  failureStrategies:
+                    - onFailure:
+                        errors:
+                          - AllErrors
+                        action:
+                          type: Ignore
+              - step:
+                  type: GitOpsRollout
+                  name: Handle Degraded Rollout
+                  identifier: Handle_Degraded_Rollout
+                  spec:
+                    appName: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].appName>
+                    agentIdentifier: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].agentIdentifier>
+                    namespace: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].namespace>
+                    rolloutName: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].rolloutName>
+                    autoRolloutAction: retry
+                  timeout: 10m
+                  when:
+                    stageStatus: Failure
+              - step:
+                  type: GitOpsRollout
+                  name: Conditional Execution For Rollout
+                  identifier: Conditional_Execution_For_Rollout
+                  spec:
+                    appName: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].appName>
+                    agentIdentifier: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].agentIdentifier>
+                    namespace: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].namespace>
+                    rolloutName: <+execution.steps.GitOpsSync_1.gitops.discoveredRollouts[0].rolloutName>
+                    autoRolloutAction: restart
+                  timeout: 10m
+                  when:
+                    stageStatus: All
+                    condition: <+pipeline.stages.gs1.spec.execution.steps.GitOpsSync_1.gitops.applications[0].name>=="app-rollout-example"
+            rollbackSteps: []
+          environment:
+            environmentRef: env1
+            deployToAll: true
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+
+# --- example 2 ---
+# Get the first discovered rollout's agent
+<+execution.steps.gitops_sync_step.gitops.discoveredRollouts[0].agentIdentifier>
+
+# Get the rollout name
+<+execution.steps.gitops_sync_step.gitops.discoveredRollouts[0].rolloutName>
+
+# Get the namespace
+<+execution.steps.gitops_sync_step.gitops.discoveredRollouts[0].namespace>
+
+# --- example 3 ---
+# First rollout
+<+execution.steps.gitops_sync_step.gitops.discoveredRollouts[0].rolloutName>
+
+# Second rollout
+<+execution.steps.gitops_sync_step.gitops.discoveredRollouts[1].rolloutName>
+
+# --- example 4 ---
+# Access shell script outputs
+<+execution.steps.shell_step.output.outputVariables.VAR_NAME>
+
+# Access HTTP response
+<+execution.steps.http_step.output.responseBody>
+
+# Access artifact information
+<+execution.steps.build_step.output.artifactPath>

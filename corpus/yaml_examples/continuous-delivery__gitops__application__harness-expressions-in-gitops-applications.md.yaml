@@ -1,0 +1,181 @@
+# source: docs/continuous-delivery/gitops/application/harness-expressions-in-gitops-applications.md  (https://developer.harness.io/docs/continuous-delivery/gitops/application/harness-expressions-in-gitops-applications)
+
+# --- example 1 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+spec:
+  replicas: <+serviceVariables.replicas>
+  template:
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:<+serviceVariables.imageTag>
+        env:
+        - name: API_KEY
+          value: <+serviceVariables.apiKey>
+
+# --- example 2 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: <+env.variables.namespace>
+data:
+  log-level: <+env.variables.logLevel>
+  cluster-name: <+env.variables.clusterName>
+
+# --- example 3 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  environment-name: <+env.name>
+  environment-type: <+env.type>
+  environment-id: <+env.identifier>
+
+# --- example 4 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  account-id: <+variable.account.companyId>
+  org-region: <+variable.org.defaultRegion>
+  project-name: <+variable.projectCode>
+
+# --- example 5 ---
+# Service variable definition in Harness
+variables:
+  - name: dbPassword
+    type: Secret
+    value: account.prodDbPassword
+
+# In your Kubernetes manifest
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+stringData:
+  db-password: <+serviceVariables.dbPassword>
+
+# --- example 6 ---
+   stringData:
+     db-password: <+secrets.getValue('account.prodDbPassword')>
+
+# --- example 7 ---
+   stringData:
+     db-password: actual-secret-value-from-harness
+
+# --- example 8 ---
+   variables:
+     - name: replicas
+       value: "3"
+
+# --- example 9 ---
+   spec:
+     replicas: <+serviceVariables.replicas>  # Resolves to "10" in prod, "3" elsewhere
+
+# --- example 10 ---
+   # Environment: production
+   variables:
+     - name: logLevel
+       value: "INFO"
+
+# --- example 11 ---
+   env:
+   - name: LOG_LEVEL
+     value: <+env.variables.logLevel>  # Resolves to "DEBUG" for all services in prod
+
+# --- example 12 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp
+  namespace: <+env.variables.namespace>  # Environment variable
+  labels:
+    environment: <+env.type>  # Environment property (Production/PreProduction)
+    app: myapp
+spec:
+  replicas: <+serviceVariables.replicas>  # Service variable (Number type)
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      containers:
+      - name: myapp
+        image: myapp:<+serviceVariables.imageTag>  # Service variable (String)
+        env:
+        - name: LOG_LEVEL
+          value: <+env.variables.logLevel>  # Environment variable
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: api-key
+        - name: REGION
+          value: <+serviceVariables.region>  # Service variable
+        - name: ENVIRONMENT_NAME
+          value: <+env.name>  # Environment property
+        resources:
+          limits:
+            memory: <+serviceVariables.memoryLimit>
+            cpu: <+serviceVariables.cpuLimit>
+          requests:
+            memory: <+serviceVariables.memoryRequest>
+            cpu: <+serviceVariables.cpuRequest>
+
+# --- example 13 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: <+env.variables.namespace>
+data:
+  # Environment metadata
+  environment-name: <+env.name>
+  environment-type: <+env.type>
+  environment-id: <+env.identifier>
+  
+  # Service variables
+  max-connections: "<+serviceVariables.maxConnections>"
+  cache-ttl: <+serviceVariables.cacheTtl>
+  
+  # Environment variables
+  log-level: <+env.variables.logLevel>
+  cluster-name: <+env.variables.clusterName>
+  
+  # Nested expressions
+  api-endpoint: "https://api.<+serviceVariables.region>.example.com"
+  
+  # Fixed variables
+  company-id: <+variable.account.companyId>
+
+# --- example 14 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: <+env.variables.namespace>
+type: Opaque
+stringData:
+  # Secret variables resolve in two stages:
+  # 1. Expression resolution: <+serviceVariables.apiKey> → <+secrets.getValue('account.myApiKey')>
+  # 2. Secret retrieval: Actual value injected at deployment time
+  api-key: <+serviceVariables.apiKey>
+  db-password: <+serviceVariables.dbPassword>
+  oauth-token: <+serviceVariables.oauthToken>
+
+# --- example 15 ---
+# Correct variable definition
+variables:
+  - name: replicas
+    type: Number  # Not String
+    value: 3

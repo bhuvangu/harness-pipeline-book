@@ -1,0 +1,16 @@
+# source: docs/continuous-integration/development-guides/mlops/mlops-mlflow.md  (https://developer.harness.io/docs/continuous-integration/development-guides/mlops/mlops-mlflow)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: mlflow plugin
+                  identifier: maven_plugin
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                    image: harnesscommunity/mlflow
+                    settings:
+                      MLFLOW_TRACKING_URI: http://12.345.678.900:5000 ## URI for your MLflow remote tracking server
+                      MLFLOW_EXPERIMENT_NAME: someExperimentName
+                      MLFLOW_PROJECT_PATH: https://github.com/someAccount/mlflow-example-project
+                      MLFLOW_RUN_PARAMETERS: n_estimators=150
+                    imagePullPolicy: Always

@@ -1,0 +1,30 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/mig/step-references/gce-provision-backend-service.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/mig/step-references/gce-provision-backend-service)
+
+# --- example 1 ---
+- stepGroup:
+    name: MIG Deployment
+    identifier: MIG
+    steps:
+      - step:
+          type: GCEProvisionBackendService
+          name: GCEProvisionBackendService_1
+          identifier: GCEProvisionBackendService_1
+          spec:
+            gcpConnectorRef: <+input>
+            project: pl-play
+            region: us-central1
+            backendService: prod-backend-service
+            config:
+              type: Harness
+              spec:
+                secretFiles: []
+                files:
+                  - /gcp-backend-service/prod-service
+            connectorRef: account.harnessImage
+            image: harness/gce-provision-backend-service:0.0.1-linux-amd64
+          timeout: 10m
+    stepGroupInfra:
+      type: KubernetesDirect
+      spec:
+        connectorRef: <+input>
+        namespace: <+input>

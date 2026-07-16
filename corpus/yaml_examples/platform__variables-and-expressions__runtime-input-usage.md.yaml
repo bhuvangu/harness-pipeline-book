@@ -1,0 +1,111 @@
+# source: docs/platform/variables-and-expressions/runtime-input-usage.md  (https://developer.harness.io/docs/platform/variables-and-expressions/runtime-input-usage)
+
+# --- example 1 ---
+              - step:
+                  identifier: Run_1
+                  type: Run
+                  name: Run_1
+                  spec:
+                    shell: <+input>
+                    command: <+input>
+
+# --- example 2 ---
+              - step:
+                  identifier: Run_1
+                  type: Run
+                  name: <+input>.default(bengaluru)
+                  ...
+
+# --- example 3 ---
+"<+input>.default('{\"risk\": 100,\"availabilityVsCost\": \"balanced\",\"drainingTimeout\": 120,\"lifetimePeriod\": \"days\",\"fallbackToOd\": true}')"
+
+# --- example 4 ---
+pipeline:
+  name: UseStageTemplate
+  identifier: UseStageTemplate
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: stage1
+        identifier: stage1
+        template:
+          templateRef: stageTempDefault1
+          versionLabel: v1
+          templateInputs:
+            type: Custom
+            variables:
+              - name: var1
+                type: String
+                default: ABC
+                value: <+input>.default(new york).executionInput()
+
+# --- example 5 ---
+pipeline:
+  name: custom_expression_runtime
+  identifier: custom_expression_runtime
+  projectIdentifier: test
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: custom_1
+        identifier: custom_1
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          export name="123"
+                          export version="v1,v2,v3"
+                    environmentVariables: []
+                    outputVariables:
+                      - name: name
+                        type: String
+                        value: name
+                      - name: version
+                        type: String
+                        value: version
+                  timeout: 10m
+        tags: {}
+    - stage:
+        name: cust_2
+        identifier: cust_2
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo hey
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        variables:
+          - name: var2
+            type: String
+            description: ""
+            required: false
+            value: <+input>.executionInput().allowedValues(<+pipeline.stages.custom_1.spec.execution.steps.ShellScript_1.output.outputVariables.name>,<+pipeline.stages.custom_1.spec.execution.steps.ShellScript_1.output.outputVariables.version>)

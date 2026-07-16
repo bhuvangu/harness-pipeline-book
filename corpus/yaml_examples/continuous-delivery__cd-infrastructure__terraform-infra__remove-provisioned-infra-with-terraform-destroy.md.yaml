@@ -1,0 +1,14 @@
+# source: docs/continuous-delivery/cd-infrastructure/terraform-infra/remove-provisioned-infra-with-terraform-destroy.md  (https://developer.harness.io/docs/continuous-delivery/cd-infrastructure/terraform-infra/remove-provisioned-infra-with-terraform-destroy)
+
+# --- example 1 ---
+- step:
+    type: TerraformDestroy
+    name: Terraform Destroy
+    identifier: Terraform_Destroy
+    spec:
+      provisionerIdentifier: test
+      configuration:
+        type: Inline
+        createRemoteWorkspaceWithPrefix: true
+        spec:
+          configFiles: {}

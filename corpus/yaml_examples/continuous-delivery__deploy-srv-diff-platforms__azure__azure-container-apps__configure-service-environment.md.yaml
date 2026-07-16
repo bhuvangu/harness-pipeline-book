@@ -1,0 +1,134 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/configure-service-environment.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/configure-service-environment)
+
+# --- example 1 ---
+name: aca-aut-test
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 80
+      traffic:
+        - latestRevision: true
+          weight: 100
+  template:
+    containers:
+      - name: my-app
+        image: placeholder
+        resources:
+          cpu: 0.25
+          memory: 0.5Gi
+
+# --- example 2 ---
+name: my-container-app
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 8080
+      traffic:
+        - latestRevision: true
+          weight: 100
+  template:
+    containers:
+      - name: my-app-container
+        image: placeholder
+        env:
+          - name: APP_ENV
+            value: production
+          - name: LOG_LEVEL
+            value: info
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+    scale:
+      minReplicas: 1
+      maxReplicas: 10
+      rules:
+        - name: http-rule
+          http:
+            metadata:
+              concurrentRequests: "50"
+
+# --- example 3 ---
+artifacts:
+  primary:
+    primaryArtifactRef: <+input>
+    sources:
+      - identifier: acr_artifact
+        spec:
+          connectorRef: my_azure_connector
+          subscriptionId: <subscription-id>
+          registry: myregistry.azurecr.io
+          repository: my-app
+          tag: <+input>
+        type: Acr
+
+# --- example 4 ---
+service:
+  name: my-azure-container-apps-service
+  identifier: my_azure_container_apps_service
+  orgIdentifier: default
+  projectIdentifier: my_project
+  tags: {}
+  serviceDefinition:
+    type: AzureContainerApps
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: acr_artifact
+              type: Acr
+              spec:
+                connectorRef: my_azure_connector
+                subscriptionId: <subscription-id>
+                registry: myregistry.azurecr.io
+                repository: my-app
+                tag: <+input>
+                digest: ""
+            - identifier: dockerhub_artifact
+              type: DockerRegistry
+              spec:
+                connectorRef: my_docker_connector
+                imagePath: myorg/my-app
+                tag: <+input>
+                digest: ""
+      manifests:
+        - manifest:
+            identifier: container_app_manifest
+            type: AzureContainerAppsConfiguration
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /acaManifest
+  gitOpsEnabled: false
+
+# --- example 5 ---
+environment:
+  name: Azure_Container_Apps_Production
+  identifier: azure_container_apps_prod
+  description: "Production environment for Azure Container Apps"
+  tags: {}
+  type: Production
+  orgIdentifier: default
+  projectIdentifier: my_project
+
+# --- example 6 ---
+infrastructureDefinition:
+  name: azure_container_apps_infra
+  identifier: azure_container_apps_infra
+  orgIdentifier: default
+  projectIdentifier: my_project
+  environmentRef: azure_container_apps_prod
+  deploymentType: AzureContainerApps
+  type: AzureContainerApps
+  spec:
+    connectorRef: my_azure_connector
+    subscriptionId: <subscription-id>
+    resourceGroup: my-resource-group
+    managedEnvironment: my-managed-environment
+  allowSimultaneousDeployments: false

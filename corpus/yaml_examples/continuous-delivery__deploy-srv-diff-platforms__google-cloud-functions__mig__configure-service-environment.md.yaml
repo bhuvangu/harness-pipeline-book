@@ -1,0 +1,86 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/mig/configure-service-environment.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/mig/configure-service-environment)
+
+# --- example 1 ---
+artifacts:
+  primary:
+    primaryArtifactRef: <+input>
+    sources:
+      - identifier: gceimage
+        spec:
+          connectorRef: my_gcp_connector
+          project: my-gcp-project
+          versionRegex: my-app-image-.*
+        type: GceImage
+
+# --- example 2 ---
+service:
+  name: my-mig-service
+  identifier: my_mig_service
+  orgIdentifier: default
+  projectIdentifier: my_project
+  serviceDefinition:
+    type: GoogleManagedInstanceGroup
+    spec:
+      manifests:
+        - manifest:
+            identifier: instancetemplate
+            type: GoogleMigInstanceTemplate
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: my_github_connector
+                  gitFetchType: Branch
+                  paths:
+                    - mig/my-project/instance-template.json
+                  repoName: my-repo
+                  branch: main
+        - manifest:
+            identifier: migconfig
+            type: GoogleMigConfiguration
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: my_github_connector
+                  gitFetchType: Branch
+                  paths:
+                    - mig/my-project/mig-manifest.json
+                  repoName: my-repo
+                  branch: main
+        - manifest:
+            identifier: migautoscaler
+            type: GoogleMigAutoscalerConfiguration
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: my_github_connector
+                  gitFetchType: Branch
+                  paths:
+                    - mig/my-project/autoscaler.json
+                  repoName: my-repo
+                  branch: main
+        - manifest:
+            identifier: mighealthcheck
+            type: GoogleMigHealthCheckConfiguration
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: my_github_connector
+                  gitFetchType: Branch
+                  paths:
+                    - mig/my-project/health-check.json
+                  repoName: my-repo
+                  branch: main
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: gceimage
+              spec:
+                connectorRef: my_gcp_connector
+                project: my-gcp-project
+                versionRegex: my-app-image-.*
+              type: GceImage

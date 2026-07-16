@@ -1,0 +1,49 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/ticketing-systems/servicenow-multi-config-items.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/ticketing-systems/servicenow-multi-config-items)
+
+# --- example 1 ---
+pipeline:
+  projectIdentifier: myproject
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: stage
+        identifier: stage
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ServiceNowCreate
+                  name: create
+                  identifier: create
+                  spec:
+                    useServiceNowTemplate: false
+                    connectorRef: account.service_now_connector
+                    ticketType: change_request
+                    fields: []
+                  timeout: 10m
+              - step:
+                  type: ServiceNowCreate
+                  name: ServiceNowCreate_1
+                  identifier: ServiceNowCreate_1
+                  spec:
+                    useServiceNowTemplate: false
+                    connectorRef: account.service_now_connector
+                    ticketType: task_ci
+                    fields:
+                      - name: ci_item
+                        value: <+matrix.ci_item>
+                      - name: task
+                        value: <+pipeline.stages.stage.spec.execution.steps.create.ticket.fields.sys_id>
+                  timeout: 10m
+                  strategy:
+                    matrix:
+                      ci_item:
+                        - 9ea9e3491bb971100269a608624bcb85
+                        - 43b89fa11b6139100269a608624bcb6f
+                      maxConcurrency: 2
+        tags: {}
+  identifier: mypipeline
+  name: mypipeline

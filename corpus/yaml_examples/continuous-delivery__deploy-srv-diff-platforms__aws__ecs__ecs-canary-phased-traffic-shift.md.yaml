@@ -1,0 +1,76 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/aws/ecs/ecs-canary-phased-traffic-shift.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/aws/ecs/ecs-canary-phased-traffic-shift)
+
+# --- example 1 ---
+pipeline:
+  name: EcsPipeline
+  identifier: EcsPipeline
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: ecs
+        identifier: ecs
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: ECS
+          service:
+            serviceRef: EcsService1_B5
+          execution:
+            steps:
+              - step:
+                  type: EcsServiceSetup
+                  name: ECS Service Setup
+                  identifier: EcsServiceSetup_1
+                  spec:
+                    resizeStrategy: ResizeNewFirst
+                  timeout: 10m
+              - step:
+                  type: EcsUpgradeContainer
+                  name: 50 Percent Traffic Increase
+                  identifier: EcsUpgradeContainer_1
+                  spec:
+                    newServiceInstanceCount: 50
+                    newServiceInstanceUnit: Percentage
+                  timeout: 10m
+              - step:
+                  type: EcsUpgradeContainer
+                  name: 100 Percentage Traffic Increase
+                  identifier: EcsUpgradeContainer_2
+                  spec:
+                    newServiceInstanceCount: 100
+                    newServiceInstanceUnit: Percentage
+                  timeout: 10m
+            rollbackSteps:
+              - step:
+                  type: EcsBasicRollback
+                  name: EcsBasicRollback_1
+                  identifier: EcsBasicRollback_1
+                  spec: {}
+                  timeout: 10m
+          environment:
+            environmentRef: EcsEnv_yV
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: EcsInfra_Jf
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+        variables:
+          - name: runTaskName
+            type: String
+            description: ""
+            value: runTask-auto
+          - name: runTaskCount
+            type: Number
+            description: ""
+            value: 1
+          - name: var1
+            type: String
+            description: ""
+            value: ecs-auto-iG

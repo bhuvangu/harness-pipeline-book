@@ -1,0 +1,318 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/artifacts-tab.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/artifacts-tab)
+
+# --- example 1 ---
+- step:
+    type: Plugin
+    name: publish artifact metadata
+    identifier: publish_artifact_metadata
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/artifact-metadata-publisher
+      settings:
+        file_urls: https://domain.com/path/to/artifact
+
+# --- example 2 ---
+file_urls:
+  - https://BUCKET.s3.REGION.amazonaws.com/TARGET/artifact1.html
+  - https://BUCKET.s3.REGION.amazonaws.com/TARGET/artifact2.pdf
+
+# --- example 3 ---
+file_urls:
+  - artifact1:::https://BUCKET.s3.REGION.amazonaws.com/TARGET/artifact1.html
+  - artifact2:::https://BUCKET.s3.REGION.amazonaws.com/TARGET/artifact2.pdf
+
+# --- example 4 ---
+- step:
+    type: Plugin
+    name: publish artifact metadata
+    identifier: publish_artifact_metadata
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/artifact-metadata-publisher
+      settings:
+        file_urls: https://domain.com/path/to/artifact
+        artifact_file: temp.txt
+
+# --- example 5 ---
+- step:
+    type: Run
+    name: Publish Artifact Metadata
+    identifier: publish_artifact_metadata
+    spec:
+      shell: Sh
+      command: |-
+        # Download the artifact-metadata-publisher binary for macOS ARM64
+        curl -L https://github.com/drone-plugins/artifact-metadata-publisher/releases/download/v2.2.0/artifact-metadata-publisher-darwin-arm64.zst -o artifact-metadata-publisher-darwin-arm64.zst
+        
+        # Decompress the binary
+        zstd -d artifact-metadata-publisher-darwin-arm64.zst -o ./artifact-metadata-publisher
+        
+        # Make the binary executable
+        chmod 700 ./artifact-metadata-publisher
+        
+        # Run the plugin with your artifact URLs
+        PLUGIN_FILE_URLS="https://domain.com/path/to/artifact" ./artifact-metadata-publisher
+
+# --- example 6 ---
+- step:
+    type: Run
+    name: Publish Multiple Artifacts
+    identifier: publish_multiple_artifacts
+    spec:
+      shell: Sh
+      command: |-
+        curl -L https://github.com/drone-plugins/artifact-metadata-publisher/releases/download/v2.2.0/artifact-metadata-publisher-darwin-arm64.zst -o artifact-metadata-publisher-darwin-arm64.zst
+        zstd -d artifact-metadata-publisher-darwin-arm64.zst -o ./artifact-metadata-publisher
+        chmod 700 ./artifact-metadata-publisher
+        
+        # Publish multiple artifacts with custom names
+        PLUGIN_FILE_URLS="Config File:::https://s3.amazonaws.com/bucket/config.json,Build Report:::https://s3.amazonaws.com/bucket/report.html" ./artifact-metadata-publisher
+
+# --- example 7 ---
+- step:
+    type: Run
+    name: Generate Presigned URL
+    identifier: generate_presigned_url
+    spec:
+      shell: Sh
+      command: |-
+        FILE_NAME="my-artifact.zip"
+        
+        # Generate presigned URL (assumes AWS credentials are configured)
+        PRESIGNED_URL=$(aws s3 presign s3://my-bucket/$FILE_NAME --expires-in 3600)
+        
+        echo "Generated presigned URL: $PRESIGNED_URL"
+      envVariables:
+        AWS_ACCESS_KEY_ID: <+secrets.getValue("aws_access_key")>
+        AWS_SECRET_ACCESS_KEY: <+secrets.getValue("aws_secret_key")>
+      outputVariables:
+        - name: PRESIGNED_URL
+
+- step:
+    type: Run
+    name: Publish Artifact Metadata
+    identifier: publish_artifact_metadata
+    spec:
+      shell: Sh
+      command: |-
+        curl -L https://github.com/drone-plugins/artifact-metadata-publisher/releases/download/v2.2.0/artifact-metadata-publisher-darwin-arm64.zst -o artifact-metadata-publisher-darwin-arm64.zst
+        zstd -d artifact-metadata-publisher-darwin-arm64.zst -o ./artifact-metadata-publisher
+        chmod 700 ./artifact-metadata-publisher
+        
+        # Use the presigned URL from the previous step
+        PLUGIN_FILE_URLS="my-artifact.zip:::<+execution.steps.generate_presigned_url.output.outputVariables.PRESIGNED_URL>" ./artifact-metadata-publisher
+
+# --- example 8 ---
+- step:
+    type: Run
+    name: run maven tests
+    identifier: run_maven_tests
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: openjdk:11
+      shell: Sh
+      command: ./mvnw clean test site
+- step:
+    type: Run
+    name: generate allure report
+    identifier: generate_allure_report
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: solutis/allure:2.9.0
+      command: |
+        cd target
+        allure generate allure-results --clean -o allure-report
+- step:
+    type: Run
+    name: combine report
+    identifier: combine_report
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: shubham149/allure-combine:latest
+      command: |
+        cd target/allure-report
+        allure-combine .
+        cd ../..
+        cp target/allure-report/complete.html .
+
+# --- example 9 ---
+- step:
+    type: GCSUpload
+    name: upload report
+    identifier: upload_report
+    spec:
+      connectorRef: YOUR_GCP_CONNECTOR_ID
+      bucket: YOUR_GCS_BUCKET
+      sourcePath: target/allure-report/complete.html
+      target: <+pipeline.sequenceId>
+
+# --- example 10 ---
+- step:
+    type: Plugin
+    name: publish artifact metadata
+    identifier: publish_artifact_metadata
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/artifact-metadata-publisher
+      settings:
+        file_urls: https://storage.googleapis.com/YOUR_GCS_BUCKET/<+pipeline.sequenceId>/complete.html
+
+# --- example 11 ---
+pipeline:
+  name: allure-report-upload
+  identifier: allurereportupload
+  projectIdentifier: YOUR_HARNESS_PROJECT_ID
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: test and upload artifact
+        identifier: test_and_upload_artifact
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: run maven tests
+                  identifier: run_maven_tests
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: openjdk:11
+                    shell: Sh
+                    command: ./mvnw clean test site
+              - step:
+                  type: Run
+                  name: generate allure report
+                  identifier: generate_allure_report
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: solutis/allure:2.9.0
+                    command: |
+                      cd target
+                      allure generate allure-results --clean -o allure-report
+              - step:
+                  type: Run
+                  name: combine report
+                  identifier: combine_report
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: shubham149/allure-combine:latest
+                    command: |
+                      cd target/allure-report
+                      allure-combine .
+                      cd ../..
+                      cp target/allure-report/complete.html .
+              - step:
+                  type: GCSUpload
+                  name: upload report
+                  identifier: upload_report
+                  spec:
+                    connectorRef: YOUR_GCP_CONNECTOR_ID
+                    bucket: YOUR_GCS_BUCKET
+                    sourcePath: target/allure-report/complete.html
+                    target: <+pipeline.sequenceId>
+              - step:
+                  type: Plugin
+                  name: publish artifact metadata
+                  identifier: publish_artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://storage.googleapis.com/YOUR_GCS_BUCKET/<+pipeline.sequenceId>/complete.html
+
+# --- example 12 ---
+pipeline:
+  name: allure-report-upload
+  identifier: allurereportupload
+  projectIdentifier: YOUR_HARNESS_PROJECT_ID
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: run maven tests
+                  identifier: run_maven_tests
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: openjdk:11
+                    shell: Sh
+                    command: ./mvnw clean test site
+              - step:
+                  type: Run
+                  name: generate allure report
+                  identifier: generate_allure_report
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: solutis/allure:2.9.0
+                    command: |
+                      cd target
+                      allure generate allure-results --clean -o allure-report
+              - step:
+                  type: Run
+                  name: combine report
+                  identifier: combine_report
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: shubham149/allure-combine:latest
+                    command: |
+                      cd target/allure-report
+                      allure-combine .
+                      cd ../..
+                      cp target/allure-report/complete.html .
+              - step:
+                  type: GCSUpload
+                  name: upload report
+                  identifier: upload_report
+                  spec:
+                    connectorRef: YOUR_GCP_CONNECTOR_ID
+                    bucket: YOUR_GCS_BUCKET
+                    sourcePath: target/allure-report/complete.html
+                    target: <+pipeline.sequenceId>
+              - step:
+                  type: Plugin
+                  name: publish artifact metadata
+                  identifier: publish_artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://storage.googleapis.com/YOUR_GCS_BUCKET/<+pipeline.sequenceId>/complete.html

@@ -1,0 +1,395 @@
+# source: docs/platform/connectors/cloud-providers/ref-cloud-providers/aws-connector-settings-reference.md  (https://developer.harness.io/docs/platform/connectors/cloud-providers/ref-cloud-providers/aws-connector-settings-reference)
+
+# --- example 1 ---
+connector:
+  name: aws-irsa-cross-account
+  type: Aws
+  spec:
+    credential:
+      type: Irsa
+      crossAccountAccess:
+        crossAccountRoleArn: arn:aws:iam::ACCOUNT_B:role/target-role
+      region: us-east-1
+    delegateSelectors:
+      - eks-delegate
+
+# --- example 2 ---
+connector:
+  name: aws-test-oidc
+  identifier: testoidc
+  type: Aws
+  spec:
+    credential:
+      type: OidcAuthentication
+      spec:
+        iamRoleArn: arn:aws:iam::806630305776:role/test-automation
+        oidcSessionTagKeys:
+          - environment_id
+          - environment_type
+          - connector_name
+          - delegate_selectors
+    region: us-east-1
+    delegateSelectors:
+      - aws
+    executeOnDelegate: true
+
+# --- example 3 ---
+connector:
+  name: aws-sm-oidc
+  identifier: awssmoidc
+  type: AwsSecretManager
+  spec:
+    credential:
+      type: OidcAuthentication
+      spec:
+        iamRoleArn: arn:aws:iam::806630305776:role/test-automation
+        oidcSessionTagKeys:
+          - account_id
+          - delegate_selectors
+          - triggered_by_name
+          - pipeline_id
+    region: us-east-1
+    delegateSelectors:
+      - aws
+    executeOnDelegate: true
+
+# --- example 4 ---
+connector:
+  name: aws-kms-oidc
+  identifier: testkms2
+  type: AwsKms
+  spec:
+    credential:
+      type: OidcAuthentication
+      spec:
+        iamRoleArn: arn:aws:iam::806630305776:role/test-automation
+        oidcSessionTagKeys:
+          - account_id
+          - delegate_selectors
+          - pipeline_id
+          - connector_id
+    kmsArnInPlainText: arn:aws:kms:us-east-1:806630305776:key/019d3436-6083-42a2-81cf-cfbd678742d6
+    region: us-east-1
+    delegateSelectors:
+      - aws
+    executeOnDelegate: true
+
+# --- example 5 ---
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "eks:DescribeCluster",
+        "eks:ListClusters",
+        "eks:ListNodegroups",
+        "sts:GetCallerIdentity",
+        "ec2:DescribeRegions",
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+
+# --- example 6 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: harness-oidc-sa
+  namespace: harness-delegate-ng
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::479370281431:role/mayank-harness-oidc-test
+
+# --- example 7 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: harness-oidc-role
+  namespace: cd-k8s-qa-sanity
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+    
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: harness-oidc-binding
+  namespace: cd-k8s-qa-sanity
+subjects:
+  - kind: ServiceAccount
+    name: harness-oidc-sa
+    namespace: harness-delegate-ng   
+roleRef:
+  kind: Role
+  name: harness-oidc-role
+  apiGroup: rbac.authorization.k8s.io
+
+# --- example 8 ---
+apiVersion: v1
+clusters:
+  - cluster:
+      server: $cluster_endpoint
+      certificate-authority-data: $certificate_data
+    name: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+contexts:
+  - context:
+      cluster: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+      user: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+    name: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+current-context: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+kind: Config
+preferences: {}
+users:
+  - name: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+    user:
+      exec:
+        apiVersion: client.authentication.k8s.io/v1beta1
+        command: aws-iam-authenticator
+        args:
+          - "token"
+          - "-i"
+          - "$cluster_name"
+
+# --- example 9 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: harness-delegate
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: harness-delegate-cluster-admin
+subjects:
+  - kind: ServiceAccount
+#    name: default
+    name: cdp-delegate
+    namespace: harness-delegate
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eks-test-new-proxy
+  namespace: harness-delegate
+type: Opaque
+data:
+  # Enter base64 encoded username and password, if needed
+  PROXY_USER: ""
+  PROXY_PASSWORD: ""
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    harness.io/name: eks-test-new
+  name: eks-test-new
+  namespace: harness-delegate-ng
+spec:
+  replicas: 1
+  minReadySeconds: 120
+  selector:
+    matchLabels:
+      harness.io/name: eks-test-new
+  template:
+    metadata:
+      labels:
+        harness.io/name: eks-test-new
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3460"
+        prometheus.io/path: "/api/metrics"
+    spec:
+      terminationGracePeriodSeconds: 600
+      restartPolicy: Always
+      containers:
+      - image: docker.io/harness/delegate:23.10.81202
+        imagePullPolicy: Always
+        name: delegate
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 0
+        ports:
+          - containerPort: 8080
+        resources:
+          limits:
+            memory: "2048Mi"
+          requests:
+            cpu: "0.5"
+            memory: "2048Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3460
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3460
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 15
+        envFrom:
+        - secretRef:
+            name: newdel-account-token
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms64M"
+        - name: ACCOUNT_ID
+          value: YOUR_ACCOUNT_ID
+        - name: MANAGER_HOST_AND_PORT
+          value: https://app.harness.io
+        - name: DELEGATE_NAME
+          value: eks-test-new
+        - name: DELEGATE_TYPE
+          value: "KUBERNETES"
+        - name: DELEGATE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: INIT_SCRIPT
+          value: ""
+        - name: DELEGATE_DESCRIPTION
+          value: ""
+        - name: DELEGATE_TAGS
+          value: ""
+        - name: NEXT_GEN
+          value: "true"
+        - name: DELEGATE_CPU_THRESHOLD
+          value: "80"
+
+---
+
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+   name: eks-test-new-hpa
+   namespace: harness-delegate-ng
+   labels:
+       harness.io/name: eks-test-new
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: newdel
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 99
+
+---
+
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: upgrader-cronjob
+  namespace: harness-delegate-ng
+rules:
+  - apiGroups: ["batch", "apps", "extensions"]
+    resources: ["cronjobs"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["extensions", "apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: newdel-upgrader-cronjob
+  namespace: harness-delegate-ng
+subjects:
+  - kind: ServiceAccount
+    name: upgrader-cronjob-sa
+    namespace: harness-delegate-ng
+roleRef:
+  kind: Role
+  name: upgrader-cronjob
+  apiGroup: ""
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: upgrader-cronjob-sa
+  namespace: harness-delegate-ng
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: newdel-upgrader-token
+  namespace: harness-delegate-ng
+type: Opaque
+data:
+  UPGRADER_TOKEN: "YOUR_UPGRADER_TOKEN"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: newdel-upgrader-config
+  namespace: harness-delegate-ng
+data:
+  config.yaml: |
+    mode: Delegate
+    dryRun: false
+    workloadName: newdel
+    namespace: harness-delegate-ng
+    containerName: delegate
+    delegateConfig:
+      accountId: YOUR_ACCOUNT_ID
+      managerHost: https://app.harness.io
+
+---
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    harness.io/name: newdel-upgrader-job
+  name: newdel-upgrader-job
+  namespace: harness-delegate-ng
+spec:
+  schedule: "0 */1 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 20
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: upgrader-cronjob-sa
+          restartPolicy: Never
+          containers:
+          - image: docker.io/harness/upgrader:latest
+            name: upgrader
+            imagePullPolicy: Always
+            envFrom:
+            - secretRef:
+                name: newdel-upgrader-token
+            volumeMounts:
+              - name: config-volume
+                mountPath: /etc/config
+          volumes:
+            - name: config-volume
+              configMap:
+                name: newdel-upgrader-config

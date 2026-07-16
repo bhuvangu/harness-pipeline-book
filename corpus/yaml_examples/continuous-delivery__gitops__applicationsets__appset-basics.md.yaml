@@ -1,0 +1,66 @@
+# source: docs/continuous-delivery/gitops/applicationsets/appset-basics.md  (https://developer.harness.io/docs/continuous-delivery/gitops/applicationsets/appset-basics)
+
+# --- example 1 ---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: guestbook
+spec:
+  generators:
+  - list:
+      elements:
+      - ns: engineering-dev
+        url: https://kubernetes.default.svc
+      - ns: engineering-prod
+        url: https://kubernetes.default.svc
+  template:
+    metadata:
+      name: '{{ns}}-guestbook'
+      labels:
+        harness.io/serviceRef: guestbook
+        harness.io/envRef: '{{ns}}'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/argoproj/argo-cd.git
+        targetRevision: HEAD
+        path: applicationset/examples/list-generator/guestbook/{{ns}}
+      destination:
+        server: '{{url}}'
+        namespace: '{{ns}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+
+# --- example 2 ---
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluster-addons
+spec:
+  generators:
+  - git:
+      repoURL: https://github.com/argoproj/argo-cd.git
+      revision: HEAD
+      directories:
+      - path: applicationset/examples/git-generator-directory/cluster-addons/*
+  template:
+    metadata:
+      name: '{{path.basename}}'
+      labels: 
+        harness.io/envRef: '{{envTag}}'
+        harness.io/serviceRef: '{{serviceTag}}'
+        harness.io/buildRef: '{{releaseTag}}'
+    spec:
+      project: "default"
+      source:
+        repoURL: https://github.com/argoproj/argo-cd.git
+        targetRevision: HEAD
+        path: '{{path.path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}'
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true

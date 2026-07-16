@@ -1,0 +1,32 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/define-a-docker-build-infrastructure.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/define-a-docker-build-infrastructure)
+
+# --- example 1 ---
+- stage:
+    name: build
+    identifier: build
+    description: ""
+    type: CI
+    spec:
+      cloneCodebase: true
+      platform:
+        os: Linux
+        arch: Amd64
+      runtime:
+        type: Docker
+        spec: {}
+
+# --- example 2 ---
+- stage:
+    name: build
+    identifier: build
+    description: ""
+    type: CI
+    spec:
+      cloneCodebase: true
+      platform:
+        os: Linux
+        arch: Amd64
+      runtime:
+        type: Docker
+        spec: 
+          harnessImageConnectorRef: account.docker_private_ciplay

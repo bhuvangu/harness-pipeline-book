@@ -1,0 +1,567 @@
+# source: docs/continuous-delivery/cd-onboarding/upgrade-cd-v2.md  (https://developer.harness.io/docs/continuous-delivery/cd-onboarding/upgrade-cd-v2)
+
+# --- example 1 ---
+service:
+  name: nginx-canary
+  identifier: nginxcanary
+  
+## SERVICE v2 UPDATE
+## In v2, a service definition needs to be provided with the service in order for it to be used in a pipeline 
+
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+    
+## SERVICE v2 UPDATE  
+## You will need to provide a path to your service manifests (i.e. kubernetes manifests)
+
+      manifests:
+        - manifest:
+            identifier: nginx
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: ProductManagementRohan
+                  gitFetchType: Branch
+                  paths:
+                    - traffic-shifting-nginx/backend/deployment.yaml
+                    - traffic-shifting-nginx/backend/service.yaml
+                    - traffic-shifting-nginx/backend/nginx.yaml
+                    - traffic-shifting-nginx/frontend/ui.yaml
+                  repoName: Product-Management
+                  branch: main
+              valuesPaths:
+                - traffic-shifting-nginx/values.yaml
+              skipResourceVersioning: false
+              
+## SERVICE v2 UPDATE
+## You will need to add an artifact if you want to pass an image tag in at pipeline runtime 
+## this is also associated with the service configuration
+
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: public_dockerhub
+                imagePath: library/nginx
+                tag: <+input>
+              identifier: nginx
+              type: DockerRegistry
+            
+ ## SERVICE v2 UPDATE
+ ## NEW CAPABILITY: We now have service variables that are mapped and managed with the service no longer defined in the pipeline
+ ## This can be overwritten when deploying the service to different environments
+ 
+ 
+      variables:
+        - name: canaryName
+          type: String
+          description: ""
+          value: colors-canary
+        - name: host
+          type: String
+          description: ""
+          value: nginx-canary.harness.io
+        - name: name
+          type: String
+          description: ""
+          value: colors
+        - name: stableName
+          type: String
+          description: ""
+          value: colors-stable
+  gitOpsEnabled: false
+
+# --- example 2 ---
+resource "harness_platform_service" "example" {
+  identifier  = "identifier"
+  name        = "name"
+  description = "test"
+  org_id      = "org_id"
+  project_id  = "project_id"
+  
+## SERVICE v2 UPDATE
+## We now take in a YAML that can define the service definition for a given service
+## It is not mandatory for service creation 
+## It is mandatory for service use in a pipeline
+
+  yaml        = <<-EOT
+                service:
+                  name: name
+                  identifier: identifier
+                  serviceDefinition:
+                    spec:
+                      manifests:
+                        - manifest:
+                            identifier: manifest1
+                            type: K8sManifest
+                            spec:
+                              store:
+                                type: Github
+                                spec:
+                                  connectorRef: <+input>
+                                  gitFetchType: Branch
+                                  paths:
+                                    - files1
+                                  repoName: <+input>
+                                  branch: master
+                              skipResourceVersioning: false
+                      configFiles:
+                        - configFile:
+                            identifier: configFile1
+                            spec:
+                              store:
+                                type: Harness
+                                spec:
+                                  files:
+                                    - <+org.description>
+                      variables:
+                        - name: var1
+                          type: String
+                          value: val1
+                        - name: var2
+                          type: String
+                          value: val2
+                    type: Kubernetes
+                  gitOpsEnabled: false
+              EOT
+}
+
+# --- example 3 ---
+environment:
+  name: staging
+  identifier: staging
+  tags: {}
+  type: PreProduction
+  orgIdentifier: default
+  projectIdentifier: Rohan
+
+## ENVIRONMENT v2 UPDATE
+## Environments now have variables
+## These variables are globally defined and can be accessed when the environment is referenced in the pipeline
+
+  variables:
+    - name: db_host
+      type: String
+      value: postgres-staging
+      description: ""
+    - name: DB_PASS_STAGING
+      type: Secret
+      value: Rohan_QA
+      description: ""
+ 
+ ## ENVIRONMENT v2 UPDATE    
+ ## Environment-specific property files like values.yaml can now be mapped to the environment as well as in the manifest block
+
+  overrides:
+    manifests:
+      - manifest:
+          identifier: staging
+          type: Values
+          spec:
+            store:
+              type: Github
+              spec:
+                connectorRef: ProductManagementRohan
+                gitFetchType: Branch
+                paths:
+                  - cdng/staging-values.yaml
+                repoName: Product-Management
+                branch: main
+
+# --- example 4 ---
+resource "harness_platform_environment" "example" {
+  identifier = "identifier"
+  name       = "name"
+  org_id     = "org_id"
+  project_id = "project_id"
+  tags       = ["foo:bar", "baz"]
+  type       = "PreProduction"
+
+## ENVIRONMENT v2 Update
+## The YAML is needed if you want to define the environment variables and overrides for the environment
+## Not mandatory for environment creation or pipeline usage
+
+  yaml       = <<-EOT
+               environment:
+         name: name
+         identifier: identifier
+         orgIdentifier: org_id
+         projectIdentifier: project_id
+         type: PreProduction
+         tags:
+           foo: bar
+           baz: ""
+         variables:
+           - name: envVar1
+             type: String
+             value: v1
+             description: ""
+           - name: envVar2
+             type: String
+             value: v2
+             description: ""
+         overrides:
+           manifests:
+             - manifest:
+                 identifier: manifestEnv
+                 type: Values
+                 spec:
+                   store:
+                     type: Git
+                     spec:
+                       connectorRef: <+input>
+                       gitFetchType: Branch
+                       paths:
+                         - file1
+                       repoName: <+input>
+                       branch: master
+           configFiles:
+             - configFile:
+                 identifier: configFileEnv
+                 spec:
+                   store:
+                     type: Harness
+                     spec:
+                       files:
+                         - account:/Add-ons/svcOverrideTest
+                       secretFiles: []
+      EOT
+}
+
+# --- example 5 ---
+infrastructureDefinition:
+  name: product-staging
+  identifier: productstaging
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: Rohan
+  
+## NOTE: the Environment reference maps the infrastructure definition to the environment
+
+  environmentRef: staging
+  deploymentType: Kubernetes
+  type: KubernetesDirect
+  spec:
+    connectorRef: pmk8scluster
+    namespace: <+input>.allowedValues(dev,qa,prod)
+    releaseName: release-<+INFRA_KEY_SHORT_ID>
+  allowSimultaneousDeployments: false
+
+# --- example 6 ---
+resource "harness_platform_infrastructure" "example" {
+  identifier      = "identifier"
+  name            = "name"
+  org_id          = "orgIdentifer"
+  project_id      = "projectIdentifier"
+  env_id          = "environmentIdentifier"
+  type            = "KubernetesDirect"
+  deployment_type = "Kubernetes"
+  yaml            = <<-EOT
+        infrastructureDefinition:
+         name: name
+         identifier: identifier
+         description: ""
+         tags:
+           asda: ""
+         orgIdentifier: orgIdentifer
+         projectIdentifier: projectIdentifier
+         environmentRef: environmentIdentifier
+         deploymentType: Kubernetes
+         type: KubernetesDirect
+         spec:
+          connectorRef: account.gfgf
+          namespace: asdasdsa
+          releaseName: release-<+INFRA_KEY_SHORT_ID>
+          allowSimultaneousDeployments: false
+      EOT
+}
+
+# --- example 7 ---
+    - stage:
+        name: Deploy
+        identifier: Deploy
+        description: ""
+        type: Deployment
+        spec:
+        
+ ## SERVICE + ENVIRONMENT v2 UPDATE
+ ## deploymentType. This scopes the stage config to one of the deployment types that Harness offers 
+ ## Steps, services, environments, infrastructure definitions are all scoped to the stage's deployment type. This prevents incompatible config usage
+ 
+          deploymentType: Kubernetes
+          
+ ## SERVICE + ENVIRONMENT v2 UPDATE
+ ## serviceref. This is now a reference to the service object that is configured and managed outside the pipeline
+ ## serviceInputs. These are the runtime inputs that users provide for the artifact when they deploy the particular service
+ 
+          service:
+            serviceRef: nginxcanary
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+                      
+ ## SERVICE + ENVIRONMENT v2 UPDATE
+ ## environmentref. This is now a reference to the environment object that is configured and managed outside the pipeline
+ ## infrastructureDefinitions. This object is defined outside of the pipeline and is referenced via the identifier. The YAML is inserted into the stage definition once defined
+ 
+          environment:
+            environmentRef: staging
+            deployToAll: false
+  
+            infrastructureDefinitions:
+              - identifier: productstaging
+                inputs:
+                  identifier: productstaging
+                  type: KubernetesDirect
+                  spec:
+                    namespace: <+input>.allowedValues(dev,qa,prod)
+          execution:
+            steps:
+              - stepGroup:
+                  name: Canary Deployment
+                  identifier: canaryDepoyment
+                  steps:
+                    - step:
+                        name: Canary Deployment
+                        identifier: canaryDeployment
+                        type: K8sCanaryDeploy
+                        timeout: 10m
+                        spec:
+                          instanceSelection:
+                            type: Count
+                            spec:
+                              count: 1
+                          skipDryRun: false
+                    - step:
+                        name: Canary Delete
+                        identifier: canaryDelete
+                        type: K8sCanaryDelete
+                        timeout: 10m
+                        spec: {}
+              - stepGroup:
+                  name: Primary Deployment
+                  identifier: primaryDepoyment
+                  steps:
+                    - step:
+                        name: Rolling Deployment
+                        identifier: rollingDeployment
+                        type: K8sRollingDeploy
+                        timeout: 10m
+                        spec:
+                          skipDryRun: false
+            rollbackSteps:
+              - step:
+                  name: Canary Delete
+                  identifier: rollbackCanaryDelete
+                  type: K8sCanaryDelete
+                  timeout: 10m
+                  spec: {}
+              - step:
+                  name: Rolling Rollback
+                  identifier: rollingRollback
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+
+# --- example 8 ---
+pipeline:
+  name: Nginx Colors Canary
+  identifier: Nginx_Colors_Canary
+  projectIdentifier: Rohan
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Deploy
+        identifier: Deploy
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          
+ ## SERVICE + ENVIRONMENT v2 UPDATE
+ ## serviceref. This is now a reference to the service object that is configured and managed outside the pipeline.
+ ## serviceInputs. These are the runtime inputs that users provide for the artifact when they deploy the particular service.
+ 
+          service:
+            serviceRef: nginxcanary
+            serviceInputs:
+              serviceDefinition:
+                type: Kubernetes
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+                      
+ ## SERVICE + ENVIRONMENT v2 UPDATE
+ ## environmentref. This is now a reference to the environment object that is configured and managed outside the pipeline.
+ ## infrastructureDefinitions. This object is defined outside of the pipeline and is referenced via the identifier. The YAML is inserted into the stage definition once defined.
+ 
+          environment:
+            environmentRef: staging
+            deployToAll: false
+  
+            infrastructureDefinitions:
+              - identifier: productstaging
+                inputs:
+                  identifier: productstaging
+                  type: KubernetesDirect
+                  spec:
+                    namespace: <+input>.allowedValues(dev,qa,prod)
+          execution:
+            steps:
+              - stepGroup:
+                  name: Canary Deployment
+                  identifier: canaryDepoyment
+                  steps:
+                    - step:
+                        name: Canary Deployment
+                        identifier: canaryDeployment
+                        type: K8sCanaryDeploy
+                        timeout: 10m
+                        spec:
+                          instanceSelection:
+                            type: Count
+                            spec:
+                              count: 1
+                          skipDryRun: false
+                    - step:
+                        name: Canary Delete
+                        identifier: canaryDelete
+                        type: K8sCanaryDelete
+                        timeout: 10m
+                        spec: {}
+              - stepGroup:
+                  name: Primary Deployment
+                  identifier: primaryDepoyment
+                  steps:
+                    - step:
+                        name: Rolling Deployment
+                        identifier: rollingDeployment
+                        type: K8sRollingDeploy
+                        timeout: 10m
+                        spec:
+                          skipDryRun: false
+            rollbackSteps:
+              - step:
+                  name: Canary Delete
+                  identifier: rollbackCanaryDelete
+                  type: K8sCanaryDelete
+                  timeout: 10m
+                  spec: {}
+              - step:
+                  name: Rolling Rollback
+                  identifier: rollingRollback
+                  type: K8sRollingRollback
+                  timeout: 10m
+                  spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+
+# --- example 9 ---
+template:
+  name: Deploy
+  identifier: Deploy
+  type: Stage
+  projectIdentifier: Rohan
+  orgIdentifier: default
+  tags: {}
+  spec:
+    type: Deployment
+    spec:
+ 
+ ## SERVICE + ENVIRONMENT v2 UPDATE
+ ## deploymentType. This scopes the stage config to a Harness deployment type.
+ ## Steps, services, environments, and infrastructure definitions are all scoped to the stage's deployment type. This prevents incompatible config usage.
+ 
+      deploymentType: Kubernetes
+      
+ ## SERVICE + ENVIRONMENT v2 UPDATE
+ ## serviceref. This is now a reference to the service object that is configured and managed outside the pipeline.
+ ## serviceInputs. These are the runtime inputs that users provide for the artifact when they deploy the particular service.
+ 
+      service:
+        serviceRef: <+input>
+        serviceInputs: <+input>
+        
+ ## SERVICE + ENVIRONMENT v2 UPDATE
+ ## environmentref. This is now a reference to the environment object that is configured and managed outside the pipeline.
+ ## infrastructureDefinitions. This object is defined outside of the pipeline and is referenced using the identifier. The YAML is inserted into the stage definition once defined.
+ 
+      environment:
+        environmentRef: <+input>
+        deployToAll: false
+        environmentInputs: <+input>
+        infrastructureDefinitions: <+input>
+      execution:
+        steps:
+          - step:
+              name: Rollout Deployment
+              identifier: rolloutDeployment
+              type: K8sRollingDeploy
+              timeout: 10m
+              spec:
+                skipDryRun: false
+                pruningEnabled: false
+          - step:
+              type: ShellScript
+              name: Shell Script
+              identifier: ShellScript
+              spec:
+                shell: Bash
+                onDelegate: true
+                source:
+                  type: Inline
+                  spec:
+                    script: kubectl get pods -n <+infra.namespace>
+                environmentVariables: []
+                outputVariables: []
+              timeout: 10m
+          - step:
+              type: Http
+              name: HTTP
+              identifier: HTTP
+              spec:
+                url: https://google.com
+                method: GET
+                headers: []
+                outputVariables: []
+              timeout: 10s
+        rollbackSteps:
+          - step:
+              name: Rollback Rollout Deployment
+              identifier: rollbackRolloutDeployment
+              type: K8sRollingRollback
+              timeout: 10m
+              spec:
+                pruningEnabled: false
+    failureStrategies:
+      - onFailure:
+          errors:
+            - AllErrors
+          action:
+            type: StageRollback
+  versionLabel: "2.0"

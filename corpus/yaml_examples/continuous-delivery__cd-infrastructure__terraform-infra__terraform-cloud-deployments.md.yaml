@@ -1,0 +1,36 @@
+# source: docs/continuous-delivery/cd-infrastructure/terraform-infra/terraform-cloud-deployments.md  (https://developer.harness.io/docs/continuous-delivery/cd-infrastructure/terraform-infra/terraform-cloud-deployments)
+
+# --- example 1 ---
+connector:
+  name: TF Cloud connector
+  identifier: TF_Cloud_connector
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: TerraformCloud_Doc_team
+  type: TerraformCloud
+  spec:
+    terraformCloudUrl: https://app.terraform.io
+    credential:
+      type: ApiToken
+      spec:
+        apiToken: account.terraformconnector
+    executeOnDelegate: true
+
+# --- example 2 ---
+curl --location --request POST 'https://app.harness.io/gateway/ng/api/connectors?accountIdentifier=12345' \
+--header 'Content-Type: text/yaml' \
+--header 'x-api-key: pat.12345.6789' \
+--data-raw 'connector:
+  name: TF Cloud connector
+  identifier: TF_Cloud_connector
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: TerraformCloud_Doc_team
+  type: TerraformCloud
+  spec:
+    terraformCloudUrl: https://app.terraform.io
+    credential:
+      type: ApiToken
+      spec:
+        apiToken: account.terraformconnector
+    executeOnDelegate: true'

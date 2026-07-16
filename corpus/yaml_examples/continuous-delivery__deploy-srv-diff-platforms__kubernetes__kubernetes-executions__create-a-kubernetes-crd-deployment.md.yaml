@@ -1,0 +1,16 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/create-a-kubernetes-crd-deployment.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/kubernetes-executions/create-a-kubernetes-crd-deployment)
+
+# --- example 1 ---
+"harness.io/steadyStateCondition": ${json.select("$..metadata.generation", response) == json.select("$..status.observedGeneration", response) && json.select("$..status.availableReplicas", response) == json.select("$..spec.replicas", response)}
+
+# --- example 2 ---
+"harness.io/steadyStateCondition": ${json.select("$..status.lifecycleState", response) == "STABLE"}
+
+# --- example 3 ---
+"harness.io/steadyStateCondition": ${json.select("$..metadata.generation", response) == json.select("$..status.observedGeneration", response) && json.select("$..status.lifecycleState", response) == "STABLE"}
+
+# --- example 4 ---
+metadata:
+  annotations:
+    managed-workload: "true"
+    failureCondition: "status.failed == 1"

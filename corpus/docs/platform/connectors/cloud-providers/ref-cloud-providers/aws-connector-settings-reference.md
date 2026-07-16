@@ -1,0 +1,2409 @@
+---
+title: AWS connector settings reference
+description: This topic provides settings and permissions for Harness AWS connectors.
+# sidebar_position: 2
+helpdocs_topic_id: m5vkql35ca
+helpdocs_category_id: 1ehb4tcksy
+helpdocs_is_private: false
+helpdocs_is_published: true
+---
+
+Harness uses AWS connectors for activities such as obtaining artifacts, building and deploying services, and verifying deployments.
+
+This topic describes settings and permissions for AWS connectors.
+
+## AWS permissions and policies
+
+The AWS role policy requirements depend on what AWS services you are using for your artifacts and target infrastructure.
+
+Consider the following user and access type requirements:
+
+- **User:** Harness requires that the IAM user can make API requests to AWS. For more information, go to [Creating an IAM User in Your AWS Account](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html).
+- **User Access Type: Programmatic access:** This enables an access key ID and secret access key for the AWS API, CLI, SDK, and other development tools.
+- **DescribeRegions:** Required for all AWS Cloud Provider connections by default. This requirement can be removed by enabling the `CDS_AWS_DESCRIBE_REGIONS_OPTIONAL` feature flag. For details, go to [DescribeRegions - Optional](#describeregions---optional).
+
+The AWS [IAM Policy Simulator](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_testing-policies.html) is useful for evaluating policies and access.
+
+### DescribeRegions and connector validation
+
+The [DescribeRegions](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeRegions.html) action is required for all AWS connectors regardless of what AWS service you are using for your target or build infrastructure.
+
+Harness needs a policy with the `DescribeRegions` action so that it can list the available regions when you define your target architecture. To do this, create a [Customer Managed Policy](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_managed-vs-inline.html#customer-managed-policies), add the `DescribeRegions` action to list those regions, and add that to any role used by the connector.
+
+For example:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "ec2:DescribeRegions",
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+#### DescribeRegions - Optional
+
+:::info note
+
+This behavior is controlled by the feature flag `CDS_AWS_DESCRIBE_REGIONS_OPTIONAL`. Contact [Harness Support](mailto:support@harness.io) to enable it on your account. This feature requires Harness Delegate version `889xx` or later.
+
+:::
+
+When this feature flag is enabled, Harness uses `sts:GetCallerIdentity` instead of `ec2:DescribeRegions` to validate connector credentials. The STS `GetCallerIdentity` API requires no IAM permissions and always succeeds with valid credentials, regardless of which AWS services your account uses. This means no additional IAM policy is needed for connector validation, unblocking customers who only use non-EC2 services such as S3, ECR, ECS, or Lambda.
+
+### AWS S3 permissions and policies
+
+Harness requires several policies to [read from AWS S3](#read-from-aws-s3), [write to AWS S3](#write-to-aws-s3), or both [read and write to AWS S3](#read-and-write-to-aws-s3). The policies you need depend on how you plan to use the connector in Harness.
+
+Make sure your policy declarations allow the necessary `Resource` access for the capacity in which you plan to use the connector. Be mindful of object-level and bucket-level access for [Amazon S3 resources](https://docs.aws.amazon.com/AmazonS3/latest/userguide/s3-arn-format.html) in your policy declarations.
+
+Declarations like `"Resource": "*"` or `"Resource": "arn:aws:s3:::your-s3-bucket"` allow access to bucket-level data that is required for functions like `"Action": "s3:ListBucket"`.
+
+Declarations like `"Resource": "arn:aws:s3:::bucket-name/*"` limit access to object-level data, such as the contents of the bucket, and prevent access to higher-level data.
+
+You can either use a single expression, like `"Resource": "*"`, or create separate declarations for different actions, for example:
+
+```json
+{
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::your-s3-bucket"
+},
+{
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::your-s3-bucket/*"
+}
+```
+
+#### Read from AWS S3
+
+There are two required policies to read from AWS S3:
+
+- `AmazonS3ReadOnlyAccess` managed policy
+- A [Customer Managed Policy](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_managed-vs-inline.html#customer-managed-policies) you create using `ec2:DescribeRegions` (required unless the `CDS_AWS_DESCRIBE_REGIONS_OPTIONAL` feature flag is enabled)
+
+<details>
+<summary>AmazonS3ReadOnlyAccess managed policy</summary>
+
+- **Policy Name:** `AmazonS3ReadOnlyAccess`
+- **Policy ARN:** `arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess`
+- **Description:** `Provides read-only access to all buckets via the AWS Management Console`
+- **Policy JSON:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:Get*",
+        "s3:List*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+</details>
+
+<details>
+<summary>ec2:DescribeRegions customer managed policy</summary>
+
+- **Policy Name:** Any name, such as `HarnessS3`
+- **Description:** `Harness S3 policy that uses EC2 permissions.`
+- **Policy JSON:**
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "ec2:DescribeRegions",
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+</details>
+
+#### Write to AWS S3
+
+There are two [Customer Managed Policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_managed-vs-inline.html#customer-managed-policies) required to write to AWS S3. The `ec2:DescribeRegions` policy is only required if the `CDS_AWS_DESCRIBE_REGIONS_OPTIONAL` feature flag is not enabled.
+
+<details>
+<summary>S3 write customer managed policy</summary>
+
+- **Policy Name:** `HarnessS3Write`
+- **Description:** `Custom policy for pushing to S3.`
+- **Policy JSON:**
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AllObjectActions",
+            "Effect": "Allow",
+            "Action": "s3:*Object",
+            "Resource": ["arn:aws:s3:::bucket-name/*"]
+        }
+    ]
+}
+```
+
+</details>
+
+<details>
+<summary>ec2:DescribeRegions customer managed policy</summary>
+
+- **Policy Name:** Any name, such as `HarnessS3`
+- **Description:** `Harness S3 policy that uses EC2 permissions.`
+- **Policy JSON:**
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": "ec2:DescribeRegions",
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+</details>
+
+#### Read and Write to AWS S3
+
+You can have a single policy that reads and writes to an S3 bucket.
+
+For more information, go to the following AWS documentation:
+
+- [Allow read and write access to objects in an S3 Bucket](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_s3_rw-bucket.html)
+- [Allow read and write access to objects in an S3 Bucket, programmatically and in the console](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_examples_s3_rw-bucket-console.html).
+
+<details>
+<summary>JSON example: S3 read and write policy</summary>
+
+Here is an example of an S3 read and write policy declaration that includes AWS console access:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ConsoleAccess",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetAccountPublicAccessBlock",
+                "s3:GetBucketAcl",
+                "s3:GetBucketLocation",
+                "s3:GetBucketPolicyStatus",
+                "s3:GetBucketPublicAccessBlock",
+                "s3:ListAllMyBuckets"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ListObjectsInBucket",
+            "Effect": "Allow",
+            "Action": "s3:ListBucket",
+            "Resource": ["arn:aws:s3:::bucket-name"]
+        },
+        {
+            "Sid": "AllObjectActions",
+            "Effect": "Allow",
+            "Action": "s3:*Object",
+            "Resource": ["arn:aws:s3:::bucket-name/*"]
+        }
+    ]
+}
+```
+
+</details>
+
+#### Cross-account bucket access
+
+If you want to use an S3 bucket that is in a separate account than the account provided in your [Harness AWS connector settings](#harness-aws-connector-settings), you can grant cross-account bucket access. For more information, go to the AWS documentation on [Bucket Owner Granting Cross-Account Bucket Permissions](https://docs.aws.amazon.com/AmazonS3/latest/dev/example-walkthroughs-managing-access-example2.html).
+
+### AWS Elastic Container Registry (ECR) permissions and policies
+
+Use these policies to pull or push to ECR. For more information, go to the AWS documentation about [AWS managed policies for Amazon Elastic Container Registry](https://docs.aws.amazon.com/AmazonECR/latest/userguide/security-iam-awsmanpol.html).
+
+<details>
+<summary>Pull from ECR policy</summary>
+
+- **Policy Name:** `AmazonEC2ContainerRegistryReadOnly`
+- **Policy ARN:** `arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly`
+- **Description:** `Provides read-only access to Amazon EC2 Container Registry repositories.`
+- **Policy JSON:**
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+      {
+              "Effect": "Allow",
+              "Action": [
+                  "ecr:GetAuthorizationToken",
+                  "ecr:BatchCheckLayerAvailability",
+                  "ecr:GetDownloadUrlForLayer",
+                  "ecr:GetRepositoryPolicy",
+                  "ecr:DescribeRepositories",
+                  "ecr:ListImages",
+                  "ecr:DescribeImages",
+                  "ecr:BatchGetImage"
+              ],
+              "Resource": "*"
+      }
+  ]
+}
+```
+
+</details>
+
+<details>
+<summary>Push to ECR</summary>
+
+- **Policy Name:** `AmazonEC2ContainerRegistryFullAccess`
+- **Policy ARN:** `arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess`
+- **Policy JSON:**
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ecr:*",
+                "cloudtrail:LookupEvents"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateServiceLinkedRole"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:AWSServiceName": [
+                        "replication.ecr.amazonaws.com"
+                    ]
+                }
+            }
+        }
+    ]
+}
+```
+
+</details>
+
+### AWS CloudFormation policies
+
+The required policies depend on what you are provisioning. Here are some examples:
+
+<details>
+<summary>Example: Create and manage EKS clusters</summary>
+
+This example policy gives full access to create and manage EKS clusters.
+
+```json
+{
+     "Version": "2012-10-17",
+     "Statement": [
+         {
+             "Effect": "Allow",
+             "Action": [
+                 "autoscaling:*",
+                 "cloudformation:*",
+                 "ec2:*",
+                 "eks:*",
+                 "iam:*",
+                 "ssm:*"
+             ],
+             "Resource": "*"
+         }
+     ]
+ }
+```
+
+</details>
+
+<details>
+<summary>Example: Limited permissions for EKS clusters</summary>
+
+This example policy gives limited permission to EKS clusters.
+
+```json
+ {
+     "Version": "2012-10-17",
+     "Statement": [
+         {
+             "Effect": "Allow",
+             "Action": [
+                 "autoscaling:CreateAutoScalingGroup",
+                 "autoscaling:DescribeAutoScalingGroups",
+                 "autoscaling:DescribeScalingActivities",
+                 "autoscaling:UpdateAutoScalingGroup",
+                 "autoscaling:CreateLaunchConfiguration",
+                 "autoscaling:DescribeLaunchConfigurations",
+                 "cloudformation:CreateStack",
+                 "cloudformation:DescribeStacks",
+                 "ec2:AuthorizeSecurityGroupEgress",
+                 "ec2:AuthorizeSecurityGroupIngress",
+                 "ec2:RevokeSecurityGroupEgress",
+                 "ec2:RevokeSecurityGroupIngress",
+                 "ec2:CreateSecurityGroup",
+                 "ec2:createTags",
+                 "ec2:DescribeImages",
+                 "ec2:DescribeKeyPairs",
+                 "ec2:DescribeRegions",
+                 "ec2:DescribeSecurityGroups",
+                 "ec2:DescribeSubnets",
+                 "ec2:DescribeVpcs",
+                 "eks:CreateCluster",
+                 "eks:DescribeCluster",
+                 "iam:AddRoleToInstanceProfile",
+                 "iam:AttachRolePolicy",
+                 "iam:CreateRole",
+                 "iam:CreateInstanceProfile",
+                 "iam:CreateServiceLinkedRole",
+                 "iam:GetRole",
+                 "iam:ListRoles",
+                 "iam:PassRole",
+                 "ssm:GetParameters"
+             ],
+             "Resource": "*"
+         }
+     ]
+ }
+```
+
+</details>
+
+### Fargate
+
+Amazon requires the Amazon EKS Pod execution role to run pods on the AWS Fargate infrastructure. For more information, go to [Amazon EKS Pod execution IAM role](https://docs.aws.amazon.com/eks/latest/userguide/pod-execution-role.html) in the AWS documentation.
+
+If you deploy pods to Fargate nodes in an EKS cluster, and your nodes needs IAM credentials, you must configure IRSA in your AWS EKS configuration (and then select the **Use IRSA** option for your connector credentials in Harness). This is due to [Fargate limitations](https://docs.aws.amazon.com/eks/latest/userguide/fargate.html#:~:text=The%20Amazon%20EC2%20instance%20metadata%20service%20(IMDS)%20isn%27t%20available%20to%20Pods%20that%20are%20deployed%20to%20Fargate%20nodes.).
+
+## Harness AWS connector settings
+
+The AWS connector has the following settings.
+
+### Basic settings
+
+- **Name:** The name for the connector.
+- **Id:** [Entity Identifier.](../../../references/entity-identifier-reference.md)
+- **Description:** Optional text string.
+- **Tags**: Optional <a href="/docs/platform/tags/overview#create-tags-for-pipelines">tags</a>.
+
+### Credentials
+
+Specify the credentials that enable Harness to connect your AWS account. There are four primary options.
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import DocImage from '@site/src/components/DocImage';
+
+<Tabs>
+<TabItem value="iam" label="Assume IAM Role on Delegate" default>
+
+The **Assume IAM Role on Delegate** option assumes the SA of the delegate.
+
+This is often the simplest method for connecting Harness to your AWS account and services. Make sure the IAM roles attached to the nodes have the right access.
+
+Once you select this option, you can select a delegate in the next step of AWS connector creation. Typically, the delegate runs in the target infrastructure (such as in an EKS cluster).
+
+#### Assume IAM Role vs Use IRSA
+
+There are some instances where you need to use the **Use IRSA** option instead of the **Assume IAM Role on Delegate** option:
+
+* The **Assume IAM Role on Delegate** option isn't valid for IAM roles for service accounts (IRSA).
+* If your Harness Delegate is in an EKS cluster that uses IRSA, you must select **Use IRSA**.
+* If you deploy pods to Fargate nodes in an EKS cluster, and your nodes needs IAM credentials, you must configure IRSA in your AWS EKS configuration and select the **Use IRSA** option for your connector credentials. This is due to [Fargate limitations](https://docs.aws.amazon.com/eks/latest/userguide/fargate.html#:~:text=The%20Amazon%20EC2%20instance%20metadata%20service%20(IMDS)%20isn%27t%20available%20to%20Pods%20that%20are%20deployed%20to%20Fargate%20nodes.).
+
+</TabItem>
+<TabItem value="access" label="AWS Access Key">
+
+With the **AWS Access Key** option, you provide the [Access Key and Secret Access Key](https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys) of the IAM Role to use for the AWS account. You can use [Harness Text Secrets](/docs/platform/secrets/add-use-text-secrets.md) for both.
+
+We also support JET (JWT-based Enterprise Token) identity tokens for authentication and authorization across the following AWS services:
+
+- Amazon EKS (Elastic Kubernetes Service)
+- Amazon ASG (Auto Scaling Groups)
+- WinRM (Windows Remote Management)
+- SSH (Secure Shell)
+- Amazon ECS (Elastic Container Service)
+- AWS CloudFormation
+- AWS SAM (Serverless Application Model)
+
+To obtain a JET identity token, authenticate with your identity provider using your credentials and request a token through their API.
+
+Additionally, this option requires Harness Delegate version 24.09.84100 or later.
+
+#### JSON secret mapping
+
+You can store multiple AWS credential fields (`access key`, `secret key`, `session token`) in a single JSON-formatted secret and map individual fields using JSONPath dot notation. This is useful for AWS STS temporary credentials or external credential management systems that export credentials as JSON.
+
+**Delegate support**: This option requires Harness Delegate version 894xx or later.
+
+:::note Feature Availability
+- This feature is currently behind the feature flag `PL_CONNECTOR_JSON_CREDENTIAL_MAPPING`. Contact <a href="mailto:support@harness.io">Harness Support</a> to enable this feature for your account.
+:::
+
+**JSON secret formats**
+
+<Tabs>
+<TabItem value="flat" label="Flat JSON">
+
+```json
+{
+  "access_key": "AKIAIOSFODNN7EXXXXX",
+  "secret_key": "wJalrXUtnFXXXSDFRGXXXXxRfiCYEXAMPLEKEY",
+  "session_token": "FwoGZXIvYXdXXXXXDH..."
+}
+```
+
+**Field mappings**
+- Access Key Mapping: `access_key`
+- Secret Key Mapping: `secret_key`
+- Session Token Mapping: `session_token`
+
+</TabItem>
+<TabItem value="nested" label="Nested JSON (AWS STS format)">
+
+```json
+{
+  "Credentials": {
+    "AccessKeyId": "AKIAIOSFODNN7EXXXXX",
+    "SecretAccessKey": "wJalrXUtnFXXXSDFRGXXXXxRfiCYEXAMPLEKEY",
+    "SessionToken": "FwoGZXIvYXdXXXXXDH...",
+    "Expiration": "2024-12-31T23:59:59Z"
+  }
+}
+```
+
+**Field mappings (JSONPath dot notation)**
+- Access Key Mapping: `Credentials.AccessKeyId`
+- Secret Key Mapping: `Credentials.SecretAccessKey`
+- Session Token Mapping: `Credentials.SessionToken`
+
+</TabItem>
+</Tabs>
+
+**Configuration steps**
+
+Create a secret in your secret manager with your AWS credentials in JSON format:
+
+1. In Harness, go to **Project Settings** → **Secrets** and [create a new text secret](/docs/platform/secrets/add-use-text-secrets#add-a-text-secret).
+2. When configuring the AWS connector, select **JSON Secret** as the **Authentication** method.
+3. Select your **JSON secret**.
+4. Configure the JSONPath mappings for `access key`, `secret key`, and optionally `session token` based on your JSON structure.
+5. Click **Continue**.
+
+**JSONPath dot notation**
+
+Use dots (`.`) to navigate nested JSON structures:
+- Simple key: `username` → accesses `{"username": "value"}`
+- Nested path: `parent.child` → accesses `{"parent": {"child": "value"}}`
+- Deep nesting: `a.b.c` → accesses `{"a": {"b": {"c": "value"}}}`
+
+
+:::warning Avoid literal dots in JSON key names
+
+Do not use literal dots in JSON key names (for example, `"aws.key"`). The JSONPath parser treats dots as path separators. Use underscores (`aws_key`) or camelCase (`awsKey`) instead.
+
+:::
+
+</TabItem>
+<TabItem value="irsa" label="Use IRSA">
+
+The **Use IRSA** option allows the Harness Kubernetes delegate in AWS EKS to use a specific IAM role when making authenticated requests to resources.
+
+By default, the Harness Kubernetes delegate uses a ClusterRoleBinding to the **default** service account; whereas, with this option, you can use AWS [IAM roles for service accounts (IRSA)](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) to associate a specific IAM role with the service account used by the Harness Kubernetes delegate.
+
+For instructions, go to [Use IRSA](/docs/platform/connectors/cloud-providers/add-aws-connector/#use-irsa).
+
+<details>
+<summary>Understanding IRSA Authentication Workflow</summary>
+
+#### What is IRSA?
+
+IRSA (IAM Roles for Service Accounts) is the AWS EKS native way to allow applications running in EKS pods to access AWS APIs using permissions configured in AWS IAM roles. This eliminates the need for static AWS credentials and provides fine-grained access control.
+
+#### How IRSA Works
+
+When using an AWS connector with IRSA (IAM Roles for Service Accounts), it's important to understand when and where the authentication happens, especially in complex scenarios involving delegates, runners, and different IAM roles.
+
+**Key Components:**
+
+1. **Pod**: Your Harness Delegate running in the EKS cluster
+2. **Service Account**: A Kubernetes service account with the annotation `eks.amazonaws.com/role-arn: <IAM_ROLE_ARN>` pointing to an IAM role
+3. **IAM Role**: An AWS IAM role with:
+   - Policies granting permissions to AWS resources (e.g., S3, ECR, ECS)
+   - Trust relationship allowing the specific service account to assume the role
+4. **OIDC Provider**: The EKS cluster's OIDC identity provider registered in AWS IAM that validates service account tokens
+
+**Authentication Flow:**
+
+When you configure an AWS connector with the **Use IRSA** option:
+
+1. **Service Account Configuration**: When a service account is created in EKS with IRSA annotation (`eks.amazonaws.com/role-arn`), it is associated with an IAM role.
+
+2. **Pod Configuration**: When the delegate pod is configured to use the service account, EKS automatically:
+   - Volume-mounts the service account JWT token into the pod at `/var/run/secrets/eks.amazonaws.com/serviceaccount/token`
+   - Injects environment variables:
+     - `AWS_ROLE_ARN`: The IAM role ARN to assume
+     - `AWS_WEB_IDENTITY_TOKEN_FILE`: Path to the service account token
+
+3. **Assume Role Request**: When the delegate needs to access AWS services, the AWS SDK:
+   - Automatically reads the `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE` environment variables
+   - Calls `sts:AssumeRoleWithWebIdentity` API
+   - Sends the service account JWT token as proof of identity
+
+4. **Token Validation**: AWS STS validates the request:
+   - Retrieves the OIDC provider's public keys from the EKS cluster's OIDC discovery endpoint (`.well-known/openid-configuration`)
+   - Validates the JWT signature using the public keys
+   - Verifies the JWT was issued by the trusted OIDC provider
+   - Checks the IAM role's trust policy to ensure the service account (`system:serviceaccount:namespace:sa-name`) is authorized to assume the role
+
+5. **Credentials Issued**: On successful validation, AWS STS returns temporary security credentials (access key, secret key, session token) with an expiration time (typically 1 hour).
+
+6. **AWS API Calls**: The delegate uses these temporary credentials to authenticate AWS API calls (S3, ECR, ECS, etc.). The AWS SDK automatically refreshes credentials before they expire.
+
+**IRSA Authentication Flow:**
+
+```mermaid
+sequenceDiagram
+    participant H as Harness Platform
+    participant D as Delegate Pod<br/>(with Service Account)
+    participant SDK as AWS SDK
+    participant STS as AWS STS
+    participant OIDC as EKS OIDC Provider
+    participant AWS as AWS Service<br/>(S3, ECR, etc.)
+    
+    H->>D: Execute task using AWS connector
+    D->>SDK: Request AWS credentials
+    SDK->>SDK: Read AWS_ROLE_ARN and<br/>AWS_WEB_IDENTITY_TOKEN_FILE
+    SDK->>STS: AssumeRoleWithWebIdentity<br/>(role ARN + JWT token)
+    STS->>OIDC: Fetch public keys<br/>(.well-known/openid-configuration)
+    OIDC->>STS: Return public keys
+    STS->>STS: Validate JWT signature<br/>and trust policy
+    STS->>SDK: Return temporary credentials<br/>(AccessKey, SecretKey, SessionToken)
+    SDK->>D: Provide credentials
+    D->>AWS: Make API call with credentials
+    AWS->>D: Response
+    D->>H: Task result
+```
+
+##### Multi-Environment Scenarios
+
+In scenarios where you have multiple execution environments (for example, a Kubernetes delegate and separate runners), understanding which IAM role is used is critical.
+
+**Scenario 1: Delegate on EKS with IRSA + Cross-Account Access**
+
+IRSA works seamlessly with cross-account access. You can configure:
+- **Base IAM Role** (via IRSA): The role associated with the delegate's service account in Account A
+- **Cross-Account Role**: A role in Account B that the base role can assume
+
+Example connector configuration:
+```yaml
+connector:
+  name: aws-irsa-cross-account
+  type: Aws
+  spec:
+    credential:
+      type: Irsa
+      crossAccountAccess:
+        crossAccountRoleArn: arn:aws:iam::ACCOUNT_B:role/target-role
+      region: us-east-1
+    delegateSelectors:
+      - eks-delegate
+```
+
+The authentication flow:
+1. Delegate uses IRSA to obtain temporary credentials for its base IAM role (in the same account as the EKS cluster)
+2. Using those credentials, the delegate calls `sts:AssumeRole` to assume the cross-account role in Account B
+3. Delegate performs operations in Account B using the cross-account role's temporary credentials
+
+Note: The base IAM role must have `sts:AssumeRole` permission for the cross-account role ARN, and the cross-account role must trust the base IAM role in its trust policy.
+
+**Scenario 2: Delegate on EKS with IRSA + Windows Runner on EC2**
+
+Consider this common setup:
+- **Delegate**: Running in an EKS cluster with a Kubernetes service account tied to IAM Role A (via IRSA)
+- **Windows Runner**: Running on an EC2 instance with IAM Role B attached to the instance
+
+```mermaid
+graph TB
+    subgraph "EKS Cluster"
+        D[Delegate Pod<br/>Service Account: sa-delegate<br/>IAM Role A via IRSA]
+    end
+    
+    subgraph "EC2 Instance"
+        R[Windows Runner<br/>IAM Role B via Instance Profile]
+    end
+    
+    H[Harness Platform]
+    AWS1[AWS Services<br/>for Delegate Operations]
+    AWS2[AWS Services<br/>for Runner Operations]
+    
+    H -->|Task 1: Deploy to K8s| D
+    H -->|Task 2: Build on Windows| R
+    
+    D -->|Uses IAM Role A<br/>via IRSA| AWS1
+    R -->|Uses IAM Role B<br/>via IMDS| AWS2
+    
+    style D fill:#e1f5ff
+    style R fill:#fff4e1
+    style AWS1 fill:#d4edda
+    style AWS2 fill:#d4edda
+```
+
+**Authentication behavior:**
+
+1. **For tasks executed by the delegate itself** (such as Kubernetes deployments, delegate-side operations):
+   - The delegate uses **IAM Role A** (the IRSA role from its Kubernetes service account)
+   - This includes operations like pulling images from ECR, accessing S3 for artifacts, etc.
+
+2. **For tasks executed on the Windows runner** (such as build steps, PowerShell scripts):
+   - The runner uses **IAM Role B** (the EC2 instance profile role)
+   - The AWS connector's IRSA configuration does **not** apply to the runner
+   - The runner authenticates using the EC2 instance metadata service (IMDS)
+
+**Key Points:**
+
+- **AWS connector IRSA authentication is delegate-specific**: The IRSA configuration in the AWS connector only affects operations performed by the delegate pod itself.
+- **Runners use their own IAM roles**: Runners (VM-based, Docker, or Windows) use the IAM role attached to their host infrastructure (EC2 instance profile, ECS task role, etc.).
+- **Different roles for different components**: In a mixed environment, you may have different IAM roles with different permissions for the delegate and for runners.
+
+##### When to Use IRSA
+
+Use the **Use IRSA** option when:
+
+- Your Harness Delegate runs in an EKS cluster with IRSA configured
+- You want the delegate to use a specific IAM role (not the node's instance profile)
+- You need fine-grained IAM permissions for the delegate's operations
+- You're deploying to Fargate nodes (where IMDS is not available)
+
+##### When IRSA Does Not Apply
+
+IRSA authentication does **not** apply to:
+
+- **VM-based runners** (Windows or Linux) running on EC2 instances - these use EC2 instance profiles
+- **Docker runners** - these use the IAM role of their host
+- **Harness Cloud build infrastructure** - uses Harness-managed credentials
+- **Operations performed directly by runners** - runners authenticate independently of the delegate's IRSA configuration
+
+##### Troubleshooting Authentication Issues
+
+If you encounter authentication errors:
+
+1. **Identify where the operation is executing**: Determine if the operation runs on the delegate or on a runner.
+2. **Check the appropriate IAM role**:
+   - For delegate operations: Verify the IRSA role attached to the delegate's service account
+   - For runner operations: Verify the IAM role attached to the runner's host (EC2 instance profile, ECS task role, etc.)
+3. **Verify IAM policies**: Ensure the IAM role has the necessary permissions for the AWS service being accessed.
+4. **Check trust relationships**: For IRSA, verify the IAM role's trust policy allows the EKS cluster's OIDC provider.
+5. **Review logs**: Check delegate logs and runner logs to see which credentials are being used.
+
+##### Verifying IRSA Configuration
+
+To verify that IRSA is working correctly on your delegate, you can exec into the delegate pod and run the following commands:
+
+**Check environment variables:**
+```bash
+# Exec into the delegate pod
+kubectl exec -it <delegate-pod-name> -n harness-delegate-ng -- /bin/bash
+
+# Verify IRSA environment variables are set
+echo $AWS_ROLE_ARN
+echo $AWS_WEB_IDENTITY_TOKEN_FILE
+
+# Verify the token file exists
+ls -la $AWS_WEB_IDENTITY_TOKEN_FILE
+```
+
+**Test AWS credentials:**
+```bash
+# Install AWS CLI if not already present
+microdnf install unzip
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+./aws/install
+
+# Verify current identity
+aws sts get-caller-identity
+
+# Test access to AWS services (example: S3)
+aws s3 ls
+
+# Test access to ECR
+aws ecr list-images --repository-name <your-repo-name>
+```
+
+**Test cross-account access (if configured):**
+```bash
+# Assume the cross-account role
+export $(printf "AWS_ACCESS_KEY_ID=%s AWS_SECRET_ACCESS_KEY=%s AWS_SESSION_TOKEN=%s" \
+$(aws sts assume-role \
+--role-arn "arn:aws:iam::TARGET_ACCOUNT:role/target-role" \
+--role-session-name TestSession \
+--query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
+--output text))
+
+# Verify assumed role identity
+aws sts get-caller-identity
+
+# Test operations in target account
+aws s3 ls
+aws ecr list-images --repository-name <repo-name>
+```
+
+Expected output for `aws sts get-caller-identity` with IRSA:
+```json
+{
+    "UserId": "AROAXXXXXXXXXX:botocore-session-1234567890",
+    "Account": "123456789012",
+    "Arn": "arn:aws:sts::123456789012:assumed-role/your-irsa-role/botocore-session-1234567890"
+}
+```
+
+</details>
+
+</TabItem>
+<TabItem value="oidc" label="Use OIDC">
+
+:::info
+
+This option requires Harness Delegate version 24.03.836xx or later.
+
+:::
+
+Select **Use OIDC** to connect to AWS with OIDC.
+
+To do this, you need to create an [OIDC identity provider](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_providers_oidc.html) in AWS. Then you need to add it in a trust relationship with an IAM role you create that Harness will use to operate in AWS.
+
+Use the following Harness OIDC provider endpoint and OIDC audience settings to create your OIDC identity provider:
+
+* Harness OIDC provider endpoint: `https://app.harness.io/ng/api/oidc/account/<ACCOUNT_ID>`
+* OIDC audience: `sts.amazonaws.com`
+
+#### Supported Swimlanes
+
+These are the current supported deployment swimlanes for AWS OIDC:
+
+- AWS ECS
+- AWS ASG
+- AWS EKS
+- AWS Lambda
+- Kubernetes
+- Terraform
+- CloudFormation
+
+#### Enhanced Subject
+
+:::info
+
+Currently, extra scope information included with the JWT in the **sub** field is behind the feature flag, `PL_OIDC_ENHANCED_SUBJECT_FIELD`. Contact [Harness Support](mailto:support@harness.io) to enable the feature.
+
+:::
+
+- **sub**: What is issuing the JWT.
+  This value will change depending on the scope of the OIDC connector.
+  - **At project scope**: `account/<account_id>:org/{organization_id}:project/<project_id>`
+  - **At organization scope**: `account/<account_id>:org/<organization_id>:project/`
+  - **At account scope**: `account/<account_id>:org/:project/`
+
+:::info note
+If the feature flag `CDS_ENABLE_PIPELINE_SCOPED_OIDC_SUB` is enabled on top of `PL_OIDC_ENHANCED_SUBJECT_FIELD`, the  `Pipeline ID` will also be included in the sub field. For example:
+`account/<account_id>:org/<organization_id>:project/<project_id>:pipeline/<pipeline_id>`. Contact [Harness Support](mailto:support@harness.io) to enable the feature.
+:::
+
+#### Examples
+
+- For Project level resources - `"sub":"account/Hue1lBsaSx2APlXjzVEPIg:org/default:project/OIDC_Test"`
+- For Organization level resources - `"sub":"account/Hue1lBsaSx2APlXjzVEPIg:org/default:project/"`
+- For Account level resources - `"sub":"account/Hue1lBsaSx2APlXjzVEPIg:org/:project/"`
+
+### OIDC claims supported in Harness
+
+**Trusted Claims:**
+
+  - Harness validates the following claims internally to determine if the principal has the required permissions. When configuring trust on the Cloud Provider side, only these specific claims and their exact values should be accepted. Any claims outside this list must be rejected to avoid unauthorized access.
+    * `accountId`
+    * `organizationId`
+    * `projectIdentifier`
+    * `pipelineIdentifier`
+
+  - The following claims are validated for existence in Harness, but do not include an access check:
+    * `environmentIdentifier`
+    * `connectorIdentifier`
+    * `serviceIdentifier`
+
+**Non-Trusted Claims**
+
+  - The following claims are considered non-trusted. They are not validated for existence or access control and are used for informational context only:
+
+    * `environmentType`
+    * `connectorName`
+    * `serviceName`
+    * `triggeredByName`
+    * `triggerByEmail`
+    * `stageType`
+    * `stepType`
+    * `context`
+
+### Custom Parameters 
+
+Here are the custom parameters for the Harness AWS OIDC JWT:
+
+- **account_id**: The account id of your Harness account.
+- **organization_id**: The organization id of your Harness organization.
+- **project_id**: The project id of your Harness project. 
+- **connector_id**: The id of the OIDC-enabled AWS connector that sent this token.
+- **connector_name**: The name of the OIDC-enabled AWS connector that sent this token.
+- **context**: This specifies the Harness context from when this OIDC token is generated. Possible values for this field are:
+  - `CONNECTOR_VALIDATION` - This context is sent when the connector is being setup.
+  - `PIPELINE_CONFIGURATION` - This context is sent when a pipeline configuration is being completed.
+  - `PIPELINE_EXECUTION` - This context is sent when a pipeline configuration is being executed.
+  - `PERPETUAL_TASK` - This context is sent when a perpetual task is executing.
+
+### OIDC delegate selectors for AWS
+
+:::info Feature flag
+
+This behavior is controlled by the feature flag `CDS_OIDC_AWS_SESSION_TAG_DELEGATE_SELECTORS`. Contact [Harness Support](mailto:support@harness.io) to enable it on your account.
+
+:::
+
+You can configure AWS Cloud Provider connectors with OIDC authentication to include delegate selectors as AWS session tags in OIDC tokens. This enables you to enforce AWS IAM policies based on which Harness delegates execute tasks.
+
+When you configure an AWS connector with OIDC, Harness includes delegate selector information in the OIDC token with the `https://aws.amazon.com/tags/principal_tags/delegate_selectors` claim. AWS converts this into a session tag when assuming the IAM role, and you can reference it in IAM policies using `aws:PrincipalTag/delegate_selectors` conditions.
+
+Harness resolves delegate selectors following the precedence: Step > StepGroup > Stage > Pipeline (first match wins). Connector-level delegate selectors are always combined with the resolved selector. Multiple selectors are encoded using the `+` delimiter (for example, `+selector1+selector2+`).
+
+#### IAM trust policy configuration
+
+To use delegate selectors with OIDC, add the `sts:TagSession` permission to your IAM role's trust policy:
+
+<details>
+<summary>Trust policy with sts:TagSession permission</summary>
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::123456789012:oidc-provider/app.harness.io/ng/api/oidc/account/YOUR_ACCOUNT_ID"
+      },
+      "Action": [
+        "sts:AssumeRoleWithWebIdentity",
+        "sts:TagSession"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "app.harness.io/ng/api/oidc/account/YOUR_ACCOUNT_ID:aud": "sts.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+#### IAM policy conditions
+
+You can enforce delegate selector requirements using IAM policy conditions.
+
+**Allow specific delegate selector (OR condition):**
+
+<details>
+<summary>IAM policy with OR condition for delegate selectors</summary>
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowS3Access",
+      "Effect": "Allow",
+      "Action": ["s3:*"],
+      "Resource": "*",
+      "Condition": {
+        "StringLike": {
+          "aws:PrincipalTag/delegate_selectors": [
+            "*+delegate-selector-1+*",
+            "*+delegate-selector-2+*"
+          ]
+        }
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+This policy allows S3 access only if the delegate selector matches either of the specified selectors.
+
+**Require multiple delegate selectors (AND condition):**
+
+To enforce that multiple delegate selectors must be present, use DENY rules with DeMorgan's Law (`NOT(NOT A OR NOT B) = A AND B`):
+
+<details>
+<summary>IAM policy with AND condition using DENY rules</summary>
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowS3",
+      "Effect": "Allow",
+      "Action": ["s3:*"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "DenyUnlessDelegateSelector1Present",
+      "Effect": "Deny",
+      "Action": ["s3:*"],
+      "Resource": "*",
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalTag/delegate_selectors": "*+delegate-selector-1+*"
+        }
+      }
+    },
+    {
+      "Sid": "DenyUnlessDelegateSelector2Present",
+      "Effect": "Deny",
+      "Action": ["s3:*"],
+      "Resource": "*",
+      "Condition": {
+        "StringNotLike": {
+          "aws:PrincipalTag/delegate_selectors": "*+delegate-selector-2+*"
+        }
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+This policy allows S3 access by default, but denies access if either delegate selector is NOT present, resulting in access only when BOTH selectors are present.
+
+#### Two-tier policy approach
+
+You can separate connector validation permissions from service operation permissions:
+
+**Tier 1: Allow connector validation**
+
+```json
+{
+  "Sid": "EC2Permissions",
+  "Effect": "Allow",
+  "Action": ["ec2:DescribeRegions"],
+  "Resource": "*"
+}
+```
+
+**Tier 2: Restrict service operations**
+
+```json
+{
+  "Sid": "CloudFormationWithDelegateRestriction",
+  "Effect": "Allow",
+  "Action": ["cloudformation:*"],
+  "Resource": "*",
+  "Condition": {
+    "StringLike": {
+      "aws:PrincipalTag/delegate_selectors": "*+your-delegate-selector+*"
+    }
+  }
+}
+```
+
+This approach allows connector validation to succeed while restricting actual service operations to specific delegates.
+
+:::info Future enhancement
+
+Support for delegate selectors in OIDC tokens is planned for AWS Secret Manager and AWS KMS connectors. For these connectors, only the connector-level delegate selectors will be included (not pipeline or step-level selectors).
+
+:::
+
+For more information about delegate selectors, go to [Select delegates with selectors](/docs/platform/delegates/manage-delegates/select-delegates-with-selectors).
+
+
+#### Examples
+
+<details>
+<summary> JWT sent by a connector at the project scope </summary>
+
+```
+{
+  "header":{
+     "typ":"JWT"
+     "alg":"RS256"
+     "kid":"2xk__q7dWlb0c8qM5iYR_J-Ro9eYd0yOb_J5ooSk94g"
+  }
+"payload":{
+     "sub":"account/Hue1lBsaSx2APlXjzVEPIg:org/default:project/OIDC_Test"
+     "iss":"https://app.harness.io/ng/api/oidc/account/Hue1lBsaSx2APlXjzVEPIg"
+     "aud":"sts.amazonaws.com"
+     "exp":1718132139
+     "iat":1718128539
+     "account_id":"Hue1lBsaSx2APlXjzVEPIg"
+     "organization_id":"default"
+     "project_id":"OIDC_Test"
+     "connector_id":"AWS_OIDC"
+     "connector_name":"AWS_OIDC"
+     "context":"CONNECTOR_VALIDATION"
+   }
+}
+```
+</details>
+
+<details>
+<summary> JWT sent by a connector at the organization scope </summary> 
+
+```
+{
+   "header":{
+      "typ":"JWT"
+      "alg":"RS256"
+      "kid":"2xk__q7dWlb0c8qM5iYR_J-Ro9eYd0yOb_J5ooSk94g"
+    }
+    "payload":{
+       "sub":"account/Hue1lBsaSx2APlXjzVEPIg:org/default:project/"
+        "iss":"https://app.harness.io/ng/api/oidc/account/Hue1lBsaSx2APlXjzVEPIg"
+        "aud":"sts.amazonaws.com"
+        "exp":1718133015
+        "iat":1718129415
+        "account_id":"Hue1lBsaSx2APlXjzVEPIg"
+        "organization_id":"default"
+        "connector_id":"AWS_OIDC_Org"
+        "connector_name":"AWS_OIDC_Org"
+        "context":"CONNECTOR_VALIDATION"
+    }
+}
+```
+
+</details>
+
+<details>
+<summary> Sample IAM policy scoped to a specific project or organization </summary>
+
+This example policy enables scoping to a specific project or organization for authentication through an OIDC provider.
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::156272853481:oidc-provider/app.harness.io/ng/api/oidc/account/Hue1lBsaSx2APlXjzVEPIg"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "app.harness.io/ng/api/oidc/account/Hue1lBsaSx2APlXjzVEPIg:aud": "sts.amazonaws.com",
+                    "app.harness.io/ng/api/oidc/account/Hue1lBsaSx2APlXjzVEPIg:sub": "account/Hue1lBsaSx2APlXjzVEPIg:org/default:project/OIDC_Test"
+                }
+            }
+        }
+    ]
+}
+```
+You can match only the aud or sub. To map to a particular organization and project, you must enable the feature flag `PL_OIDC_ENHANCED_SUBJECT_FIELD` . The subject value will follow the format shown above: `account/Hue1lBsaSx2APlXjzVEPIg:org/default:project/OIDC_Test`.
+
+</details>
+
+
+### OIDC session tags for AWS
+
+:::info Feature flag
+
+The feature flag `CDS_OIDC_AWS_SESSION_TAGS` controls this behavior. Contact [Harness Support](mailto:support@harness.io) to enable it on your account.
+
+:::
+
+You can configure AWS connectors with OIDC authentication to include selected execution context attributes as AWS session tags in OIDC tokens. This enables you to enforce AWS IAM policies based on pipeline execution context, allowing fine-grained access control for AWS resources and secrets.
+
+When you configure an AWS connector with OIDC and the feature flag is enabled, Harness includes your selected attributes in the OIDC token as AWS principal tags using the format `https://aws.amazon.com/tags/principal_tags/<attribute-name>`. AWS converts these into session tags when assuming the IAM role, and you can reference them in IAM policies using `aws:PrincipalTag/<attribute-name>` conditions.
+
+This capability enables granular access control based on execution context. For example, you can ensure that production secrets are only accessible during production environment executions, or restrict resource access based on specific pipelines, projects, or services.
+
+#### Available session tag attributes
+
+You can select any combination of the following attributes to include as session tags:
+
+- **account_id:** Harness account identifier
+- **organization_id:** Organization identifier
+- **project_id:** Project identifier
+- **pipeline_id:** Pipeline identifier
+- **environment_id:** Environment identifier
+- **environment_type:** Environment type (Production, PreProduction, etc.)
+- **connector_id:** Connector identifier
+- **connector_name:** Connector name
+- **service_id:** Service identifier
+- **service_name:** Service name
+- **triggered_by_name:** Name of the user or trigger that initiated the execution
+- **trigger_by_email:** Email of the user who triggered the execution
+- **stage_type:** Stage type in the pipeline
+- **step_type:** Step type in the pipeline
+- **delegate_selectors:** Delegate selectors used for execution
+- **context:** Additional context information
+
+#### Configure OIDC session tags in connectors
+
+When you create or edit an AWS connector with OIDC authentication, you can select which attributes to include as session tags:
+
+1. In the connector credentials step, select **Use OIDC** as the authentication method
+2. Enter your **IAM Role** ARN
+3. In the **OIDC Session Tags** field, select the attributes you want to include
+
+<div style={{textAlign: 'center'}}>
+  <DocImage path={require('../static/aws-oidc-session-tags-dropdown.png')} width="50%" height="50%" title="Click to view full size image" />
+</div>
+
+The selected attributes appear as chips below the field. You can add or remove attributes as needed.
+
+<div style={{textAlign: 'center'}}>
+  <DocImage path={require('../static/aws-oidc-session-tags-selected.png')} width="50%" height="50%" title="Click to view full size image" />
+</div>
+
+#### Connector YAML configuration
+
+The connector YAML includes the selected session tag attributes in the `oidcSessionTagKeys` field:
+
+<details>
+<summary>AWS connector YAML with OIDC session tags</summary>
+
+```yaml
+connector:
+  name: aws-test-oidc
+  identifier: testoidc
+  type: Aws
+  spec:
+    credential:
+      type: OidcAuthentication
+      spec:
+        iamRoleArn: arn:aws:iam::806630305776:role/test-automation
+        oidcSessionTagKeys:
+          - environment_id
+          - environment_type
+          - connector_name
+          - delegate_selectors
+    region: us-east-1
+    delegateSelectors:
+      - aws
+    executeOnDelegate: true
+```
+
+</details>
+
+<details>
+<summary>AWS Secrets Manager connector YAML with OIDC session tags</summary>
+
+```yaml
+connector:
+  name: aws-sm-oidc
+  identifier: awssmoidc
+  type: AwsSecretManager
+  spec:
+    credential:
+      type: OidcAuthentication
+      spec:
+        iamRoleArn: arn:aws:iam::806630305776:role/test-automation
+        oidcSessionTagKeys:
+          - account_id
+          - delegate_selectors
+          - triggered_by_name
+          - pipeline_id
+    region: us-east-1
+    delegateSelectors:
+      - aws
+    executeOnDelegate: true
+```
+
+</details>
+
+<details>
+<summary>AWS KMS connector YAML with OIDC session tags</summary>
+
+```yaml
+connector:
+  name: aws-kms-oidc
+  identifier: testkms2
+  type: AwsKms
+  spec:
+    credential:
+      type: OidcAuthentication
+      spec:
+        iamRoleArn: arn:aws:iam::806630305776:role/test-automation
+        oidcSessionTagKeys:
+          - account_id
+          - delegate_selectors
+          - pipeline_id
+          - connector_id
+    kmsArnInPlainText: arn:aws:kms:us-east-1:806630305776:key/019d3436-6083-42a2-81cf-cfbd678742d6
+    region: us-east-1
+    delegateSelectors:
+      - aws
+    executeOnDelegate: true
+```
+
+</details>
+
+#### Use cases
+
+OIDC session tags enable fine-grained access control based on execution context:
+
+- **Environment-based isolation:** Restrict access to production secrets only during production environment executions, and development secrets only during development executions.
+- **Pipeline-specific access:** Grant access to specific AWS resources only when particular pipelines execute.
+- **Project-level separation:** Enforce project-level access boundaries for AWS resources based on the project context.
+- **Service-specific permissions:** Restrict resource access based on which service is being deployed.
+- **Delegate selector policies:** Enforce IAM policies based on which delegates execute tasks (requires `CDS_OIDC_AWS_SESSION_TAG_DELEGATE_SELECTORS` feature flag).
+- **Compliance requirements:** Meet regulatory requirements that mandate context-based access separation for sensitive data and resources.
+
+#### How it works
+
+When your pipeline executes and uses an AWS connector with OIDC authentication, Harness and AWS perform these steps:
+
+1. Harness generates an OIDC ID token that includes your selected attributes from the pipeline execution context
+2. The ID token includes claims formatted as `"https://aws.amazon.com/tags/principal_tags/<attribute>": "<value>"`
+3. Harness presents the ID token to AWS STS via `AssumeRoleWithWebIdentity`
+4. AWS validates the token and converts the principal tags into session tags
+5. IAM policies evaluate the `aws:PrincipalTag/<attribute>` conditions to enforce access control
+
+Session tags are only included for attributes that have values in the execution context. If a selected attribute is not available (for example, `environment_id` when no environment is specified), that tag is not included in the token.
+
+#### IAM trust policy configuration
+
+To use OIDC session tags, add the `sts:TagSession` permission to your IAM role's trust policy. This permission allows AWS STS to apply session tags from the OIDC token when assuming the role.
+
+<details>
+<summary>Trust policy with sts:TagSession permission</summary>
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::806630305776:oidc-provider/app.harness.io/ng/api/oidc/account/YOUR_ACCOUNT_ID"
+      },
+      "Action": [
+        "sts:AssumeRoleWithWebIdentity",
+        "sts:TagSession"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "app.harness.io/ng/api/oidc/account/YOUR_ACCOUNT_ID:aud": "sts.amazonaws.com"
+        }
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+You can add conditions to the trust policy to validate specific session tag values during role assumption:
+
+<details>
+<summary>Trust policy with session tag validation</summary>
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::806630305776:oidc-provider/qa.harness.io/ng/api/oidc/account/YOUR_ACCOUNT_ID"
+      },
+      "Action": [
+        "sts:AssumeRoleWithWebIdentity",
+        "sts:TagSession"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "qa.harness.io/ng/api/oidc/account/YOUR_ACCOUNT_ID:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "aws:RequestTag/delegate_selectors": "*aws*",
+          "aws:RequestTag/pipeline_id": "*deploy-prod*"
+        }
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+The trust policy above validates that the `delegate_selectors` tag contains "aws" and the `pipeline_id` tag contains "deploy-prod" during role assumption. If these conditions are not met, role assumption fails.
+
+**Trust policy components:**
+
+- **`sts:TagSession`:** Grants permission to apply session tags from the OIDC token
+- **`aws:RequestTag/<attribute>`:** Validates that the session tag matches the specified value or pattern during role assumption
+
+:::info
+The `aws:RequestTag` condition in the trust policy validates session tags during role assumption. If the session tags in the OIDC token do not match the trust policy conditions, role assumption fails.
+:::
+
+#### IAM policy conditions for attribute-based access control
+
+After you configure the trust policy, update your IAM policies to enforce attribute-based access using the `aws:PrincipalTag` condition. This ensures that resources can only be accessed when the session tags match your requirements.
+
+<details>
+<summary>Example: Environment-based secret access control</summary>
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:PrincipalTag/environment_type": "Production"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:dev/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:PrincipalTag/environment_type": "PreProduction"
+        }
+      }
+    }
+  ]
+}
+```
+
+This policy restricts access to production secrets only when `environment_type` is "Production", and development secrets only when it is "PreProduction".
+
+</details>
+
+**Key IAM policy components:**
+
+- **`aws:PrincipalTag/<attribute>`:** Evaluates the session tag passed through the OIDC token
+- **Resource ARN patterns:** Use path-based or tag-based patterns to organize resources by context
+- **Variable substitution:** Match session tags to resource tags using `${aws:ResourceTag/tagname}` syntax
+
+#### OIDC token structure
+
+The OIDC token payload includes your selected attributes as AWS principal tags:
+
+<details>
+<summary>OIDC token payload example</summary>
+
+```json
+{
+  "sub": "account_identifier",
+  "aud": "sts.amazonaws.com",
+  "iss": "https://app.harness.io/ng/api/oidc/account/YOUR_ACCOUNT_ID",
+  "exp": 1234567890,
+  "iat": 1234567890,
+  "https://aws.amazon.com/tags/principal_tags/environment_id": "prod_environment",
+  "https://aws.amazon.com/tags/principal_tags/environment_type": "Production",
+  "https://aws.amazon.com/tags/principal_tags/pipeline_id": "deploy_prod",
+  "https://aws.amazon.com/tags/principal_tags/delegate_selectors": "+aws+prod+"
+}
+```
+
+</details>
+
+Each selected attribute appears as a claim with the prefix `https://aws.amazon.com/tags/principal_tags/` followed by the attribute name.
+
+#### Delegate selectors behavior
+
+The `delegate_selectors` attribute has special behavior governed by two different feature flags:
+
+- **When `CDS_OIDC_AWS_SESSION_TAG_DELEGATE_SELECTORS` is enabled:** Harness automatically includes `delegate_selectors` in the OIDC token regardless of whether you selected it in the connector's OIDC session tags field.
+- **When `CDS_OIDC_AWS_SESSION_TAGS` is enabled:** You can select any attributes you want, including `delegate_selectors`, through the connector configuration. All selected attributes are included in the OIDC token.
+
+The two feature flags work independently. If both are enabled, `delegate_selectors` will be included in the token regardless of your selection.
+
+Multiple delegate selectors are encoded using the `+` delimiter (for example, `+selector1+selector2+`). Harness resolves delegate selectors following the precedence: Step > StepGroup > Stage > Pipeline (first match wins). Connector-level delegate selectors are always combined with the resolved selector.
+
+:::info Configuration requirements and behavior
+
+- **Feature flag:** The `CDS_OIDC_AWS_SESSION_TAGS` feature flag must be enabled at the account level. Contact [Harness Support](mailto:support@harness.io) to enable it.
+- **Attribute selection:** You must select at least one attribute in the connector's OIDC session tags field for tags to be included in the token.
+- **Attribute availability:** Session tags are only included for attributes with values in the execution context. If an attribute is unavailable (for example, `service_id` in a non-deployment pipeline), that tag is omitted from the token.
+- **IAM propagation:** Changes to IAM trust policies and permissions policies can take up to five minutes to propagate in AWS. Allow time for propagation before testing.
+- **Session tag format:** AWS requires session tags to use the flattened claim format `https://aws.amazon.com/tags/principal_tags/<tag-name>`. Harness automatically formats claims correctly.
+- **Trust policy validation:** If your IAM role trust policy includes conditions on `aws:RequestTag/<attribute>`, ensure the values match your pipeline execution attributes. Mismatches cause role assumption to fail.
+
+For more information about AWS session tags, go to [AWS IAM session tags documentation](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html).
+
+:::
+
+
+</TabItem>
+<TabItem value="broker" label="Custom (Credential Broker)">
+
+:::info
+
+This feature is controlled by the feature flag `CDS_AWS_CUSTOM_CREDENTIAL_BROKER_AUTHENTICATION`. Contact [Harness Support](mailto:support@harness.io) to enable it on your account.
+
+:::
+
+Select **Custom (Credential Broker)** to fetch AWS credentials dynamically from a third-party credential management solution. This allows you to integrate with external credential brokers that provide temporary AWS credentials on demand.
+
+With this option, Harness calls a configured endpoint to retrieve AWS credentials (access key, secret key, session token, and expiration) at runtime. The credentials are cached until they expire, reducing the frequency of broker calls.
+
+#### Configure credential broker settings
+
+To use the credential broker, you must configure the following fields:
+
+- **Broker URL**: The HTTP/HTTPS endpoint of your credential broker service that returns AWS credentials. This endpoint must be accessible from the Harness Delegate.
+
+- **Signed Secret**: A Harness secret used to sign the broker payload and generate the JWT token. The generated JWT token is sent as a Bearer token in the Authorization header when calling the broker endpoint.
+
+- **Broker Payload (JSON)**: Optional JSON payload used to generate the JWT token for broker authentication. Supports Harness expressions such as `<+pipeline.identifier>` and `<+pipeline.sequenceId>`.
+
+#### Field mapping
+
+The **Field Mapping** section defines how to extract AWS credential fields from the broker's JSON response using JSONPath expressions. The broker can return credentials in any JSON structure, and you map the response fields to the expected AWS credential fields.
+
+Configure the following JSONPath expressions:
+
+- **Access Key Path**: JSONPath expression to extract the AWS access key ID (e.g., `$.result.creds.access_key_id`)
+- **Secret Key Path**: JSONPath expression to extract the AWS secret access key (e.g., `$.result.creds.secret_access_key`)
+- **Session Token Path**: JSONPath expression to extract the session token (e.g., `$.result.creds.session_token`)
+- **Expiration Path**: JSONPath expression to extract the credential expiration time in UTC (e.g., `$.result.creds.expiration`)
+
+All JSONPath expressions must start with `$` and use dot notation (e.g., `$.field.nested_field`).
+
+The **Access Key Path** and **Secret Key Path** are required. **Session Token Path** and **Expiration Path** are optional.
+
+If the broker response includes an expiration time, Harness automatically caches the credentials and refreshes them 5 minutes before expiration. If no expiration is provided, Harness fetches new credentials for every request.
+
+<details>
+<summary>Example: Broker response and field mapping</summary>
+
+Here is an example of a broker response and the corresponding field mapping configuration:
+
+**Broker response:**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "cloud": "aws",
+    "creds": {
+      "access_key_id": "ASIA****************",
+      "secret_access_key": "****************************************",
+      "session_token": "IQoJb3JpZ2luX2***************************"
+      "expiration": "2099-12-31T23:59:59Z"
+    }
+  }
+}
+```
+
+**Field mapping configuration:**
+
+- Access Key Path: `$.result.creds.access_key_id`
+- Secret Key Path: `$.result.creds.secret_access_key`
+- Session Token Path: `$.result.creds.session_token`
+- Expiration Path: `$.result.creds.expiration`
+
+</details>
+
+#### Additional settings
+
+- **Timeout (seconds)**: The maximum time (in seconds) to wait for a response from the broker endpoint. If the broker doesn't respond within this time, the connection fails. Default: 30 seconds.
+
+- **Skip TLS Verification**: When enabled, Harness skips TLS certificate verification when calling the broker endpoint. Use this option only if your broker uses self-signed or internal certificates. Default: Disabled.
+
+#### Network requirements
+
+The credential broker endpoint must be accessible from the Harness Delegate. If your broker is behind a firewall or in a private network, configure your network to allow outbound HTTPS connections from the delegate to the broker endpoint.
+
+#### Supported expressions
+
+The **Broker Payload** field supports the following Harness expressions:
+
+- Pipeline-level expressions (e.g., `<+pipeline.identifier>`, `<+pipeline.sequenceId>`)
+- Account and organization identifiers
+
+#### Test connection behavior
+
+When you test the connector connection, Harness validates that the broker endpoint is reachable. However, expression resolution only occurs during pipeline execution. If your broker payload includes expressions, they are resolved only when the pipeline runs, not during the connector test.
+
+</TabItem>
+</Tabs>
+
+:::warning
+
+Ensure that the AWS IAM roles applied to the credentials you use (the Harness Delegate or the access key) include the policies needed by Harness to deploy to the target AWS service.
+
+If the IAM role used by your AWS connector does not have the policies required by the AWS service you want to access, you can modify or switch the role. This entails changing the role assigned to the AWS account or Harness Delegate that your AWS connector is using. When you switch or modify the IAM role used by the connector, it might take up to 5 minutes to take effect.
+
+By default, the [DescribeRegions](https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeRegions.html) action is required for all AWS connectors regardless of what AWS service you are using for your target infrastructure. If the `CDS_AWS_DESCRIBE_REGIONS_OPTIONAL` feature flag is enabled on your account, this requirement is removed and Harness uses `sts:GetCallerIdentity` for validation instead. For more details, go to [DescribeRegions and connector validation](#describeregions-and-connector-validation).
+
+The AWS [IAM Policy Simulator](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_testing-policies.html) is a useful tool for evaluating policies and access.
+
+Finally, it is possible to create a connector with a non-existent delegate. This behavior is intended. This design allows you to replace a delegate with a new one that has the same name or tag.
+
+:::
+
+
+### Enable cross-account access (STS Role)
+
+If you want to use a certain AWS account for the connection and then deploy in a different AWS account, select **Enable cross-account access (STS Role)** in your AWS connector's **Credentials** settings. The STS role is supported for EC2 and ECS. It is supported for EKS if you use the IRSA credentials option.
+
+This option uses the [AWS Security Token Service](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html) (STS) feature. The AWS account used for AWS access in the connector's **Credentials** settings assumes the IAM role you specify in the **Cross account role ARN** field. However, the Harness Delegate always runs in the account you specify in the connector's **Credentials** through **AWS Access Key** or **Assume IAM Role on Delegate**.
+
+In the **Cross account role ARN** field, input the Amazon Resource Name (ARN) of the role that you want the connector to assume. This is an IAM role in the target deployment AWS account.
+
+The assumed ARN role must have all the IAM policies required to perform your Harness deployment, such as Amazon S3, ECS (Existing Cluster), and AWS EC2 policies. For more information, go to the AWS documentation on [Assuming an IAM Role in the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html).
+
+To assume the role specified in the **Cross account role ARN** field, the AWS account in **Credentials** must be trusted by the role. The trust relationship is defined in the ARN role's trust policy when the role is created. That trust policy states which accounts are allowed to give that access to users in the account. You can use an STS role to establish trust between roles in the same account, but cross-account trust is more common.
+
+If the administrator of the account to which the role belongs provided you with an external ID, you can input this value in the **External Id** field. For more information, go to the AWS documentation about [How to Use an External ID When Granting Access to Your AWS Resources to a Third Party](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-user_externalid.html).
+
+In the **Assume Role Duration (seconds)** field, you can set the AssumeRole session duration. Harness supports a time range between 15 minutes (900 seconds) to 12 hours (43200 seconds). For more information, go to the AWS documentation on [Session Duration](https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRole.html#API_AssumeRole_RequestParameters) in the AWS AssumeRole documentation.
+
+### Test Region and AWS GovCloud Support
+
+By default, Harness uses the `us-east-1` region to test the credentials for AWS connectors.
+
+If you want to use an AWS GovCloud account for this connector, select it in the **Test Region** field. GovCloud is used by organizations such as government agencies at the federal, state, and local levels, as well as contractors, and educational institutions. It is also used for regulatory compliance with these organizations.
+
+You can access AWS GovCloud with AWS GovCloud credentials (AWS GovCloud account access key and AWS GovCloud IAM user credentials). You can't access AWS GovCloud with standard AWS credentials. Likewise, you can't access standard AWS regions using AWS GovCloud credentials.
+
+### AWS backoff strategy
+
+In some Harness CloudFormation and ECS deployments you might get failures with `ThrottlingException` or `Rate exceeded` errors for CloudFormation and ECS API calls.
+
+This can happen when CloudFormation and ECS API calls exceed the maximum allowed API request rate per AWS account and region. Requests are throttled for each AWS account on a per-region basis to help service performance. Go to [Service endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/aws-service-information.html) from AWS.
+
+The **AWS Backoff Strategy** settings remedy this situation by setting Amazon SDK default backoff strategy params for CloudFormation and ECS. In your Harness AWS connector settings, you can use the backoff strategy settings to configure the AWS backoff strategy:
+
+- **Fixed Delay:** This is a simple backoff strategy that always uses a [fixed delay](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/retry/backoff/FixedDelayBackoffStrategy.html) before the next retry attempt.
+- **Equal Jitter:** This strategy uses [equal jitter](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/retry/backoff/EqualJitterBackoffStrategy.html) for computing the delay before the next retry.
+- **Full Jitter:** This strategy uses a [full jitter](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/retry/backoff/FullJitterBackoffStrategy.html) strategy for computing the next backoff delay.
+
+These options are part of the AWS [software.amazon.awssdk.core.retry.backoff](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/core/retry/backoff/package-summary.html) package.
+
+The Amazon SDK Default backoff strategy is the combination of fixed backoff, equal jitter, and full jitter backoff strategies.
+
+Fixed backoff is a simple backoff strategy that always uses a fixed delay for the delay before the next retry attempt.
+
+:::info
+
+Backoff strategy parameter settings are in milliseconds.
+
+:::
+
+Typically, the SDK default strategy uses the full jitter strategy for non-throttled exceptions and the equal jitter strategy for throttled exceptions.
+
+Here's the list of non-throttled error and status codes where full jitter strategy is applied:
+
+```
+"TransactionInProgressException",
+"RequestTimeout",
+"RequestTimeoutException",
+"IDPCommunicationError",
+500,
+502,
+503,
+504,
+"RequestTimeTooSkewed",
+"RequestExpired",
+"InvalidSignatureException",
+"SignatureDoesNotMatch",
+"AuthFailure",
+"RequestInTheFuture",
+"IOException"
+```
+
+Here's list of throttled error codes where equal jitter strategy is applied:
+
+```
+"Throttling",
+"ThrottlingException",
+"ThrottledException",
+"ProvisionedThroughputExceededException",
+"SlowDown",
+"TooManyRequestsException",
+"RequestLimitExceeded",
+"BandwidthLimitExceeded",
+"RequestThrottled",
+"RequestThrottledException",
+"EC2ThrottledException",
+"PriorRequestNotComplete",
+"429 Too Many Requests"
+```
+
+For more strategies, go to [Exponential Backoff And Jitter](https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/) from AWS.
+
+### Connector Limitations
+
+Currently, the OIDC connector does not support the S3 Download step plugin.
+
+## Connect to Elastic Kubernetes Service (EKS)
+
+To connect Harness to Elastic Kubernetes Service (Amazon EKS), you can use the [platform-agnostic Kubernetes cluster connector](./kubernetes-cluster-connector-settings-reference.md) or an AWS connector configured for EKS.
+
+### Required AWS Permissions
+
+The following minimum permissions are required to use the AWS Connector for EKS deployments:
+
+```yaml
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "eks:DescribeCluster",
+        "eks:ListClusters",
+        "eks:ListNodegroups",
+        "sts:GetCallerIdentity",
+        "ec2:DescribeRegions",
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+Additionally, ensure the following prerequisites are met: 
+
+1. You must map your [IAM role to a Kubernetes resource](https://docs.aws.amazon.com/eks/latest/userguide/auth-configmap.html).
+2. Create a ServiceAccount(SA) in your Kubernetes cluster with an appropriate RoleBinding and ClusterRoleBinding. 
+
+<details>
+<summary>Example: ServiceAccount YAML</summary>
+
+```yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: harness-oidc-sa
+  namespace: harness-delegate-ng
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::479370281431:role/mayank-harness-oidc-test
+```
+
+</details>
+
+<details>
+<summary>Example: RoleBinding YAML</summary>
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: harness-oidc-role
+  namespace: cd-k8s-qa-sanity
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+    
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: harness-oidc-binding
+  namespace: cd-k8s-qa-sanity
+subjects:
+  - kind: ServiceAccount
+    name: harness-oidc-sa
+    namespace: harness-delegate-ng   
+roleRef:
+  kind: Role
+  name: harness-oidc-role
+  apiGroup: rbac.authorization.k8s.io
+```
+
+</details>
+
+### Configure EKS for use with Harness
+
+Make sure your EKS cluster meets the following requirements for the Harness AWS connector.
+
+1. You have created an EKS cluster.
+
+  ```
+  eksctl create cluster CLUSTER_NAME
+  ```
+
+2. You have created a Fargate profile. For more information, go to [Getting started with AWS Fargate using Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/fargate-getting-started.html) in the AWS documentation.
+
+   You can run the following to list Fargate profiles in an EKS cluster.
+
+   ```
+   aws eks list-fargate-profiles --cluster-name cdp-eks-cluster
+   ```
+
+   If you don't have a Fargate profile, use the commands below to create one.
+
+<details>
+<summary>Commands to create a Fargate profile</summary>
+
+```bash
+aws eks create-fargate-profile --fargate-profile-name test-fargate-profile --cluster-name cdp-eks-cluster --pod-execution-role-arn arn:aws:iam::XXXXX:role/AmazonEKSFargatePodExecutionRole --selectors "namespace=sainath-test, labels={infra=fargate}"
+```
+
+```bash
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" unzip awscliv2.zip
+./aws/install
+```
+
+```bash
+eksctl create iamserviceaccount --cluster=cdp-eks-cluster --name=<cluster-name> --namespace=harness-delegate --attach-policy-arn=
+```
+
+```bash
+kubectl apply -f ~/Desktop/new/harness-delegate-kubernetes/harness-delegate.yaml
+```
+
+```bash
+aws sts get-caller-identity
+```
+
+```bash
+apt-get update && apt-get install -yy less
+```
+
+```bash
+eksctl get nodegroups --cluster=cdp-eks-cluster
+```
+
+```bash
+eksctl create iamserviceaccount --cluster=<clusterName> --name=<serviceAccountName> --tags "Owner=Owner_Name,Team=Team_Name" --override-existing-serviceaccounts
+```
+
+```bash
+kubectl describe pod test-new-xicobc-0 -n harness-delegate | grep AWS_WEB_IDENTITY_TOKEN_FILE:
+```
+
+</details>
+
+3. The IAM role of the EKS cluster's worker nodes have the [required permissions](https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html).
+
+   - Your IAM role needs permission to access the AWS EKS cluster. You can edit the `configmap/aws-auth` entry in the EKS cluster to enable the required permissions. For more information, go to the EKS documentation on [adding user roles](https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html). You can also assume the IAM role used to create the AWS EKS cluster, which has the required `configmap/aws-auth` entries by default.
+   - Your IAM role needs the basic policies to access the AWS EKS cluster. For more information, go to [Amazon EKS identity-based policy examples](https://docs.aws.amazon.com/eks/latest/userguide/security_iam_id-based-policy-examples.html). 
+   - If you deploy pods to Fargate nodes in an EKS cluster, and your nodes needs IAM credentials, you must configure IRSA in your AWS EKS configuration (and then select the **Use IRSA** option for your connector credentials in Harness). This is due to [Fargate limitations](https://docs.aws.amazon.com/eks/latest/userguide/fargate.html#:~:text=The%20Amazon%20EC2%20instance%20metadata%20service%20(IMDS)%20isn%27t%20available%20to%20Pods%20that%20are%20deployed%20to%20Fargate%20nodes.).
+
+4. You have installed the `aws-iam-authenticator` plugin, which is used for `kubectl` authentication. For more information, go to [Create kubeconfig file manually](https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html#create-kubeconfig-manually).
+
+   The `aws-iam-authenticator` supports the role to be assumed and external ID as arguments. If you configure your AWS connector with a cross-account access and external ID, modify `kubeconfig` accordingly.
+
+<details>
+<summary>Example kubeconfig with aws-iam-authenticator</summary>
+
+```yaml
+apiVersion: v1
+clusters:
+  - cluster:
+      server: $cluster_endpoint
+      certificate-authority-data: $certificate_data
+    name: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+contexts:
+  - context:
+      cluster: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+      user: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+    name: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+current-context: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+kind: Config
+preferences: {}
+users:
+  - name: arn:aws:eks:$region_code:$account_id:cluster/$cluster_name
+    user:
+      exec:
+        apiVersion: client.authentication.k8s.io/v1beta1
+        command: aws-iam-authenticator
+        args:
+          - "token"
+          - "-i"
+          - "$cluster_name"
+```
+
+</details>
+
+5. You have [installed a Harness Delegate](/docs/platform/delegates/delegate-concepts/delegate-overview.md) with an [immutable image type](/docs/platform/delegates/delegate-concepts/delegate-image-types) and installed the `aws-iam-authenticator` on the delegate. To add `aws-iam-authenticator` to the delegate:
+   1. Open the `delegate.yaml` file in a text editor.
+   2. Locate the environment variable `INIT_SCRIPT` in the `Deployment` object.
+   3. Replace `value: ""` with the following script to install `aws-iam-authenticator`.
+
+      ```
+      // Download aws-iam-authenticator
+      curl -Lo aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.9/aws-iam-authenticator_0.5.9_linux_amd64
+      chmod +x ./aws-iam-authenticator
+      // Add the binary to PATH
+      mv ./aws-iam-authenticator /usr/local/bin
+      // Verify the binary
+      aws-iam-authenticator help
+      ```
+
+      For more information, go to [install AWS IAM authenticator](https://docs.aws.amazon.com/eks/latest/userguide/install-aws-iam-authenticator.html).
+
+<details>
+<summary>Sample delegate YAML file</summary>
+
+Here's an example of a Harness Delegate YAML file configured for EKS.
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: harness-delegate
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: harness-delegate-cluster-admin
+subjects:
+  - kind: ServiceAccount
+#    name: default
+    name: cdp-delegate
+    namespace: harness-delegate
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eks-test-new-proxy
+  namespace: harness-delegate
+type: Opaque
+data:
+  # Enter base64 encoded username and password, if needed
+  PROXY_USER: ""
+  PROXY_PASSWORD: ""
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    harness.io/name: eks-test-new
+  name: eks-test-new
+  namespace: harness-delegate-ng
+spec:
+  replicas: 1
+  minReadySeconds: 120
+  selector:
+    matchLabels:
+      harness.io/name: eks-test-new
+  template:
+    metadata:
+      labels:
+        harness.io/name: eks-test-new
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3460"
+        prometheus.io/path: "/api/metrics"
+    spec:
+      terminationGracePeriodSeconds: 600
+      restartPolicy: Always
+      containers:
+      - image: docker.io/harness/delegate:23.10.81202
+        imagePullPolicy: Always
+        name: delegate
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 0
+        ports:
+          - containerPort: 8080
+        resources:
+          limits:
+            memory: "2048Mi"
+          requests:
+            cpu: "0.5"
+            memory: "2048Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3460
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3460
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 15
+        envFrom:
+        - secretRef:
+            name: newdel-account-token
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms64M"
+        - name: ACCOUNT_ID
+          value: YOUR_ACCOUNT_ID
+        - name: MANAGER_HOST_AND_PORT
+          value: https://app.harness.io
+        - name: DELEGATE_NAME
+          value: eks-test-new
+        - name: DELEGATE_TYPE
+          value: "KUBERNETES"
+        - name: DELEGATE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: INIT_SCRIPT
+          value: ""
+        - name: DELEGATE_DESCRIPTION
+          value: ""
+        - name: DELEGATE_TAGS
+          value: ""
+        - name: NEXT_GEN
+          value: "true"
+        - name: DELEGATE_CPU_THRESHOLD
+          value: "80"
+
+---
+
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+   name: eks-test-new-hpa
+   namespace: harness-delegate-ng
+   labels:
+       harness.io/name: eks-test-new
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: newdel
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 99
+
+---
+
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: upgrader-cronjob
+  namespace: harness-delegate-ng
+rules:
+  - apiGroups: ["batch", "apps", "extensions"]
+    resources: ["cronjobs"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["extensions", "apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: newdel-upgrader-cronjob
+  namespace: harness-delegate-ng
+subjects:
+  - kind: ServiceAccount
+    name: upgrader-cronjob-sa
+    namespace: harness-delegate-ng
+roleRef:
+  kind: Role
+  name: upgrader-cronjob
+  apiGroup: ""
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: upgrader-cronjob-sa
+  namespace: harness-delegate-ng
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: newdel-upgrader-token
+  namespace: harness-delegate-ng
+type: Opaque
+data:
+  UPGRADER_TOKEN: "YOUR_UPGRADER_TOKEN"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: newdel-upgrader-config
+  namespace: harness-delegate-ng
+data:
+  config.yaml: |
+    mode: Delegate
+    dryRun: false
+    workloadName: newdel
+    namespace: harness-delegate-ng
+    containerName: delegate
+    delegateConfig:
+      accountId: YOUR_ACCOUNT_ID
+      managerHost: https://app.harness.io
+
+---
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    harness.io/name: newdel-upgrader-job
+  name: newdel-upgrader-job
+  namespace: harness-delegate-ng
+spec:
+  schedule: "0 */1 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 20
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: upgrader-cronjob-sa
+          restartPolicy: Never
+          containers:
+          - image: docker.io/harness/upgrader:latest
+            name: upgrader
+            imagePullPolicy: Always
+            envFrom:
+            - secretRef:
+                name: newdel-upgrader-token
+            volumeMounts:
+              - name: config-volume
+                mountPath: /etc/config
+          volumes:
+            - name: config-volume
+              configMap:
+                name: newdel-upgrader-config
+```
+
+</details>
+
+6. You're using Kubernetes version 1.22 or later. Harness uses a [client-go credential plugin](https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins) to authenticate the connection to the EKS cluster. Support for EKS is deprecated for Kubernetes 1.21 and earlier versions.
+
+### Use EKS for builds (Harness CI)
+
+To use an EKS cluster for Kubernetes cluster build infrastructure in Harness CI, you must create a [platform-agnostic Kubernetes cluster connector](./kubernetes-cluster-connector-settings-reference.md) for the stage's build infrastructure, and then you can use either type of connector in individual steps in the stage.
+
+However, for individual steps in a build stage, if your EKS clusters use IRSA (IAM roles for the delegate's service account or with OIDC Provider) or Fargate nodes in EKS clusters, use an AWS connector configured for EKS. Follow the steps in [Add an AWS connector](../add-aws-connector.md) to create the AWS connector.
+
+### Use EKS for deployments (Harness CD)
+
+To connect to EKS for deployments, do the following:
+
+1. On the **Environments** page for your project, select **Infrastructure Definition**, and then proceed to create or update an infrastructure definition.
+
+2. Enter a name and, optionally, a description and any tags that you want to associate with the infrastructure definition.
+
+3. In **How do you want to setup your infrastructure?** select one of the following options:
+
+- **Inline**. Stores the infrastructure definition in Harness.
+- **Remote**. Stores the infrastructure definition in a Git repository. If you select this option, do the following:
+
+  1. In **Git Connector**, create or select a Git connector.
+
+  2. In **Repository** and **Branch**, specify the repository and branch, respectively, on which to store the infrastructure definition.
+
+  Harness populates **YAML Path** with a path it generates based on the name of the infrastructure definition. If you edit the infrastructure definition's name after Harness populates this field, Harness does not update the name of the file to match the infrastructure definition's new name. If you want them to match, also edit the file name in the YAML path field manually.
+
+4. In **Deployment Type**, select **Kubernetes** or **Native Helm**.
+
+5. In **Select Infrastructure Type** > **Via Cloud Provider**, select **Elastic Kubernetes Service**.
+
+6. Select **Map Dynamically Provisioned Infrastructure** if you want to map the provisioned infrastructure dynamically.
+
+A **Provisioner** setting is added and configured as a runtime input.
+
+7. Configure the following fields to connect to a cluster:
+   * In **Connector**, create or select an AWS connector.
+   * (Optional) In **Region**, specify an AWS Region if you want the next field (**Cluster**) to show clusters from only that AWS Region.
+      The Cluster field, by default, fetches all the clusters in all the AWS Regions associated with the AWS account. The credentials that the AWS connector uses, on the other hand, might limit the connector to only certain AWS Regions. In such a scenario, specifying the AWS Region ensures that the Cluster field is populated with a usable list of clusters.
+   * In **Cluster**, select the Kubernetes cluster that you want to use.
+   * In **Namespace**, select a namespace to use on the Kubernetes cluster.
+   * In **Release name**, specify a release name.
+
+   :::tip
+
+   These fields can use [fixed values, runtime inputs, or expressions](/docs/platform/variables-and-expressions/runtime-inputs).
+
+   :::
+
+8. (Optional) Select **Allow simultaneous deployments on the same infrastructure**.
+
+9. (Optional) Select **Scope to Specific Services** if you want to limit the infrastructure definition to specific services only, and then select or create the services you want in the infrastructure definition.
+
+10. Select **Save**.
+
+### Set up EKS Authentication in AWS and Harness
+
+To set up EKS Authentication in AWS and Harness, you need:
+
+* A [Harness AWS connector](../add-aws-connector.md) configured for EKS.
+* AWS IAM Authenticator installed via `INIT_SCRIPT` on your EKS cluster's Harness Delegate and an IAM role in your AWS account with the necessary permissions. For details, refer to [Configure EKS for use with Harness](#configure-eks-for-use-with-harness).
+* A Kubernetes Service Account configured in the EKS cluster.
+
+<details>
+<summary>Video: Native EKS authentication support</summary>
+
+Here's a quick video demonstrating Native EKS authentication support for Kubernetes:
+
+<!-- Video:
+https://www.loom.com/share/2f02907ff84247acaf3e617c05acab34-->
+<DocVideo src="https://www.loom.com/share/2f02907ff84247acaf3e617c05acab34" />
+
+</details>
+
+## AWS Serverless Lambda
+
+When used for AWS ECS images for AWS Serverless Lambda deployments, your [AWS connector](#harness-aws-connector-settings) can use **AWS Access Key**, **Assume IAM Role on Delegate**, or **Use IRSA** authentication.
+
+Additional configuration is required in your ECS cluster and delegate, as explained below.
+
+For instructions on executing Serverless Lambda deployments, go to [Serverless Lambda CD quickstart](/docs/continuous-delivery/deploy-srv-diff-platforms/serverless/serverless-lambda-cd-quickstart).
+
+### Permissions
+
+All authentication methods for Serverless deployments require an AWS User with specific AWS permissions, as described in the Serverless documentation on [AWS Credentials](https://www.serverless.com/framework/docs/providers/aws/guide/credentials).
+
+To create the AWS user, do the following:
+
+1. Log into your AWS account, and go to the Identity & Access Management (IAM) page.
+2. Select **Users**, and then **Add user**. Enter a name, enable **Programmatic access**, and then select **Next**.
+3. On the **Permissions** page, do one of the following:
+   - **Full Admin Access:** Select **Attach existing policies directly**, search for and select **AdministratorAccess**, and then select **Next: Review**. Review the configuration and select **Create user**.
+   - **Limited Access:** Select **Create policy**, select the **JSON** tab, and add the following [Serverless gist](https://gist.github.com/ServerlessBot/7618156b8671840a539f405dea2704c8) JSON code:
+
+<details>
+<summary>IAMCredentials.json</summary>
+
+```
+{
+    "Statement": [
+        {
+            "Action": [
+                "apigateway:*",
+                "cloudformation:CancelUpdateStack",
+                "cloudformation:ContinueUpdateRollback",
+                "cloudformation:CreateChangeSet",
+                "cloudformation:CreateStack",
+                "cloudformation:CreateUploadBucket",
+                "cloudformation:DeleteStack",
+                "cloudformation:Describe*",
+                "cloudformation:EstimateTemplateCost",
+                "cloudformation:ExecuteChangeSet",
+                "cloudformation:Get*",
+                "cloudformation:List*",
+                "cloudformation:UpdateStack",
+                "cloudformation:UpdateTerminationProtection",
+                "cloudformation:ValidateTemplate",
+                "dynamodb:CreateTable",
+                "dynamodb:DeleteTable",
+                "dynamodb:DescribeTable",
+                "dynamodb:DescribeTimeToLive",
+                "dynamodb:UpdateTimeToLive",
+                "ec2:AttachInternetGateway",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:CreateInternetGateway",
+                "ec2:CreateNetworkAcl",
+                "ec2:CreateNetworkAclEntry",
+                "ec2:CreateRouteTable",
+                "ec2:CreateSecurityGroup",
+                "ec2:CreateSubnet",
+                "ec2:CreateTags",
+                "ec2:CreateVpc",
+                "ec2:DeleteInternetGateway",
+                "ec2:DeleteNetworkAcl",
+                "ec2:DeleteNetworkAclEntry",
+                "ec2:DeleteRouteTable",
+                "ec2:DeleteSecurityGroup",
+                "ec2:DeleteSubnet",
+                "ec2:DeleteVpc",
+                "ec2:Describe*",
+                "ec2:DetachInternetGateway",
+                "ec2:ModifyVpcAttribute",
+                "events:DeleteRule",
+                "events:DescribeRule",
+                "events:ListRuleNamesByTarget",
+                "events:ListRules",
+                "events:ListTargetsByRule",
+                "events:PutRule",
+                "events:PutTargets",
+                "events:RemoveTargets",
+                "iam:AttachRolePolicy",
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:DeleteRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:GetRole",
+                "iam:PassRole",
+                "iam:PutRolePolicy",
+                "iot:CreateTopicRule",
+                "iot:DeleteTopicRule",
+                "iot:DisableTopicRule",
+                "iot:EnableTopicRule",
+                "iot:ReplaceTopicRule",
+                "kinesis:CreateStream",
+                "kinesis:DeleteStream",
+                "kinesis:DescribeStream",
+                "lambda:*",
+                "logs:CreateLogGroup",
+                "logs:DeleteLogGroup",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams",
+                "logs:FilterLogEvents",
+                "logs:GetLogEvents",
+                "logs:PutSubscriptionFilter",
+                "s3:CreateBucket",
+                "s3:DeleteBucket",
+                "s3:DeleteBucketPolicy",
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion",
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:ListAllMyBuckets",
+                "s3:ListBucket",
+                "s3:PutBucketNotification",
+                "s3:PutBucketPolicy",
+                "s3:PutBucketTagging",
+                "s3:PutBucketWebsite",
+                "s3:PutEncryptionConfiguration",
+                "s3:PutObject",
+                "sns:CreateTopic",
+                "sns:DeleteTopic",
+                "sns:GetSubscriptionAttributes",
+                "sns:GetTopicAttributes",
+                "sns:ListSubscriptions",
+                "sns:ListSubscriptionsByTopic",
+                "sns:ListTopics",
+                "sns:SetSubscriptionAttributes",
+                "sns:SetTopicAttributes",
+                "sns:Subscribe",
+                "sns:Unsubscribe",
+                "states:CreateStateMachine",
+                "states:DeleteStateMachine"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+        }
+    ],
+    "Version": "2012-10-17"
+}
+```
+
+</details>
+
+4. View and copy the API Key and Secret to a safe place. You'll need them to set up the Harness AWS connector.
+
+### Install Serverless on the delegate
+
+The delegate(s) used by the Harness AWS connector must have Serverless installed.
+
+To install Serverless on a Kubernetes delegate, edit the delegate YAML to install Serverless when the delegate pods are created.
+
+1. Open the delegate YAML in a text editor.
+2. Locate the environment variable `INIT_SCRIPT` in the `StatefulSet`.
+
+   ```
+   ...
+           - name: INIT_SCRIPT
+             value: ""
+   ...
+   ```
+
+3. Replace the `value` with the follow Serverless installation script:
+
+   ```
+   ...
+           - name: INIT_SCRIPT
+             value: |-
+               #!/bin/bash
+               echo "Start"
+               export DEBIAN_FRONTEND=noninteractive
+               echo "non-inte"
+               apt-get update
+               echo "updagte"
+               apt install -yq npm
+               echo "npm"
+               npm install -g serverless@v2.50.0
+               echo "Done"
+   ...
+   ```
+
+   :::info note
+   In rare cases when the delegate OS does not support `apt`, such as Red Hat Linux, you must edit this script to install `npm`. The rest of the code should remain the same.
+   :::
+
+4. Save the YAML file as `harness-delegate.yml`.
+5. Apply the delegate YAML: `kubectl apply -f harness-delegate.yml`.
+
+### Serverless cross-account access (STS Role)
+
+You can also use STS roles with Serverless Lambda deployments.
+
+If you **Enable cross-account access (STS Role)** for an AWS connector for a Serverless Lambda deployment, the delegate used by the connector must have the AWS CLI installed. The AWS CLI is not required for the other authentication methods.
+
+For more information about installing software with the delegate, go to [Build custom delegate images with third-party tools](../../../delegates/install-delegates/build-custom-delegate-images-with-third-party-tools.md).
+
+## See also
+
+- [Troubleshooting Harness](../../../../troubleshooting/troubleshooting-nextgen.md)
+- [Google Cloud Platform (GCP) connector settings reference](gcs-connector-settings-reference.md)
+- [Kubernetes cluster connector settings reference](kubernetes-cluster-connector-settings-reference.md)

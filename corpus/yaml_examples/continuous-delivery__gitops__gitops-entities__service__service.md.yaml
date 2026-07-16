@@ -1,0 +1,70 @@
+# source: docs/continuous-delivery/gitops/gitops-entities/service/service.md  (https://developer.harness.io/docs/continuous-delivery/gitops/gitops-entities/service/service)
+
+# --- example 1 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-service
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+        - name: my-service
+          image: ghcr.io/your-org/my-service:v2.3.0
+          env:
+            - name: ENVIRONMENT
+              value: "dev"
+
+# --- example 2 ---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: my-service
+bases:
+  - ../../base
+replicas:
+  - name: my-service
+    count: 3
+patches:
+  - target:
+      kind: Deployment
+      name: my-service
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: ENVIRONMENT
+            value: "dev"
+  - target:
+      kind: ConfigMap
+      name: my-service-config
+    patch: |-
+      - op: add
+        path: /data/ENVIRONMENT
+        value: "dev"
+
+# --- example 3 ---
+image:
+  repository: ghcr.io/your-org/my-service
+  tag: v2.3.0
+replicas: 3
+environment: dev
+
+# --- example 4 ---
+image:
+  repository: ghcr.io/your-org/my-service
+  tag: v2.3.0
+replicas: 3
+
+# --- example 5 ---
+image:
+  repository: ghcr.io/your-org/my-service
+  tag: v2.4.1
+replicas: 3
+
+# --- example 6 ---
+metadata:
+  name: my-service-dev
+  labels:
+    harness.io/serviceRef: my-service
+    harness.io/envRef: dev

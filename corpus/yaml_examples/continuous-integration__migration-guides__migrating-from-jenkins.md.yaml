@@ -1,0 +1,316 @@
+# source: docs/continuous-integration/migration-guides/migrating-from-jenkins.md  (https://developer.harness.io/docs/continuous-integration/migration-guides/migrating-from-jenkins)
+
+# --- example 1 ---
+    - stage:
+        name: Build
+        ...
+            steps:
+              - step:
+                  type: Run
+                  name: build
+                  identifier: build
+                  spec:
+                    connectorRef: my-docker-hub-connector
+                    image: maven:3.8-openjdk-17
+                    shell: Bash
+                    command: echo "Building on Harness"
+
+# --- example 2 ---
+pipeline:
+  name: jenkins migration test
+  identifier: jenkins_migration_test
+  projectIdentifier: jenkins_test
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Build
+        identifier: build
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Background
+                  name: Background_1
+                  identifier: Background_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: postgres:10.8
+                    envVariables:
+                      POSTGRES_USER: postgres
+                      POSTGRES_PASSWORD: <+secrets.getValue("DbPasswordSecret")>
+                      POSTGRES_DB: postgres
+              - step:
+                  type: Run
+                  name: build
+                  identifier: build
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "Building on openjdk"
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+    - stage:
+        name: Test
+        identifier: test
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: test
+                  identifier: test
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: node:13.0.0
+                    shell: Bash
+                    command: |-
+                      echo "pipeline var:" <+pipeline.variables.pipelinevar1>
+                      echo "project level var:" <+variable.proj_var>
+                      echo "secret example:" <+secrets.getValue("DbPasswordSecret")>
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+        variables: []
+    - stage:
+        name: matrix stage
+        identifier: matrix_stage
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: platform_test
+                  identifier: platform_test
+                  spec:
+                    shell: Bash
+                    command: echo "Testing on <+matrix.platform>"
+                  failureStrategies: []
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+        strategy:
+          matrix:
+            platform:
+              - windows
+              - mac
+              - linux
+          maxConcurrency: 3
+  properties:
+    ci:
+      codebase:
+        connectorRef: account.myscm
+        repoName: test
+        build: <+input>
+  variables:
+    - name: pipelinevar1
+      type: String
+      description: ""
+      value: someval
+
+# --- example 3 ---
+              - step:
+                  type: Run
+                  name: build
+                  identifier: build
+                  spec:
+                    connectorRef: my-docker-hub-connector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "Running in Docker container"
+
+# --- example 4 ---
+  stages:
+    - stage:
+        name: Test
+        ...
+    - stage:
+        name: Build
+        ...
+    - stage:
+        name: Deploy
+        ...
+
+# --- example 5 ---
+ stages:
+   - stage:
+       name: test
+       identifier: test
+       description: ""
+       type: CI
+       spec:
+         cloneCodebase: true
+         platform:
+           os: Linux
+           arch: Amd64
+         runtime:
+           type: Cloud
+           spec: {}
+         execution:
+           steps:
+             - step:
+                 type: Run
+                 name: test-step
+                 identifier: teststep
+                 spec:
+                   shell: Sh
+                   command: |
+                     go fmt $(go list ./... | grep -v /vendor/)
+                     go vet $(go list ./... | grep -v /vendor/)
+                     go test -race $(go list ./... | grep -v /vendor/)
+   - stage:
+       name: build
+       identifier: build
+       type: CI
+       spec:
+         cloneCodebase: true
+         platform:
+           os: Linux
+           arch: Amd64
+         runtime:
+           type: Cloud
+           spec: {}
+         execution:
+           steps:
+             - step:
+                 type: Run
+                 name: build-step
+                 identifier: buildstep
+                 spec:
+                   shell: Sh
+                   command: |
+                     mkdir -p mybinaries
+                     go build -o mybinaries ./...
+         sharedPaths:
+           - mybinaries
+
+# --- example 6 ---
+              - step:
+                  type: Run
+                  name: test-variable
+                  identifier: test_variable
+                  spec:
+                    command: echo "environment variable: " <+variable.env_var>
+
+# --- example 7 ---
+              - step:
+                  type: Background
+                  name: Background_1
+                  identifier: Background_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: postgres:10.8
+                    envVariables:
+                      POSTGRES_USER: postgres
+                      POSTGRES_PASSWORD: <+secrets.getValue("DbPasswordSecret")>
+                      POSTGRES_DB: postgres
+
+# --- example 8 ---
+  stages:
+    - parallel:
+        - stage:
+            name: Stage1
+            ...
+        - stage:
+            name: Stage2
+            ...
+    - stage:
+        name: Stage3
+        ...
+    - stage:
+        name: Stage4
+        ...
+
+# --- example 9 ---
+  stages:
+    - stage:
+        name: Stage1
+        identifier: Stage1
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: dockerconectorref
+                    image: dockerimage:tag
+                    shell: Bash
+                    command: echo "Testing on  <+matrix.testparam>"
+        strategy:
+          matrix:
+            testparam:
+              - node
+              - python
+              - ubuntu
+          maxConcurrency: 3
+
+# --- example 10 ---
+trigger:
+  name: scheduled build
+  identifier: scheduled_build
+  enabled: true
+  orgIdentifier: default
+  projectIdentifier: JenkinsCI
+  pipelineIdentifier: Demo
+  source:
+    type: Scheduled
+    spec:
+      type: Cron
+      spec:
+        expression: 45 13 * * 2
+  inputYaml: |
+    pipeline:
+      identifier: Demo
+      properties:
+        ci:
+          codebase:
+            build:
+              type: branch
+              spec:
+                branch: main
+
+# --- example 11 ---
+    - stage:
+        name: Build
+        identifier: build
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: maven-build
+                  identifier: maven_build
+                  spec:
+                    connectorRef: myDockerHubConnector
+                    image: maven:3.8.1-jdk-11
+                    shell: Bash
+                    command: mvn clean install

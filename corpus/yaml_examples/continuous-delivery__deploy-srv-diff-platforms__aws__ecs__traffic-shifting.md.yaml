@@ -1,0 +1,229 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/aws/ecs/traffic-shifting.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/aws/ecs/traffic-shifting)
+
+# --- example 1 ---
+- step:
+    name: ECS Blue Green Create Service
+    identifier: EcsBlueGreenCreateService
+    type: EcsBlueGreenCreateService
+    timeout: 15m
+    spec:
+      loadBalancer: ecs
+      isTrafficShift: true
+      sameAsAlreadyRunningInstances: false
+      updateGreenService: true
+      prodListener: <+input>
+      prodListenerRuleArn: <+input>
+      stageTargetGroupArn: <+input>  # Optional: Leave empty for automatic discovery
+
+# --- example 2 ---
+- step:
+    name: Ecs Blue Green Traffic Shift
+    identifier: EcsBlueGreenTrafficShift
+    type: EcsBlueGreenTrafficShift
+    timeout: 10m
+    spec:
+      ecsTrafficShiftWrapper:
+        type: Inherit
+        spec:
+          weightPercentage: <+matrix.weight>
+
+# --- example 3 ---
+stepGroup:
+  name: Blue Green Deployment
+  identifier: blueGreenDeployment
+  steps:
+    - step:
+        name: ECS Blue Green Create Service
+        identifier: EcsBlueGreenCreateService
+        type: EcsBlueGreenCreateService
+        timeout: 10m
+        spec:
+          loadBalancer: my-app-elb
+          prodListener: arn:aws:elasticloadbalancing:region:account-id:listener/app/my-app/123456
+          prodListenerRuleArn: arn:aws:elasticloadbalancing:region:account-id:listener-rule/app/my-app/123456/abc123
+          isTrafficShift: true
+          stageTargetGroupArn: arn:aws:elasticloadbalancing:region:account-id:targetgroup/stage-group/abcdef
+    - step:
+        name: Ecs Blue Green Traffic Shift
+        identifier: EcsBlueGreenTrafficShift
+        type: EcsBlueGreenTrafficShift
+        timeout: 10m
+        spec:
+          ecsTrafficShiftWrapper:
+            type: Standalone
+            spec:
+              loadBalancer: my-app-elb
+              listener: arn:aws:elasticloadbalancing:region:account-id:listener/app/my-app/123456
+              listenerRuleArn: arn:aws:elasticloadbalancing:region:account-id:listener-rule/app/my-app/123456/dev123
+              forwardConfig:
+                - targetGroupArn: arn:aws:elasticloadbalancing:region:account-id:targetgroup/stage-group/abcdef
+                  weight: 70
+                - targetGroupArn: arn:aws:elasticloadbalancing:region:account-id:targetgroup/prod-group/123456
+                  weight: 30
+  rollbackSteps:
+    - step:
+        name: ECS Blue Green Rollback
+        identifier: EcsBlueGreenRollback
+        type: EcsBlueGreenRollback
+        timeout: 10m
+        spec: {}
+    - step:
+        name: Stand Alone Traffic Shift Rollback
+        identifier: StandAloneTrafficShiftRollback
+        type: StandAloneTrafficShiftRollback
+        timeout: 10m
+        spec: {}
+
+# --- example 4 ---
+pipeline:
+  name: ecs-bluegreen-inherit-example
+  identifier: ecs_bluegreen_inherit_example
+  projectIdentifier: demo_project
+  orgIdentifier: demo_org
+  tags: {}
+  delegateSelectors:
+    - my-delegate
+  stages:
+    - stage:
+        name: ecs-inherit-stage
+        identifier: ecs_inherit_stage
+        type: Deployment
+        spec:
+          deploymentType: ECS
+          service:
+            serviceRef: <+input>
+            serviceInputs: <+input>
+          environment:
+            environmentRef: <+input>
+            deployToAll: false
+            environmentInputs: <+input>
+            serviceOverrideInputs: <+input>
+            infrastructureDefinitions: <+input>
+          execution:
+            steps:
+              - stepGroup:
+                  name: Blue Green Deployment
+                  identifier: blueGreenDeployment
+                  steps:
+                    - step:
+                        name: ECS Blue Green Create Service
+                        identifier: EcsBlueGreenCreateService
+                        type: EcsBlueGreenCreateService
+                        timeout: 10m
+                        spec:
+                          loadBalancer: <+input>
+                          prodListener: <+input>
+                          prodListenerRuleArn: <+input>
+                          isTrafficShift: true
+                          stageTargetGroupArn: <+input>  # Leave empty at runtime for automatic discovery
+                    - step:
+                        name: ECS Blue Green Traffic Shift
+                        identifier: EcsBlueGreenTrafficShift
+                        type: EcsBlueGreenTrafficShift
+                        timeout: 10m
+                        spec:
+                          ecsTrafficShiftWrapper:
+                            type: Inherit
+                            spec:
+                              weightPercentage: 70
+          rollbackSteps:
+            - step:
+                name: ECS Blue Green Rollback
+                identifier: EcsBlueGreenRollback
+                type: EcsBlueGreenRollback
+                timeout: 10m
+                spec: {}
+            - step:
+                name: Standalone Traffic Shift Rollback
+                identifier: StandAloneTrafficShiftRollback
+                type: StandAloneTrafficShiftRollback
+                timeout: 10m
+                spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+
+# --- example 5 ---
+pipeline:
+  name: ecs-bluegreen-sample
+  identifier: ecs_bluegreen_sample
+  projectIdentifier: demo_project
+  orgIdentifier: demo_org
+  tags: {}
+  stages:
+    - stage:
+        name: ecs-traffic-shifting
+        identifier: ecstrafficshifting
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: ECS
+          service:
+            serviceRef: <+input>
+            serviceInputs: <+input>
+          environment:
+            environmentRef: <+input>
+            deployToAll: false
+            environmentInputs: <+input>
+            serviceOverrideInputs: <+input>
+            infrastructureDefinitions: <+input>
+          execution:
+            steps:
+              - stepGroup:
+                  name: Blue Green Deployment
+                  identifier: blueGreenDeployment
+                  steps:
+                    - step:
+                        name: ECS Blue Green Create Service
+                        identifier: EcsBlueGreenCreateService
+                        type: EcsBlueGreenCreateService
+                        timeout: 10m
+                        spec:
+                          loadBalancer: <+input>
+                          prodListener: <+input>
+                          prodListenerRuleArn: <+input>
+                          isTrafficShift: true
+                          stageTargetGroupArn: <+input>
+                    - step:
+                        name: Ecs Blue Green Traffic Shift
+                        identifier: EcsBlueGreenTrafficShift
+                        type: EcsBlueGreenTrafficShift
+                        timeout: 10m
+                        spec:
+                          ecsTrafficShiftWrapper:
+                            type: Standalone
+                            spec:
+                              loadBalancer: <+input>
+                              listener: <+input>
+                              listenerRuleArn: <+input>
+                              forwardConfig:
+                                - targetGroupArn: <+stage.variables.stageTargetGroup>
+                                  weight: 70
+                                - targetGroupArn: <+stage.variables.prodTargetGroup>
+                                  weight: 30
+            rollbackSteps:
+              - step:
+                  name: ECS Blue Green Rollback
+                  identifier: EcsBlueGreenRollback
+                  type: EcsBlueGreenRollback
+                  timeout: 10m
+                  spec: {}
+              - step:
+                  name: Stand Alone Traffic Shift Rollback
+                  identifier: StandAloneTrafficShiftRollback
+                  type: StandAloneTrafficShiftRollback
+                  timeout: 10m
+                  spec: {}
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+  delegateSelectors:
+    - harness-dev

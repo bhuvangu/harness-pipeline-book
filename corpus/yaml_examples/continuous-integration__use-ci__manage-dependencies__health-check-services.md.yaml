@@ -1,0 +1,444 @@
+# source: docs/continuous-integration/use-ci/manage-dependencies/health-check-services.md  (https://developer.harness.io/docs/continuous-integration/use-ci/manage-dependencies/health-check-services)
+
+# --- example 1 ---
+ stages:
+    - stage:
+        identifier: build
+        type: CI
+        name: build
+        spec:
+          cloneCodebase: false
+          execution:
+            steps:
+              - parallel: ## Parallel flag.
+                  - stepGroup: ## First step group.
+                      name: group 1
+                      identifier: sg1
+                      steps:
+                        ...
+                  - stepGroup: ## Second step group.
+                      name: group 2
+                      identifier: sg2
+                      steps:
+                        ...
+
+# --- example 2 ---
+    - stage:
+        identifier: build
+        type: CI
+        name: build
+        spec:
+          cloneCodebase: false
+          execution:
+            steps:
+              - parallel:
+                  - stepGroup:
+                      name: group 1
+                      identifier: sg1
+                      steps:
+                        - step: ## This step is in the first step group.
+                            identifier: Background_1
+                            type: Background
+                            name: background service 1
+                            spec: ## Configure specs for the service you want to run.
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test1
+                                POSTGRES_PASSWORD: password
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5433"
+                  - stepGroup:
+                      name: group 2
+                      identifier: sg2
+                      steps:
+                        - step: ## This step is in the second step group.
+                            identifier: Background_2
+                            type: Background
+                            name: Background service 2
+                            spec: ## Configure specs for the service you want to run.
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test2
+                                POSTGRES_PASSWORD: password
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5434"
+
+# --- example 3 ---
+    - stage:
+        identifier: build
+        type: CI
+        name: build
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            ...
+          execution:
+            steps:
+              - parallel:
+                  - stepGroup:
+                      name: group 1
+                      identifier: sg1
+                      steps:
+                        - step: ## This step is in the first step group.
+                            identifier: Background_1
+                            type: Background
+                            name: background service 1
+                            spec: ## Configure specs for the service you want to run.
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test1
+                                POSTGRES_PASSWORD: password
+                                PGDATA: /tmp/pgdata1
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5433"
+                  - stepGroup:
+                      name: group 2
+                      identifier: sg2
+                      steps:
+                        - step: ## This step is in the second step group.
+                            identifier: Background_2
+                            type: Background
+                            name: Background service 2
+                            spec: ## Configure specs for the service you want to run.
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test2
+                                POSTGRES_PASSWORD: password
+                                PGDATA: /tmp/pgdata2
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5434"
+
+# --- example 4 ---
+    - stage:
+        identifier: build
+        type: CI
+        name: build
+        spec:
+          cloneCodebase: false
+          execution:
+            steps:
+              - parallel:
+                  - stepGroup: ## First step group.
+                      name: group 1
+                      identifier: sg1
+                      steps:
+                        - step: ## First background service.
+                            identifier: Background_1
+                            type: Background
+                            name: background service 1
+                            spec:
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test1
+                                POSTGRES_PASSWORD: password
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5433"
+                        - step: ## First health check.
+                            identifier: Run_1
+                            type: Run
+                            name: health check 1
+                            spec: ## Configure specs according to the service you're checking.
+                              shell: Sh
+                              command: |
+                                sleep 15
+                                psql -U postgres -d test1 -h Background_1 -p 5433
+                  - stepGroup: ## Second step group.
+                      name: group 2
+                      identifier: sg2
+                      steps:
+                        - step: ## Second background service.
+                            identifier: Background_2
+                            type: Background
+                            name: Background service 2
+                            spec:
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test2
+                                POSTGRES_PASSWORD: password
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5434"
+                        - step: ## Second health check.
+                            type: Run
+                            name: health check 2
+                            identifier: Run_2
+                            spec: ## Configure specs according to the service you're checking.
+                              shell: Sh
+                              command: |-
+                                sleep 15
+                                psql -U postgres -d test2 -h Background_2 -p 5434
+
+# --- example 5 ---
+    - stage:
+        identifier: build
+        type: CI
+        name: build
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            ...
+          execution:
+            steps:
+              - parallel:
+                  - stepGroup: ## First step group.
+                      name: group 1
+                      identifier: sg1
+                      steps:
+                        - step: ## First background service.
+                            identifier: Background_1
+                            type: Background
+                            name: background service 1
+                            spec:
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test1
+                                POSTGRES_PASSWORD: password
+                                PGDATA: /tmp/pgdata1
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5433"
+                        - step: ## First health check.
+                            identifier: Run_1
+                            type: Run
+                            name: health check 1
+                            spec: ## Configure specs according to the service you're checking.
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres:9-alpine
+                              shell: Sh
+                              command: |
+                                sleep 15
+                                psql -U postgres -d test1 -h localhost -p 5433
+                  - stepGroup: ## Second step group.
+                      name: group 2
+                      identifier: sg2
+                      steps:
+                        - step: ## Second background service.
+                            identifier: Background_2
+                            type: Background
+                            name: Background service 2
+                            spec:
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test2
+                                POSTGRES_PASSWORD: password
+                                PGDATA: /tmp/pgdata2
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5434"
+                        - step: ## Second health check.
+                            type: Run
+                            name: health check 2
+                            identifier: Run_2
+                            spec: ## Configure specs according to the service you're checking.
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres:9-alpine
+                              shell: Sh
+                              command: |-
+                                sleep 15
+                                psql -U postgres -d test2 -h localhost -p 5434
+
+# --- example 6 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        identifier: build
+        type: CI
+        name: build
+        spec:
+          cloneCodebase: false
+          execution:
+            steps:
+              - parallel: ## This flag causes the two step groups to run in parallel. The steps within each group run sequentially, but the two groups start at the same time.
+                  - stepGroup: ## First step group.
+                      name: group 1
+                      identifier: sg1
+                      steps:
+                        - step: ## This is the background service in the first group.
+                            identifier: Background_1
+                            type: Background
+                            name: background service 1
+                            spec: ## This example runs PostgreSQL. Configure your step's specs for the service you want to run.
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test1
+                                POSTGRES_PASSWORD: password
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5433"
+                        - step: ## This is the health check in the first group.
+                            identifier: Run_1
+                            type: Run
+                            name: health check 1
+                            spec: ## This example uses PostgreSQL. Configure your step's specs according to the service you're checking.
+                              shell: Sh
+                              command: |
+                                sleep 15
+                                psql -U postgres -d test1 -h Background_1 -p 5433
+                  - stepGroup: ## Second step group.
+                      name: group 2
+                      identifier: sg2
+                      steps:
+                        - step: ## This is the background service in the second group.
+                            identifier: Background_2
+                            type: Background
+                            name: Background service 2
+                            spec: ## This example runs PostgreSQL. Configure your step's specs for the service you want to run.
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test2
+                                POSTGRES_PASSWORD: password
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5434"
+                        - step: ## This is the health check in the second group.
+                            type: Run
+                            name: health check 2
+                            identifier: Run_2
+                            spec: ## This example uses PostgreSQL. Configure your step's specs according to the service you're checking.
+                              shell: Sh
+                              command: |-
+                                sleep 15
+                                psql -U postgres -d test2 -h Background_2 -p 5434
+              - step: ## Add other steps to your stage as needed. Make sure they are not in the step groups or under the step groups' parallel flag.
+                  identifier: Run_3
+                  type: Run
+                  name: Run_3
+                  spec:
+                   ...
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+
+# --- example 7 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        identifier: build
+        type: CI
+        name: build
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              volumes: ## This example uses mounted volumes for PostgreSQL data.
+                - mountPath: /tmp/pgdata1
+                  type: EmptyDir
+                  spec:
+                    medium: ""
+                - mountPath: /tmp/pgdata2
+                  type: EmptyDir
+                  spec:
+                    medium: ""
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - parallel: ## This flag causes the two step groups to run in parallel. The steps within each group run sequentially, but the two groups start at the same time.
+                  - stepGroup: ## First step group.
+                      name: group 1
+                      identifier: sg1
+                      steps:
+                        - step: ## This is the background service in the first group.
+                            identifier: Background_1
+                            type: Background
+                            name: background service 1
+                            spec: ## This example runs PostgreSQL. Configure your step's specs for the service you want to run.
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test1
+                                POSTGRES_PASSWORD: password
+                                PGDATA: /tmp/pgdata1
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5433"
+                        - step: ## This is the health check in the first group.
+                            identifier: Run_1
+                            type: Run
+                            name: health check 1
+                            spec: ## This example uses PostgreSQL. Configure your step's specs according to the service you're checking.
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres:9-alpine
+                              shell: Sh
+                              command: |
+                                sleep 15
+                                psql -U postgres -d test1 -h localhost -p 5433
+                  - stepGroup: ## Second step group.
+                      name: group 2
+                      identifier: sg2
+                      steps:
+                        - step: ## This is the background service in the second group.
+                            identifier: Background_2
+                            type: Background
+                            name: Background service 2
+                            spec: ## This example runs PostgreSQL. Configure your step's specs for the service you want to run.
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres
+                              shell: Sh
+                              envVariables:
+                                POSTGRES_USER: postgres
+                                POSTGRES_DB: test2
+                                POSTGRES_PASSWORD: password
+                                PGDATA: /tmp/pgdata2
+                              entrypoint:
+                                - docker-entrypoint.sh
+                                - "-p 5434"
+                        - step: ## This is the health check in the second group.
+                            type: Run
+                            name: health check 2
+                            identifier: Run_2
+                            spec: ## This example uses PostgreSQL. Configure your step's specs according to the service you're checking.
+                              connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                              image: postgres:9-alpine
+                              shell: Sh
+                              command: |-
+                                sleep 15
+                                psql -U postgres -d test2 -h localhost -p 5434
+              - step: ## Add other steps to your stage as needed. Make sure they are not in the step groups or under the step groups' parallel flag.
+                  identifier: Run_3
+                  type: Run
+                  name: Run_3
+                  spec:
+                   ...

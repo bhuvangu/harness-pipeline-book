@@ -1,0 +1,98 @@
+# source: docs/continuous-delivery/cd-infrastructure/terraform-infra/run-a-terraform-plan-with-the-terraform-apply-step.md  (https://developer.harness.io/docs/continuous-delivery/cd-infrastructure/terraform-infra/run-a-terraform-plan-with-the-terraform-apply-step)
+
+# --- example 1 ---
+- step:
+    type: TerraformPlan
+    name: TerraformPlan_1
+    identifier: TerraformPlan_1
+    spec:
+      provisionerIdentifier: planoidc
+      configuration:
+        command: Apply
+        configFiles:
+          store:
+            spec:
+              connectorRef: githubConnector
+              repoName: play
+              gitFetchType: Branch
+              branch: main
+              folderPath: tf/azure
+            type: Github
+        providerCredential:
+          type: Azure
+          spec:
+            connectorRef: AzureConnector
+            subscriptionId: 20xxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+
+# --- example 2 ---
+- step:
+    type: TerraformApply
+    name: TerraformApply_1
+    identifier: TerraformApply_1
+    spec:
+      provisionerIdentifier: gcp_terraform_provision
+      configuration:
+        type: Inline
+        spec:
+          configFiles:
+            store:
+              spec:
+                connectorRef: githubConnector
+                repoName: terraform-repo
+                gitFetchType: Branch
+                branch: main
+                folderPath: tf/gcp
+              type: Github
+          providerCredential:
+            type: Gcp
+            spec:
+              connectorRef: gcpOidcConnector
+              project: cd-play
+    timeout: 10m
+
+# --- example 3 ---
+connector:
+  type: Gcp
+  spec:
+    credential:
+      type: ManualConfig
+      spec:
+        secretKeyRef: account.gcp_service_account_key
+    delegateSelectors:
+      - gcp-delegate
+
+# --- example 4 ---
+connector:
+  type: Gcp
+  spec:
+    credential:
+      type: InheritFromDelegate
+      spec:
+        delegateSelectors:
+          - gcp-delegate-with-iam
+
+# --- example 5 ---
+connector:
+  type: Gcp
+  spec:
+    credential:
+      type: OidcAuthentication
+      spec:
+        workloadPoolId: projects/123456789/locations/global/workloadIdentityPools/harness-pool
+        providerId: harness-oidc-provider
+        gcpProjectId: my-gcp-project-id
+        serviceAccountEmail: harness-workload-identity@my-gcp-project-id.iam.gserviceaccount.com
+
+# --- example 6 ---
+- step:
+    type: TerraformApply
+    name: Terraform Apply
+    identifier: Terraform_Apply
+    timeout: 10m
+    spec:
+      provisionerIdentifier: test
+      configuration:
+        type: Inline
+        createRemoteWorkspaceWithPrefix: true
+        spec:
+          configFiles: {}

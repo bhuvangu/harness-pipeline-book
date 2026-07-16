@@ -1,0 +1,28 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push/build-and-push-to-docker-jfrog.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push/build-and-push-to-docker-jfrog)
+
+# --- example 1 ---
+- step:
+    type: BuildAndPushDockerRegistry
+    name: Build and push to JFrog Docker
+    identifier: Build_and_push_to_JFrog_Docker
+    spec:
+      connectorRef: YOUR_DOCKER_CONNECTOR_ID
+      repo: domain.jfrog.io/REPO/IMAGE
+      tags:
+        - <+pipeline.sequenceId>
+
+# --- example 2 ---
+- step:
+    identifier: metadata
+    name: Artifactory - Publish build info to JFrog Docker Registry
+    type: Plugin
+    spec:
+      connectorRef: account.ArtifactoryDocker
+      image: plugins/artifactory-publish-docker-buildinfo
+      settings:
+        access_token: <+secrets.getValue("org.artifactory_token")>
+        url: https://artifactory.customer.com/artifactory/
+        build_name: <+pipeline.name>
+        build_number: <+pipeline.executionId>
+        build_url: <+pipeline.executionUrl>
+        docker_image: artifactory.customer.com/DOCKER_REPO/IMAGE_NAME:TAG_NAME

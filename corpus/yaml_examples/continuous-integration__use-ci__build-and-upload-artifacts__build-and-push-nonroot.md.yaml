@@ -1,0 +1,56 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push-nonroot.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push-nonroot)
+
+# --- example 1 ---
+                - step:
+                    type: Plugin
+                    name: buildah-docker
+                    identifier: buildahdocker
+                    spec:
+                      connectorRef: YOUR_DOCKER_CONNECTOR
+                      image: plugins/buildah-docker:1.1.0-linux-amd64
+                      privileged: true     # false for OpenShift with anyuid SCC
+                      settings:
+                        repo: myDockerHub1234/test
+                        tags: buildahtest
+                        registry: https://index.docker.io/v2/
+                        dockerfile: Dockerfile
+                        username: <+secrets.getValue("DOCKER_HUB_USER")>
+                        password: <+secrets.getValue("DOCKER_HUB_SECRET")>
+                      runAsUser: "1000"
+
+# --- example 2 ---
+    - stage:
+        identifier: stage1
+        type: CI
+        name: stage1
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR
+              namespace: YOUR_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              containerSecurityContext:
+                runAsNonRoot: true
+                runAsUser: "1000"
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  identifier: buildah plugin
+                  type: Plugin
+                  name: buildah_plugin
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR
+                    image: plugins/buildah-docker:1.1.0-linux-amd64
+                    privileged: true
+                    settings:
+                      repo: myhub/test-repo
+                      tags: builadhrootless
+                      registry: https://index.docker.io/v2/
+                      dockerfile: Dockerfile2
+                      username: <+pipeline.variables.DOCKER_HUB_USER>
+                      password: <+secrets.getValue("MyDockerPAT")>
+                    runAsUser: "1000"

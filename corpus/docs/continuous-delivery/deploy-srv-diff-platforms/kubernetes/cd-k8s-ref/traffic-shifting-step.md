@@ -1,0 +1,622 @@
+---
+title: Kubernetes Traffic Routing Step
+description: This topic describes how to route traffic in pipelines using the traffic routing step.
+sidebar_position: 6
+---
+
+import { Troubleshoot } from '@site/src/components/AdaptiveAIContent';
+
+This topic describes the Kubernetes Traffic Routing step parameters and use cases. These configuration options can also be found as part of the Blue Green (BG) Deployment step as well as the Canary Deployment step. 
+
+This feature allows you to perform east-west routing of traffic. You would select a routing service mesh provider (currently supported SMI and Istio) and then configure one or more routes which are essentially groups of destinations and optional rules that applies for them.   
+
+:::warning SMI end of support
+**Effective Aug 1, 2026.**
+
+Service Mesh Interface (SMI) was officially archived by the CNCF in October 2023 and is no longer maintained upstream. Harness is deprecating support for SMI as a traffic shifting provider in Harness Kubernetes deployments.
+
+- Existing SMI configurations are marked as deprecated in the Harness UI as of this announcement.
+- New SMI-based traffic routing configurations are blocked in Kubernetes deployment configuration effective **Aug 1, 2026**.
+- Use Istio as your traffic shifting provider. Harness CD provides full native Istio support for canary and blue-green Kubernetes deployments with equivalent functionality. Configure it from the **Istio - New Config option** section below.
+
+For questions, contact [Harness Support](mailto:support@harness.io).
+:::
+
+Here is a video demo of traffic shifting in a Kubernetes deployments.
+
+<DocVideo src="https://www.loom.com/share/b1cf1db3300946b9b8fe48ae85bbfc26?sid=bef8f5d9-af26-4f24-a7ad-f244ac724572" />
+
+## Name
+ 
+Name of the step.
+
+## Config Type
+
+Specify your configuration type here. Currently there are two choices:
+
+* **New Config**: Select this option if you want to specify a new configuration for traffic routing in this step. If configuring this in a BlueGreen deployment step or a Canary step this option is implicitly assumed. This option will create a new resource(s).
+* **Inherit**: Select this option if you want the traffic routing step to inherit a configuration from a previous Blue Green, Canary, or Traffic Routing step. This option will patch existing resources. 
+
+## Provider
+
+Specify your service mesh provider. Harness currently supports Service Mesh Interface (SMI) and Istio. 
+
+Each provider will have some common configuration options and some provider specific ones. We have listed all configuration options for each provider. Please look at the one relevant for you.
+
+### Service Mesh Interface (SMI) - New Config option
+
+:::warning Deprecated
+SMI traffic shifting is deprecated. New SMI-based configurations are blocked in Kubernetes deployment configuration effective **Aug 1, 2026**. Use Istio as your traffic shifting provider instead.
+:::
+
+Before you begin, make sure you have an understanding on what SMI is and how it works by [visiting their website](https://smi-spec.io/). 
+
+:::info SMI TrafficSplit version support
+Currently, we only support `specs.smi-spec.io/v1alpha3` and `specs.smi-spec.io/v1alpha4` TrafficSplit resource versions since these are the only versions that support having rules (such as uri, method, and headers described below).
+:::
+
+* **Parameters**:
+    * **Resource Name:** This will be used in generating a name for a kubernetes traffic routing resources. Having that mind, the name needs to be kubernetes resource name compliant. 
+    * **Root Service:** This should be a kubernetes service name which will be receiving incoming traffic (take a look in more details the SMI link provided above). Depending on which SMI implementation you are using this value may or may not be the same as one of the destination's host (described below)
+    * **Routes**:
+        * **Route type**: Currently, Harness supports only the `http` route type - for http traffic.
+        * **Route name**: This will be used in generating kubernetes resources so the value should kubernetes name compliant. This should also be unique within the pipeline workflow as it is used as ID for updating purposes (described below)
+        * **Route Rules**: This is the way incoming requests are filtered for the configured route destinations.
+
+            * **uri**:
+                * **Value**: Enter the value that you want matched against incoming request URI. 
+                * **Match Type**: Used to determine how URI of the incoming request is matched against the `value` config parameter. Available to choose one of three values (`exact`, `prefix`, `regex`).
+
+            * **method**:
+                * **Value**: Used for matching the HTTP method of the incoming request.
+
+            * **headers**:
+                * **Values**:
+                    - **Key**: Specify the name of the request header
+                    - **Value**: Specify the value of the header
+                    - **Match Type**: Specify which kind of matching should be done against the incoming header. Available to choose one of three values (`exact`, `prefix`, `regex`). 
+
+        * **Destinations**: This is locations to which the filtered request will be routed to
+
+            * **Host**: Should be the name of the Kubernetes service resource.
+
+              :::note 
+              *Only applicable when using the Blue/Green deployment step* - You can use placeholder `stable` and `stage` resource names. Which would effectively be replaced with the name of the stable and stage services, respectively. 
+  
+              *Only applicable when using the Canary deployment step* You can use the placeholder `stable` and `canary` resource names. Which would effectively be replaced with the name of the stable and canary services, respectively.
+              :::
+
+            * **Weight**: Specify the percentage of traffic that should be routed to this host. The weight should be a numeric value in range [0 - 100].
+
+              :::note
+              If the total weights for all host destinations is not equal to 100, the weight values will be normalized into a percentage, and the pipeline will run with a warning.
+              :::
+
+### Istio - New Config option
+
+Before you begin, make sure you have an understanding of Istio and how it works by referring to [their website](https://istio.io/latest/about/service-mesh/).
+
+* **Parameters**:
+    * **Resource Name:** This name will be used to generate a kubernetes name for traffic resources. Hence the name needs to be kubernetes resource name compliant. 
+    * **Hosts:** Specify one or more host names. Hosts can be added individually using the **+Add** button or as a comma-separated list. This is specific to Istio, please take a look [here](https://istio.io/latest/docs/concepts/traffic-management/#the-hosts-field).
+    * **Gateways:** Specify one or more gateway names. This is specific to Istio, please take a look [here](https://istio.io/latest/docs/reference/config/networking/gateway/).
+    * **Routes**: Currently, Harness supports only the `http` route type.
+        * **Route type**: Currently, Harness supports only the `http` route type - for http traffic.
+        * **Route name**: This will be used in generating kubernetes resources so the value should be kubernetes name compliant. This should also be unique within the pipeline workflow as it is used as an ID for updating purposes (described below).
+        * **Route Rules**: This is the way incoming requests are filtered for the configured route destinations.
+            * **uri**:
+                * **Value**: Enter the value that you want matched against the incoming request URI.
+                * **Match Type**: Used to determine how the URI of the incoming request is matched against the `value` config parameter. Choose from one of the three available values (`exact`, `prefix`, `regex`).
+
+            * **method**:
+                * **Value**: Used for matching the HTTP method of the incoming request.
+                * **Match Type**: Used to determine how the HTTP method of the incoming request is matched against the `value` config parameter. Choose from one of the three available values (`exact`, `prefix`, `regex`).
+
+            * **headers**:
+                * **Values**:
+                    - **Key**: Specify the name of the request header
+                    - **Value**: Specify the value of the header
+                    - **Match Type**: Specify which kind of matching should be done against the incoming header. Choose from one of the three available values  (`exact`, `prefix`, `regex`).
+    
+            * **scheme**:
+                * **Value**: Specify which scheme you want to match with.
+                * **Match Type**: Specify which kind of matching should be done against the incoming request scheme. Choose from one of the three available values (`exact`, `prefix`, `regex`).
+
+            * **authority**:
+                * **Value**: Specify which authority you want to match with.
+                * **Match Type**: Specify which kind of matching should be done against the incoming request authority. Choose from one of the three available values (`exact`, `prefix`, `regex`).
+
+            * **port**: 
+                * **Value**: Specify which port you want to match the incoming request port with.
+
+        * **Match all rules**: When enabled, all configured route rules (URI, headers, method, etc.) must match for a request to be routed to the specified destinations. When disabled, a request matching any single rule will be routed.
+
+            :::note
+            This setting affects how Istio evaluates multiple route rules. Go to the [Istio HTTPMatchRequest specification](https://istio.io/latest/docs/reference/config/networking/virtual-service/#HTTPMatchRequest) to understand how fields within a single match entry are AND'd together, while separate match entries are OR'd.
+            :::
+
+            **Enabled (AND semantics - default):** All route rules are combined into a single HTTPMatchRequest entry. A request must satisfy all configured rules to be routed to the destination.
+
+            <details>
+            <summary>Example VirtualService with AND matching</summary>
+
+            When you configure a route with both a URI prefix rule and a header rule with the **Match all rules** checkbox enabled:
+
+            ```yaml
+            http:
+              - match:
+                - headers:
+                    cookie:
+                      regex: .*app-version=canary.*
+                  uri:
+                    prefix: /personal/consumer/creditcards/directdebit/bos
+            ```
+
+            In this case, a request is routed to canary only if it matches both the URI prefix AND the cookie header.
+
+            </details>
+
+            **Disabled (OR semantics):** Each route rule is rendered as a separate HTTPMatchRequest entry. A request matching any configured rule will be routed to the destination.
+
+            <details>
+            <summary>Example VirtualService with OR matching</summary>
+
+            When you configure the same route with the **Match all rules** checkbox disabled:
+
+            ```yaml
+            http:
+              - match:
+                - headers:
+                    cookie:
+                      regex: .*app-version=canary.*
+                - uri:
+                    prefix: /personal/consumer/creditcards/directdebit/bos
+            ```
+
+            In this case, a request is routed to canary if it matches the URI prefix OR the cookie header.
+
+            </details>
+
+            :::warning
+            Using OR semantics (**Match all rules** disabled) with path-based and header-based rules can cause issues. For example, any request hitting the URI prefix will be routed to canary regardless of the cookie header, potentially causing you to receive a mix of stable and canary resources (CSS, JavaScript, etc.), which may break the application.
+            :::
+
+        * **Rewrite Rule**: A rewrite rule in a traffic shifting step refers to modifying the incoming request’s path or URL before it’s forwarded to the backend service.
+
+<div align="center">
+          <DocImage path={require('./static/add-rewrite-rule.png')} width="50%" height="50%" title="Click to view full size image" />
+        </div>
+
+        Here is a sample rewrite rule for reference. Note that each rule must begin with **`rewrite:`**.
+
+        <details>
+        <summary>Basic Path Rewrite Sample YAML</summary>
+
+        Add the following snippet in the **Rewrite** text box:
+        ```yaml
+            rewrite:
+              uri: /new-path
+        ```
+
+        Below is an example of the complete VirtualService YAML that gets compiled during execution:
+
+        ```yaml
+        http:
+          - match:
+              - uri:
+                  prefix: /old-path
+            rewrite:
+              uri: /new-path
+            route:
+              - destination:
+                  host: my-service
+        ```
+        </details>
+
+        * **Destinations**: The filtered requests will be routed to these locations.
+
+            * **Host**: Should be the name of the Kubernetes service resource.
+
+              :::note 
+              *Only applicable when using the Blue/Green deployment step* - You can use placeholder `stable` and `stage` resource names. Which would effectively be replaced with the name of the stable and stage services, respectively. 
+
+              *Only applicable when using the Canary deployment step* You can use the placeholder `stable` and `canary` resource names. Which would effectively be replaced with the name of the stable and canary services, respectively.
+              :::
+
+             
+
+              - **Delegate Virtual Service Support** 
+
+              With the introduction of [delegate virtual service](https://istio.io/latest/docs/reference/config/networking/virtual-service/#Delegate) support, the **Host** field can now be left empty when using custom rewrite logic. This allows for more dynamic traffic routing configurations, enabling users to rewrite traffic-routing logic to fit their deployment strategies. To configure this, you need to check the **Delegate Service** option, which creates a delegate virtual service. When this option is checked, the **Host** field will be left empty.
+
+              This is available for **Canary Deployment, K8s Traffic routing, K8s Blue Green Deploy**.
+
+              ![](./static/re-write-istio-canary.png)
+              
+
+            * **Weight**: Specify the percentage of traffic that should be routed to this host. The weight should be a numeric value in range [0 - 100].
+
+              :::note
+              If the total weights for all host destinations is not equal to 100, the weight values will be normalized into a percentage, and the pipeline will run with a warning.
+              :::
+
+### Istio — Preserve Custom VirtualService Fields
+
+Harness preserves custom VirtualService configurations (such as `headers`, `fault`, `timeout`, `retries`, `corsPolicy`) during Canary and Blue-Green deployments when a VirtualService is provided in the manifest. Previously, these fields were overwritten when Harness applied traffic routing changes.
+
+This is useful for deployments that require VirtualService-level header manipulation, fault injection, or other advanced Istio configurations to remain intact throughout the deployment lifecycle.
+
+:::note
+Currently, this feature is behind the feature flag `CDS_ISTIO_VS_MERGE_IN_TRAFFIC_ROUTING`. Contact [Harness Support](mailto:support@harness.io) to enable the feature. This feature requires minimum versions of ng-manager `1.136.0`, pipeline-service `1.176.0`, and Delegate `26.03.88800`.
+:::
+
+:::note
+This feature applies only to **Istio** traffic routing. SMI is not supported.
+:::
+
+#### How it works
+
+When Traffic Routing is configured in your Canary or Blue-Green deployment:
+
+1. **Match:** Harness looks for a VirtualService in your manifest that matches the **resource name** specified in your Traffic Routing configuration.
+2. **Merge:** If found, Harness merges only the traffic routing changes (weights, destinations) into your VirtualService while preserving all other fields.
+3. **Fallback:** If no matching VirtualService is found, Harness creates one from scratch (existing behavior).
+
+#### Requirements
+
+| Requirement | Description |
+|-------------|-------------|
+| **VirtualService name must match** | The `resourceName` in your Traffic Routing configuration must exactly match the `metadata.name` of your VirtualService in the manifest. |
+| **Istio only** | This feature only works with Istio VirtualServices. |
+
+#### Important behavior
+
+##### Single route matching
+
+If your VirtualService has **one HTTP route** and your step config also defines **one route**, they are merged automatically — no route naming required.
+
+##### Multiple routes
+
+If your VirtualService has **multiple HTTP routes**, Harness matches routes by the `name` field (`spec.http[].name`).
+
+:::warning
+If your routes don't have names and you have multiple routes, step-defined routes are **appended** instead of merged. This may cause unexpected behavior. Always use named routes when you have multiple HTTP routes.
+:::
+
+##### Hosts and gateways
+
+If your step config specifies `hosts` or `gateways`, they **overwrite** your manifest values. Leave these empty in your step config to preserve your manifest values.
+
+##### Rollback
+
+On rollback, Harness re-applies the last successful release's manifests, which includes your original VirtualService with all custom fields intact.
+
+#### Example
+
+<details>
+<summary>VirtualService manifest (before deployment)</summary>
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: my-service-vs
+  annotations:
+    harness.io/direct-apply: "true"
+spec:
+  gateways:
+    - my-service-gw
+  hosts:
+    - "*"
+  http:
+    - name: primary-route
+      headers:
+        request:
+          set:
+            X-Request-ID: trace-123
+        response:
+          set:
+            X-Response-Source: stable
+      fault:
+        delay:
+          percentage:
+            value: 0.1
+          fixedDelay: 5s
+      timeout: 30s
+      retries:
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: gateway-error,connect-failure
+      corsPolicy:
+        allowOrigins:
+          - exact: https://example.com
+        allowMethods:
+          - GET
+          - POST
+        maxAge: 24h
+      match:
+        - uri:
+            prefix: /api/v1
+      route:
+        - destination:
+            host: my-service
+            port:
+              number: 8080
+            subset: stable
+          headers:
+            response:
+              remove:
+                - X-Server-Internal
+          weight: 100
+```
+
+</details>
+
+<details>
+<summary>VirtualService after Canary Deploy</summary>
+
+```yaml
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: my-service-vs
+  annotations:
+    harness.io/direct-apply: "true"       # Preserved
+spec:
+  gateways:
+    - my-service-gw
+  hosts:
+    - "*"
+  http:
+    - name: primary-route
+      headers:                             # Preserved
+        request:
+          set:
+            X-Request-ID: trace-123
+        response:
+          set:
+            X-Response-Source: stable
+      fault:                               # Preserved
+        delay:
+          percentage:
+            value: 0.1
+          fixedDelay: 5s
+      timeout: 30s                         # Preserved
+      retries:                             # Preserved
+        attempts: 3
+        perTryTimeout: 10s
+        retryOn: gateway-error,connect-failure
+      corsPolicy:                          # Preserved
+        allowOrigins:
+          - exact: https://example.com
+        allowMethods:
+          - GET
+          - POST
+        maxAge: 24h
+      match:
+        - uri:
+            prefix: /api/v1
+      route:
+        - destination:
+            host: my-service
+            port:
+              number: 8080
+            subset: stable                 # Preserved
+          headers:                         # Preserved
+            response:
+              remove:
+                - X-Server-Internal
+          weight: 80                       # Updated from step config
+        - destination:
+            host: my-service-canary
+            port:
+              number: 8080
+          weight: 20                       # Added from step config
+```
+
+</details>
+
+#### SMI and Istio - Inherit option
+This options provides a way to update an existing traffic routing configuration destination's weights. With this step configuration there are two logical parts.
+First one is to configure the `Route Name` and second one is to configure destination(s) which you want to update. Route name is an ID for us to know which traffic routing resource we need to update. The value of the route name should match one of the route names defined during the `New config` step configuration.
+You can configure one or more destinations and their weights. 
+You should also be aware that in case you configure lower number of destinations then the route contains, the update of the weights will occur, but it will respect [0-100] boundaries.
+
+Example:
+In original setup you have configured 3 destinations for a route:
+```
+Destination1 -> Host: svc1, Weight: 60
+Destination2 -> Host: svc2, Weight: 30
+Destination3 -> Host: svc3, Weight: 10
+```
+
+Now in the update step you configured to update only one destination for that same route. Let's say you want to update Destination `svc1` and you want to set its weight to `40`
+
+This will lead to having the remaining 60 (max limit of 100 - configured update weight of 40) to be split amongst the remaining destinations, but keeping the same ratio they have amongst themselves.
+Meaning the result would be:
+```
+Destination1 -> Host: svc1, Weight: 40
+Destination2 -> Host: svc2, Weight: 45
+Destination3 -> Host: svc3, Weight: 15
+```
+
+## Configuration examples
+
+### Istio service mesh configuration
+Here we have an example of an Istio service mesh traffic routing step. It takes all traffic coming from gateway `testgateway` with host `test.com`. It filters incoming requests that have URI `/login`, HTTP method `POST`, and header `X-Request` with value `authxx`. With `matchAllConditions` set to `true`, a request must satisfy all three criteria to be routed. Traffic is split between pods behind `svc1` and `svc2` at a 65/35 ratio. The resource created is a `VirtualService` named `istio-vs-k8s-res`.
+
+<details>
+<summary>Istio Traffic Routing YAML example</summary>
+
+```yaml
+  - step:
+      identifier: K8sTrafficRoutingConfig
+      type: K8sTrafficRouting
+      name: config
+      spec:
+        type: config
+        trafficRouting:
+          provider: istio
+          spec:
+            name: istio-vs-k8s-res
+            hosts:
+              - test.com
+            gateways:
+              - testgateway
+            routes:
+              - route:
+                  type: http
+                  name: route1
+                  rules:
+                    - rule:
+                        type: uri
+                        spec:
+                          value: /login
+                          matchType: prefix
+                    - rule:
+                        type: method
+                        spec:
+                          value: POST
+                    - rule:
+                        type: headers
+                        spec:
+                          values:
+                            - value: authxx
+                              key: X-Request
+                              matchType: prefix
+                  destinations:
+                    - destination:
+                        host: svc1
+                        weight: 65
+                    - destination:
+                        host: svc2
+                        weight: 35
+          matchAllConditions: true
+```
+
+</details>
+
+### SMI service mesh configuration
+Here we have an example of an SMI service mesh traffic routing step which will take all the traffic that is coming into service `svc1`
+It will filter all incoming request that have URI `/login` with HTTP method `POST` and header `X-Request` with value `authxx`.
+This request will be split between PODs which are behind two service `svc1` and `svc2` in ratio 65 to 35, respectively.
+The resource created would be a `TrafficSplit` with name `smi-traffic-split-res-route1` and `HTTPRouteGroup` with name `smi-traffic-split-res-route1-http-rule`
+
+```
+  - step:
+      identifier: K8sTrafficRoutingConfig
+      type: K8sTrafficRouting
+      name: config
+      spec:
+        type: config
+        trafficRouting:
+          provider: smi
+          spec:
+            rootService: svc1
+            name: smi-traffic-split-res
+            routes:
+              - route:
+                  type: http
+                  rules:
+                    - rule:
+                        type: uri
+                        spec:
+                          value: /login
+                          matchType: prefix
+                    - rule:
+                        type: method
+                        spec:
+                          value: POST
+                    - rule:
+                        type: headers
+                        spec:
+                          values:
+                            - value: authxx
+                              key: X-Request
+                              matchType: prefix
+                  name: route1
+                  destinations:
+                    - destination:
+                        host: svc1
+                        weight: 65
+                    - destination:
+                        host: svc2
+                        weight: 35
+```
+
+## Advanced
+
+See the following topics for advanced settings:
+
+* [Delegate Selector](/docs/platform/delegates/manage-delegates/select-delegates-with-selectors)
+* [Conditional Execution](/docs/platform/pipelines/step-skip-condition-settings)
+* [Failure Strategy](/docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps)
+* [Looping Strategy](/docs/platform/pipelines/looping-strategies/looping-strategies-matrix-repeat-and-parallelism)
+* [Policy Enforcement](/docs/platform/governance/policy-as-code/harness-governance-overview)
+
+## Troubleshooting
+
+<Troubleshoot
+  issue="Headers are still being removed from my VirtualService during Canary or Blue-Green deployment with Istio traffic routing"
+  mode="docs"
+  fallback="Verify the resourceName in your Traffic Routing configuration exactly matches your VirtualService's metadata.name. Check deployment logs for 'Found existing VirtualService [name] in manifest. Merging with step-level traffic routing config.' — if this message is absent, the merge did not occur. Also confirm you are using Istio, not SMI."
+/>
+
+<Troubleshoot
+  issue="Unexpected route behavior with multiple HTTP routes in VirtualService during Istio traffic routing merge"
+  mode="docs"
+  fallback="Add a name field to each HTTP route in your VirtualService for predictable merging. Without names, step-defined routes are appended instead of merged."
+/>
+
+<details>
+<summary>Example VirtualService with named routes</summary>
+
+```yaml
+spec:
+  http:
+    - name: api-route
+      headers: { ... }
+      route: [ ... ]
+    - name: web-route
+      headers: { ... }
+      route: [ ... ]
+```
+
+</details>
+
+<Troubleshoot
+  issue="Destinations with same host but different subsets are collapsed into a single destination"
+  mode="docs"
+  fallback="Use type: inherit instead of type: config to preserve existing VirtualService destinations when subset-based splitting is required; alternatively, split each subset into its own named route with a single destination. Tracked in CDS-124991."
+/>
+
+The following example shows a Harness route configuration that triggers this deduplication.
+
+<details>
+<summary>Example of affected configuration</summary>
+
+```yaml
+routes:
+  - route:
+      type: http
+      name: my-route
+      destinations:
+        - destination:
+            host: my-service
+            subset: canary
+            weight: 25
+        - destination:
+            host: my-service
+            subset: stable
+            weight: 75
+```
+
+In this example, both destinations share the same host (`my-service`). The step collapses them into a single destination with `weight: 100` and no subset field.
+
+</details>
+
+<Troubleshoot
+  issue="Traffic is routed to canary when only one of multiple route rules matches (URI or header, not both)"
+  mode="docs"
+  fallback="Enable the 'Match all rules' checkbox in your Traffic Routing configuration. When disabled, Istio applies OR semantics, meaning any matching rule routes traffic to canary. When enabled (AND semantics), all configured rules must match. This prevents issues where you receive mixed stable/canary resources that break the application."
+/>

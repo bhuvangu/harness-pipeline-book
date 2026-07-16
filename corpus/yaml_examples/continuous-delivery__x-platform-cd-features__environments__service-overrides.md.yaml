@@ -1,0 +1,10 @@
+# source: docs/continuous-delivery/x-platform-cd-features/environments/service-overrides.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/environments/service-overrides)
+
+# --- example 1 ---
+execution:
+            steps:
+              - step:
+                  name: Stage Deployment
+                  identifier: stageDeployment
+                  type: K8sBlueGreenDeploy
+                  timeout: <+serviceVariables.timeout>

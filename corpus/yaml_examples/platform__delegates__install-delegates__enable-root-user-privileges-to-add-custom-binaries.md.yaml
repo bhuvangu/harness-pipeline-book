@@ -1,0 +1,11 @@
+# source: docs/platform/delegates/install-delegates/enable-root-user-privileges-to-add-custom-binaries.md  (https://developer.harness.io/docs/platform/delegates/install-delegates/enable-root-user-privileges-to-add-custom-binaries)
+
+# --- example 1 ---
+spec:
+    containers:
+    - image: harness/delegate:ng
+      imagePullPolicy: Always
+      name: harness-delegate-instance
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsUser: 0

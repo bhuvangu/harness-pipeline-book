@@ -1,0 +1,13 @@
+# source: docs/continuous-integration/troubleshoot-ci/k8s-support-bundle.md  (https://developer.harness.io/docs/continuous-integration/troubleshoot-ci/k8s-support-bundle)
+
+# --- example 1 ---
+stages:
+  - stage:
+      name: build
+      type: CI
+      spec:
+        # ... infrastructure, cloneCodebase, etc.
+        variables:
+          - name: HARNESS_CI_SUPPORT_BUNDLE_ENABLED
+            type: String
+            value: "false"   # or simply omit this variable entirely

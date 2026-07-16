@@ -1,0 +1,14 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push/build-and-push-to-gar.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push/build-and-push-to-gar)
+
+# --- example 1 ---
+- step:
+    type: BuildAndPushGAR
+    name: BuildAndPushGAR_1
+    identifier: BuildAndPushGAR_1
+    spec:
+      connectorRef: YOUR_GCP_CONNECTOR_ID
+      host: LOCATION-docker.pkg.dev
+      projectID: GOOGLE_CLOUD_CONSOLE_PROJECT_ID
+      imageName: REPO_NAME/IMAGE_NAME
+      tags:
+        - <+pipeline.sequenceId>

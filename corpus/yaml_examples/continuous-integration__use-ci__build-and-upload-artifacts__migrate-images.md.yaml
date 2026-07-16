@@ -1,0 +1,101 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/migrate-images.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/migrate-images)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: migrate_image
+                  identifier: migrate_image
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/image-migration
+                    settings:
+                      source: some-registry/image:latest
+                      destination: my-target-registry/image:latest
+                      username: YOUR_USERNAME
+                      password: <+secrets.getValue("registry_token")>
+
+# --- example 2 ---
+              - step:
+                  type: Plugin
+                  name: migrate_image
+                  identifier: migrate_image
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/image-migration
+                    settings:
+                      source: registry-1.example.com/image:latest
+                      destination: registry-2.example.com/image:latest
+                      source_username: USERNAME_FOR_SOURCE_REGISTRY
+                      source_password: <+secrets.getValue("source_registry_token")>
+                      username: YOUR_USERNAME
+                      password: <+secrets.getValue("registry_token")>
+                      overwrite: true
+
+# --- example 3 ---
+              - step:
+                  type: Plugin
+                  name: migrate_image
+                  identifier: migrate_image
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/image-migration
+                    settings:
+                      source: registry-1.example.com/image:latest
+                      destination: LOCATION-docker.pkg.dev/PROJECT-ID/REPO-NAME/IMAGE-NAME:TAG
+                      source_username: USERNAME_FOR_SOURCE_REGISTRY
+                      source_password: <+secrets.getValue("source_registry_token")>
+                      username: oauth2accesstoken
+                      password: <+secrets.getValue("gar_token")>
+                      overwrite: true
+
+# --- example 4 ---
+              - step:
+                  type: Plugin
+                  name: migrate_image
+                  identifier: migrate_image
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/image-migration
+                    settings:
+                      source: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/image-dev:1.2.3
+                      destination: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/image-prod:1.2.3
+                      username: AWS
+                      aws_access_key_id: "012345678901"
+                      aws_secret_access_key: <+secrets.getValue("aws_secret_access_key")>
+                      aws_region: us-west-2
+                      overwrite: true
+
+# --- example 5 ---
+              - step:
+                  type: Plugin
+                  name: migrate_image
+                  identifier: migrate_image
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/image-migration
+                    settings:
+                      source: registry-2.example.com/image:latest
+                      destination: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/image:latest
+                      username: AWS
+                      aws_access_key_id: "012345678900"
+                      aws_secret_access_key: <+secrets.getValue("aws_secret_access_key")>
+                      aws_region: us-west-2
+                      overwrite: true
+
+# --- example 6 ---
+              - step:
+                  type: Plugin
+                  name: migrate_image
+                  identifier: migrate_image
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/image-migration
+                    settings:
+                      source: aws_account_id.dkr.ecr.us-west-2.amazonaws.com/image:latest
+                      destination: registry-2.example.com/image:latest
+                      source_username: AWS
+                      source_password: <+secrets.getValue("aws_token")>
+                      aws_region: us-west-2
+                      username: DESTINATION_USERNAME
+                      password: DESTINATION_PASSWORD
+                      overwrite: true

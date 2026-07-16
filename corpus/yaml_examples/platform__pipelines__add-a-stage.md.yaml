@@ -1,0 +1,17 @@
+# source: docs/platform/pipelines/add-a-stage.md  (https://developer.harness.io/docs/platform/pipelines/add-a-stage)
+
+# --- example 1 ---
+    - stage:
+        ...
+        variables:
+          - name: VAR_NAME
+            type: String ## String or Secret
+            description: ""
+            value: 90
+
+# --- example 2 ---
+name: <+stage.variables.NAME>  
+replicas: 2  
+  
+image: <+primary.artifact.image>  
+...

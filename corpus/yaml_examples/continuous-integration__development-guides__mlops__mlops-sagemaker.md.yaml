@@ -1,0 +1,25 @@
+# source: docs/continuous-integration/development-guides/mlops/mlops-sagemaker.md  (https://developer.harness.io/docs/continuous-integration/development-guides/mlops/mlops-sagemaker)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: sagemaker plugin
+                  identifier: sagemaker_plugin
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: harnesscommunity/aws-sagemaker
+                    settings:
+                      model_name: my-model-aws
+                      EXECUTION_ROLE_ARN: arn:aws:iam::12345:role/sagemakertest
+                      IMAGE_URL: 87654.dkr.ecr.us-east-1.amazonaws.com/pytorch-training:2.2.0-cpu-py310-ubuntu20.04-ec2
+                      MODEL_DATA_URL: s3://sagemakertest87678/biostats.csv
+                      ENDPOINT_CONFIG_NAME: aws-endpoint-cfg
+                      ENDPOINT_NAME: aws-endpoint
+                      INSTANCE_TYPE: ml.t2.medium
+                      INITIAL_INSTANCE_COUNT: "1"
+                      VARIANT_NAME: AllTraffic
+                      USERNAME: AWS
+                      AWS_ACCESS_KEY_ID: <+secrets.getValue("awsAccessKeyId")>
+                      AWS_SECRET_ACCESS_KEY: <+secrets.getValue("awsAccessKeySecret")>
+                      AWS_REGION: us-east-1
+                    imagePullPolicy: Always

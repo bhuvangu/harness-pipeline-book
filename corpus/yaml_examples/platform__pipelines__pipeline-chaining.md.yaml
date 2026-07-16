@@ -1,0 +1,254 @@
+# source: docs/platform/pipelines/pipeline-chaining.md  (https://developer.harness.io/docs/platform/pipelines/pipeline-chaining)
+
+# --- example 1 ---
+pipeline:
+  name: build-and-deploy
+  identifier: buildanddeploy
+  projectIdentifier: MyProject
+  orgIdentifier: default
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: Build and test application
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - stepGroup:
+                  name: build_steps
+                  identifier: build_steps
+                  steps:
+                    - step:
+                        type: Run
+                        name: run_tests
+                        identifier: run_tests
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: maven:3.8-jdk-11
+                          shell: Sh
+                          command: |
+                            echo "Running unit tests"
+                            mvn clean test
+                            echo "Tests passed"
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: build_cluster
+            rollbackSteps: []
+        tags: {}
+    - stage:
+        name: deploy
+        identifier: deploy
+        description: Deploy to multiple environments and regions
+        type: Pipeline
+        spec:
+          org: default
+          project: MyProject
+          pipeline: deployment_pipeline
+          inputs:
+            identifier: deployment_pipeline
+            variables:
+              - name: environment
+                type: String
+                value: <+matrix.env>
+              - name: region
+                type: String
+                value: <+matrix.region>
+        strategy:
+          matrix:
+            env:
+              - dev
+              - staging
+              - prod
+            region:
+              - us-east-1
+              - eu-west-1
+          maxConcurrency: 3
+
+# --- example 2 ---
+pipeline:
+  name: child
+  identifier: child
+  projectIdentifier: CD_Docs
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: child_output
+        identifier: child_output
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo <+pipeline.variables.parent_timeout>
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+          outputs: []
+        tags: {}
+  variables:
+    - name: parent_timeout
+      type: String
+      description: ""
+      required: false
+      value: <+input>
+
+# --- example 3 ---
+pipeline:
+  name: parent
+  identifier: parent
+  projectIdentifier: CD_Docs
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: chained
+        identifier: chained
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: timeout=<+pipeline.stages.chained.spec.execution.steps.ShellScript_1.timeout>
+                    environmentVariables: []
+                    outputVariables:
+                      - name: parent_timeout
+                        type: String
+                        value: timeout
+                  timeout: 10m
+          outputs: []
+        tags: {}
+    - stage:
+        name: child_pipeline
+        identifier: child_pipeline
+        description: ""
+        type: Pipeline
+        spec:
+          org: default
+          pipeline: child
+          project: CD_Docs
+          outputs: []
+          inputs:
+            identifier: child
+            variables:
+              - name: parent_timeout
+                type: String
+                value: <+pipeline.stages.chained.spec.execution.steps.ShellScript_1.output.outputVariables.parent_timeout>
+
+# --- example 4 ---
+pipeline:
+  name: pipelineA
+  identifier: pipelineA
+  projectIdentifier: CD_Samples
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: cust_1
+        identifier: cust_1
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo hello
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+    - stage:
+        name: cust_2
+        identifier: cust_2
+        description: ""
+        type: Pipeline
+        spec:
+          org: default
+          pipeline: pipelineB
+          project: CD_Samples
+
+# --- example 5 ---
+pipeline:
+  name: pipelineB
+  identifier: pipelineB
+  projectIdentifier: CD_Samples
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: cust_3
+        identifier: cust_3
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo hello_2
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+    - stage:
+        name: cust_4
+        identifier: cust_4
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: hello
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}

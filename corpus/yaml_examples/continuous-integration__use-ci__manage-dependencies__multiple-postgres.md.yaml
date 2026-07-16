@@ -1,0 +1,277 @@
+# source: docs/continuous-integration/use-ci/manage-dependencies/multiple-postgres.md  (https://developer.harness.io/docs/continuous-integration/use-ci/manage-dependencies/multiple-postgres)
+
+# --- example 1 ---
+            steps:
+              - parallel: ## Group the Background steps to run in parallel so all PostgreSQL services run simultaneously.
+                  - step:
+                      identifier: Background_1 ## You use the identifier to call background services in later steps in this stage.
+                      type: Background
+                      name: Background_1
+                      spec:
+                        shell: Sh
+                        envVariables: ## Add environment variables for the PostgreSQL user name, database name, and password.
+                          POSTGRES_USER: postgres
+                          POSTGRES_DB: test
+                          POSTGRES_PASSWORD: password ## For security, use an expression to reference a Harness text secret.
+                        portBindings:
+                          "5432": "5433" ## Specify the host port (5432) and the desired container port (such as 5433). Each Background step must have a different container port.
+                  - step:
+                      identifier: Background_2
+                      type: Background
+                      name: Background_2
+                      spec:
+                        shell: Sh
+                        envVariables:
+                          POSTGRES_USER: postgres
+                          POSTGRES_DB: test1
+                          POSTGRES_PASSWORD: password
+                        portBindings: ## Each Background step must have a different container port.
+                          "5432": "5434"
+
+# --- example 2 ---
+            steps:
+              - parallel: ## Group the Background steps to run in parallel so all PostgreSQL services run simultaneously.
+                  - step:
+                      identifier: Background_1
+                      type: Background
+                      name: Background_1
+                      spec:
+                        connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                        image: postgres ## Specify a PostgreSQL Docker image.
+                        shell: Sh
+                        entrypoint: ## Include both the image ENTRYPOINT and the additional port binding argument.
+                          - docker-entrypoint.sh
+                          - "-p 5433" ## Specify the desired container port. Each Background step must have a different container port.
+                        envVariables: ## Add environment variables for the PostgreSQL user name, database name, and password.
+                          POSTGRES_USER: postgres
+                          POSTGRES_DB: test
+                          POSTGRES_PASSWORD: password ## For security, use an expression to reference a Harness text secret.
+                  - step:
+                      identifier: Background_2
+                      type: Background
+                      name: Background_2
+                      spec:
+                        connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                        image: postgres
+                        shell: Sh
+                        entrypoint:
+                          - docker-entrypoint.sh
+                          - "-p 5434" ## Each Background step must have a different container port.
+                        envVariables:
+                          POSTGRES_USER: postgres
+                          POSTGRES_DB: test1
+                          POSTGRES_PASSWORD: password
+
+# --- example 3 ---
+              - step:
+                  identifier: Run_1
+                  type: Run
+                  name: Run_1
+                  spec:
+                    shell: Sh
+                    command: |- ## Provide the user name, database name, Background step identifier, and container port from each of your Background steps.
+                      sleep 15
+                      psql -U postgres -d test -h Background_1 -p 5433
+                      psql -U postgres -d test1 -h Background_2 -p 5434
+
+# --- example 4 ---
+              - step:
+                  identifier: Run_1
+                  type: Run
+                  name: Run_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                    image: postgres:9-alpine ## Specify a PostgreSQL Docker image.
+                    shell: Sh
+                    command: |- ## Provide the user name, database name, and container port from each of your Background steps.
+                      sleep 15
+                      psql -U postgres -d test -h localhost -p 5433
+                      psql -U postgres -d test1 -h localhost -p 5434
+
+# --- example 5 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        identifier: stage
+        type: CI
+        name: stage
+        description: ""
+        spec:
+          cloneCodebase: false
+          execution:
+            steps:
+              - parallel: ## Group the Background steps to run in parallel so all PostgreSQL services run simultaneously.
+                  - step:
+                      identifier: Background_1 ## You use the identifier to call background services in later steps in this stage.
+                      type: Background
+                      name: Background_1
+                      spec:
+                        shell: Sh
+                        envVariables: ## Add environment variables for the PostgreSQL user name, database name, and password.
+                          POSTGRES_USER: postgres
+                          POSTGRES_DB: test
+                          POSTGRES_PASSWORD: password ## For security, use an expression to reference a Harness text secret.
+                        portBindings:
+                          "5432": "5433" ## Specify the host port (5432) and the desired container port (such as 5433). Each Background step must have a different container port.
+                  - step:
+                      identifier: Background_2
+                      type: Background
+                      name: Background_2
+                      spec:
+                        shell: Sh
+                        envVariables:
+                          POSTGRES_USER: postgres
+                          POSTGRES_DB: test1
+                          POSTGRES_PASSWORD: password
+                        portBindings: ## Each Background step must have a different container port.
+                          "5432": "5434"
+              - step:
+                  identifier: Run_1
+                  type: Run
+                  name: Run_1
+                  spec:
+                    shell: Sh
+                    command: |- ## Provide the user name, database name, Background step identifier, and container port from each of your Background steps.
+                      sleep 15
+                      psql -U postgres -d test -h Background_1 -p 5433
+                      psql -U postgres -d test1 -h Background_2 -p 5434
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+
+# --- example 6 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        identifier: run_postgres
+        type: CI
+        name: run postgres
+        description: ""
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - parallel: ## Group the Background steps to run in parallel so all PostgreSQL services run simultaneously.
+                  - step:
+                      identifier: Background_1
+                      type: Background
+                      name: Background_1
+                      spec:
+                        connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                        image: postgres ## Specify a PostgreSQL Docker image.
+                        shell: Sh
+                        entrypoint: ## Include both the image ENTRYPOINT and the additional port binding argument.
+                          - docker-entrypoint.sh
+                          - "-p 5433" ## Specify the desired container port. Each Background step must have a different container port.
+                        envVariables: ## Add environment variables for the PostgreSQL user name, database name, and password.
+                          POSTGRES_USER: postgres
+                          POSTGRES_DB: test
+                          POSTGRES_PASSWORD: password ## For security, use an expression to reference a Harness text secret.
+                  - step:
+                      identifier: Background_2
+                      type: Background
+                      name: Background_2
+                      spec:
+                        connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                        image: postgres
+                        shell: Sh
+                        entrypoint:
+                          - docker-entrypoint.sh
+                          - "-p 5434" ## Each Background step must have a different container port.
+                        envVariables:
+                          POSTGRES_USER: postgres
+                          POSTGRES_DB: test1
+                          POSTGRES_PASSWORD: password
+              - step:
+                  identifier: Run_1
+                  type: Run
+                  name: Run_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                    image: postgres:9-alpine ## Specify a PostgreSQL Docker image.
+                    shell: Sh
+                    command: |- ## Provide the user name, database name, and container port from each of your Background steps.
+                      sleep 15
+                      psql -U postgres -d test -h localhost -p 5433
+                      psql -U postgres -d test1 -h localhost -p 5434
+
+# --- example 7 ---
+       - stage:
+           identifier: run_postgres
+           type: CI
+           name: run postgres
+           description: ""
+           spec:
+             cloneCodebase: false
+             infrastructure:
+               type: KubernetesDirect
+               spec:
+                 connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+                 namespace: YOUR_KUBERNETES_NAMESPACE
+                 volumes:
+                   - mountPath: /tmp/pgdata1 ## Empty volume for first PostgreSQL instance.
+                     type: EmptyDir
+                     spec:
+                       medium: ""
+                   - mountPath: /tmp/pgdata2 ## Empty volume for second PostgreSQL instance.
+                     type: EmptyDir
+                     spec:
+                       medium: ""
+                 automountServiceAccountToken: true
+                 nodeSelector: {}
+                 os: Linux
+
+# --- example 8 ---
+                     - step:
+                         identifier: Background_1
+                         type: Background
+                         name: Background_1
+                         spec:
+                           connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                           image: postgres
+                           shell: Sh
+                           entrypoint:
+                             - docker-entrypoint.sh
+                             - "-p 5433"
+                           envVariables:
+                             POSTGRES_USER: postgres
+                             POSTGRES_DB: test
+                             POSTGRES_PASSWORD: password
+                             PGDATA: /tmp/pgdata1 ## Path for first mounted volume.
+                     - step:
+                         identifier: Background_2
+                         type: Background
+                         name: Background_2
+                         spec:
+                           connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                           image: postgres
+                           shell: Sh
+                           entrypoint:
+                             - docker-entrypoint.sh
+                             - "-p 5434"
+                           envVariables:
+                             POSTGRES_USER: postgres
+                             POSTGRES_DB: test1
+                             POSTGRES_PASSWORD: password
+                             PGDATA: /tmp/pgdata2 ## Path for second mounted volume.

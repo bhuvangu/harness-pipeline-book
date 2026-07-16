@@ -1,0 +1,20 @@
+# source: docs/continuous-delivery/gitops/resources/troubleshooting.md  (https://developer.harness.io/docs/continuous-delivery/gitops/resources/troubleshooting)
+
+# --- example 1 ---
+exec:
+  command:
+    - /bin/sh
+    - -c
+    - curl -s http://localhost:8080/health
+      && curl -s http://localhost:8080/ready
+      | grep -q '"status":"ok"'
+
+# --- example 2 ---
+exec:
+  command:
+    - /bin/sh
+    - -c
+    - |
+      curl -s http://localhost:8080/health \
+        && curl -s http://localhost:8080/ready \
+        | grep -q '"status":"ok"'

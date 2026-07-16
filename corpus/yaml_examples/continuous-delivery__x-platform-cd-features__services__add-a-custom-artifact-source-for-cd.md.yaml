@@ -1,0 +1,13 @@
+# source: docs/continuous-delivery/x-platform-cd-features/services/add-a-custom-artifact-source-for-cd.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/services/add-a-custom-artifact-source-for-cd)
+
+# --- example 1 ---
+name: example  
+replicas: 2  
+  
+image: <+artifact.image>  
+# dockercfg: <+artifact.imagePullSecret>  
+  
+createNamespace: true  
+namespace: <+infra.namespace>  
+  
+...

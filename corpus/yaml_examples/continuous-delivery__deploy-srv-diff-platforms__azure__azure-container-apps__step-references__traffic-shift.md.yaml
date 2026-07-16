@@ -1,0 +1,53 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/traffic-shift.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/traffic-shift)
+
+# --- example 1 ---
+trafficShiftDetails:
+  - revisionName: latest
+    trafficValue: 20
+    tag: canary
+  - revisionName: secondlatest
+    trafficValue: 80
+    tag: stable
+
+# --- example 2 ---
+- step:
+    type: AzureContainerAppsTrafficShift
+    name: Traffic_Shift_100
+    identifier: Traffic_Shift_100
+    spec:
+      trafficShiftDetails:
+        - revisionName: latest
+          trafficValue: 100
+          tag: production
+      connectorRef: account.harnessImage
+      image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+      imagePullPolicy: Always
+      skipTrafficShift: false
+      resources:
+        limits:
+          memory: 512Mi
+          cpu: 0.5
+    timeout: 30m
+
+# --- example 3 ---
+- step:
+    type: AzureContainerAppsTrafficShift
+    name: Traffic_Shift_20
+    identifier: Traffic_Shift_20
+    spec:
+      trafficShiftDetails:
+        - revisionName: latest
+          trafficValue: 20
+          tag: label1
+        - revisionName: secondlatest
+          trafficValue: 80
+          tag: label2
+      connectorRef: account.harnessImage
+      image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+      imagePullPolicy: Always
+      skipTrafficShift: false
+      resources:
+        limits:
+          memory: 512Mi
+          cpu: 0.5
+    timeout: 30m

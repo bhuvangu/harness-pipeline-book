@@ -1,0 +1,5 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/run-a-script-on-multiple-target-instances.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/run-a-script-on-multiple-target-instances)
+
+# --- example 1 ---
+  repeat:  
+    items: <+stage.output.hosts>

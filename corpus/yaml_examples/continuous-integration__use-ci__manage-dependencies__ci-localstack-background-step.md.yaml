@@ -1,0 +1,44 @@
+# source: docs/continuous-integration/use-ci/manage-dependencies/ci-localstack-background-step.md  (https://developer.harness.io/docs/continuous-integration/use-ci/manage-dependencies/ci-localstack-background-step)
+
+# --- example 1 ---
+pipeline:
+  name: my_pipeline
+  identifier: my_pipeline
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: false ## Clone codebase is disabled for this example.
+          runtime: ## This stage runs on a Linux platform on Harness Cloud build infrastructure.
+            type: Cloud
+            spec: {}
+          platform:
+            os: Linux
+            arch: Amd64
+          execution:
+            steps:
+              - step: ## Background step runs the LocalStack Docker image.
+                  type: Background
+                  name: localstack
+                  identifier: localstack
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: localstack/localstack:latest
+                    shell: Sh
+                    envVariables:
+                      LOCALSTACK_API_KEY: <+secrets.getValue("localstack-api-key")>
+              - step: ## Run step checks that the LocalStack service is ready to receive traffic.
+                  type: Run
+                  name: localstack health
+                  identifier: localstack_health
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: curlimages/curl:7.83.1
+                    shell: Sh
+                    command: until curl --fail --silent --max-time 1 http://localstack:4566/health; do sleep 2; done

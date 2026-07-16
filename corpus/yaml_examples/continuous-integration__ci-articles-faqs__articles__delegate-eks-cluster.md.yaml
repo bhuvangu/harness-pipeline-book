@@ -1,0 +1,12 @@
+# source: docs/continuous-integration/ci-articles-faqs/articles/delegate-eks-cluster.md  (https://developer.harness.io/docs/continuous-integration/ci-articles-faqs/articles/delegate-eks-cluster)
+
+# --- example 1 ---
+   infrastructure:
+     type: KubernetesDirect
+     spec:
+       connectorRef: test-connector
+       namespace: harness-delegate-ng
+       serviceAccountName: **harness-delegate-sa**
+       automountServiceAccountToken: true
+       nodeSelector: {}
+       os: Linux

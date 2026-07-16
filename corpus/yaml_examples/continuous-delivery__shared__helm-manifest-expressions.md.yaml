@@ -1,0 +1,26 @@
+# source: docs/continuous-delivery/shared/helm-manifest-expressions.md  (https://developer.harness.io/docs/continuous-delivery/shared/helm-manifest-expressions)
+
+# --- example 1 ---
+service:
+  name: Helm Chart
+  identifier: Helm_Chart
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: nginx
+            type: HelmChart
+            spec:
+              store:
+                type: Http
+                spec:
+                  connectorRef: Bitnami
+              chartName: nginx
+              helmVersion: V3
+              skipResourceVersioning: false
+              fetchHelmChartMetadata: true
+              commandFlags:
+                - commandType: Template
+                  flag: mychart -x templates/deployment.yaml
+    type: Kubernetes

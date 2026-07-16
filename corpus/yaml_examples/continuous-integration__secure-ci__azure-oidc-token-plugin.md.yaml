@@ -1,0 +1,28 @@
+# source: docs/continuous-integration/secure-ci/azure-oidc-token-plugin.md  (https://developer.harness.io/docs/continuous-integration/secure-ci/azure-oidc-token-plugin)
+
+# --- example 1 ---
+- step:
+    type: Plugin
+    name: generate-azure-token
+    identifier: generate_azure_token
+    spec:
+      image: plugins/azure-oidc
+      settings:
+        tenant_id: <tenant_id>
+        client_id: <client_id>
+
+# --- example 2 ---
+- step:
+    type: Run
+    name: List Azure Resources
+    identifier: list_azure_resources
+    spec:
+      image: mcr.microsoft.com/azure-cli
+      shell: sh
+      envVariables:
+        AZURE_ACCESS_TOKEN: <+steps.generate_azure_token.output.outputVariables.AZURE_ACCESS_TOKEN>
+      command: |
+        az rest --method get \
+          --url "https://management.azure.com/subscriptions?api-version=2020-01-01" \
+          --headers "Authorization=Bearer $AZURE_ACCESS_TOKEN" \
+          --output json

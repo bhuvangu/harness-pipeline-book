@@ -1,0 +1,42 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/http-step.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/http-step)
+
+# --- example 1 ---
+...  
+- stepGroup:  
+  name: Simulate Load  
+  identifier: Simulate_Load  
+  steps:  
+      - parallel:  
+            - step:  
+                  type: Http  
+                  name: Load 1  
+                  identifier: Load_1  
+                  spec:  
+                      url: http://example.com  
+                      method: GET  
+                      headers: []  
+                      outputVariables: []  
+                  timeout: 10s  
+            - step:  
+                  type: Http  
+                  name: Load 2  
+                  identifier: Load_2  
+                  spec:  
+                      url: http://example.com  
+                      method: GET  
+                      headers: []  
+                      outputVariables: []  
+                  timeout: 10s  
+            - step:  
+                  type: Http  
+                  name: Load 3  
+                  identifier: Load_3  
+                  spec:  
+                      url: http://example.com  
+                      method: GET  
+                      headers: []  
+                      outputVariables: []  
+                  timeout: 10s  
+  failureStrategies: []  
+  spec: {}  
+...

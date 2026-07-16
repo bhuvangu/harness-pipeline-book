@@ -1,0 +1,16 @@
+# source: docs/platform/connectors/cloud-providers/ref-cloud-providers/docker-registry-connector-settings-reference.md  (https://developer.harness.io/docs/platform/connectors/cloud-providers/ref-cloud-providers/docker-registry-connector-settings-reference)
+
+# --- example 1 ---
+connector:
+  name: My Docker Connector
+  identifier: mydockerconnector
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: default
+  type: DockerRegistry
+  spec:
+    dockerRegistryUrl: https://docker.dev.harness.io/v2/
+    providerType: DockerHub
+    auth:
+      type: Anonymous
+    executeOnDelegate: true

@@ -1,0 +1,51 @@
+# source: docs/platform/pipelines/pipeline-execution-graph.md  (https://developer.harness.io/docs/platform/pipelines/pipeline-execution-graph)
+
+# --- example 1 ---
+pipeline:
+  name: output_variable
+  identifier: output_variable
+  projectIdentifier: PROJECT_ID
+  orgIdentifier: ORG_ID
+  tags: {}
+  stages:
+    - stage:
+        name: custom_stage
+        identifier: custom_stage
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: Http
+                  name: Http_1
+                  identifier: Http_1
+                  spec:
+                    url: https://app.harness.io/pipeline/api/pipelines/execution/subGraph/kC70LloTRcmoXkS5ffX4eg/HWbn_nVGSByRRgwtex3H2A?accountIdentifier=ACCOUNT_ID&orgIdentifier=ORG_ID&projectIdentifier=PROJECT_ID
+                    method: GET
+                    headers:
+                      - key: x-api-key
+                        value: PAT_TOKEN
+                      - key: Content-Type
+                        value: application/json
+                    inputVariables: []
+                    outputVariables:
+                      - name: out_var
+                        value: <+json.select(".data.executionGraph.nodeMap.nxZXM3IuQqmwNO-UGR_PBw.stepParameters.spec.outputVariables", httpResponseBody)>
+                        type: String
+                  timeout: 10s
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo <+execution.steps.Http_1.output.outputVariables.out_var>
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}

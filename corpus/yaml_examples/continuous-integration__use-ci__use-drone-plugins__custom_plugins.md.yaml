@@ -1,0 +1,20 @@
+# source: docs/continuous-integration/use-ci/use-drone-plugins/custom_plugins.md  (https://developer.harness.io/docs/continuous-integration/use-ci/use-drone-plugins/custom_plugins)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: git clone plugin
+                  identifier: git_clone_plugin
+                  spec:
+                    connectorRef: account.docker-connector
+                    image: my-docker-repo/git-clone-plugin
+                    settings:
+                      repo_url: https://github.com/<some-account>/<some-repo>.git ## URL of the repo to clone.
+                      branch: main ## Branch to clone.
+                      path: codebase ## Location in the stage workspace to clone the repo.
+
+# --- example 2 ---
+                settings:
+                  path: value
+                  repo_url: value
+                  branch: value

@@ -1,0 +1,37 @@
+# source: docs/continuous-delivery/gitops/gitops-entities/repositories/helm-oci-repository-aws-ecr.md  (https://developer.harness.io/docs/continuous-delivery/gitops/gitops-entities/repositories/helm-oci-repository-aws-ecr)
+
+# --- example 1 ---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: ECRAuthorizationToken
+metadata:
+  name: ecr-gen
+spec:
+  region: <REGION>
+  auth:
+    secretRef:
+      accessKeyIDSecretRef:
+        name: "awssm-secret"
+        key: "access-key"
+      secretAccessKeySecretRef:
+        name: "awssm-secret"
+        key: "secret-access-key"
+
+# --- example 2 ---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: REPO_SECRET_NAME
+spec:
+  refreshInterval: "12h"
+  target:
+    name: REPO_SECRET_NAME
+    creationPolicy: Merge
+    template:
+      data:
+        password: TEMPLATE_EXPRESSION
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: ECRAuthorizationToken
+          name: "ecr-gen"

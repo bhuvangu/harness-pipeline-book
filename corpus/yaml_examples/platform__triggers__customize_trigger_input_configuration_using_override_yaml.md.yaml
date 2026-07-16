@@ -1,0 +1,103 @@
+# source: docs/platform/triggers/customize_trigger_input_configuration_using_override_yaml.md  (https://developer.harness.io/docs/platform/triggers/customize_trigger_input_configuration_using_override_yaml)
+
+# --- example 1 ---
+ trigger:
+  name: triggerWithInputSet
+  identifier: triggerWithInputSet
+  enabled: true
+  description: ""
+  tags: {}
+  stagesToExecute: []
+  orgIdentifier: default
+  projectIdentifier: test
+  pipelineIdentifier: testTriggerOverrideInputs
+  source:
+    type: Webhook
+    spec:
+      type: Custom
+      spec:
+        payloadConditions: []
+        headerConditions: []
+  inputSetRefs:
+    - myInputSet
+
+# --- example 2 ---
+inputSet:
+  name: myInputSet
+  tags: {}
+  identifier: myInputSet
+  orgIdentifier: default
+  projectIdentifier: test
+  pipeline:
+    identifier: testTriggerOverrideInputs
+    stages:
+      - stage:
+          identifier: stage2
+          type: Deployment
+          spec:
+            service:
+              serviceInputs:
+                serviceDefinition:
+                  type: Kubernetes
+                  spec:
+                    artifacts:
+                      primary:
+                        primaryArtifactRef: gfgjhjh
+                        sources:
+                          - identifier: gfgjhjh
+                            type: Gcr
+                            spec:
+                              tag: v0.4
+    variables:
+      - name: var1
+        type: String
+        value: abc
+      - name: var2
+        type: String
+        value: def
+
+# --- example 3 ---
+trigger:
+  name: triggerWithInputSetOverrides
+  identifier: triggerWithInputSetOverrides
+  enabled: true
+  description: ""
+  tags: {}
+  stagesToExecute: []
+  orgIdentifier: default
+  projectIdentifier: test
+  pipelineIdentifier: testTriggerOverrideInputs
+  source:
+    type: Webhook
+    spec:
+      type: Custom
+      spec:
+        payloadConditions: []
+        headerConditions: []
+  inputSetRefs:
+    - myInputSet
+  inputYaml: |
+    pipeline:
+      identifier: triggerWithInputSetOverrides
+      stages:
+        - stage:
+            identifier: stage2
+            type: Deployment
+            spec:
+              service:
+                serviceInputs:
+                  serviceDefinition:
+                    type: Kubernetes
+                    spec:
+                      artifacts:
+                        primary:
+                          primaryArtifactRef: gfgjhjh
+                          sources:
+                            - identifier: gfgjhjh
+                              type: Gcr
+                              spec:
+                                tag: v0.5
+      variables:
+        - name: var2
+          type: String
+          value: overridenValue

@@ -1,0 +1,27 @@
+# source: docs/continuous-integration/secure-ci/aws-oidc-token-plugin.md  (https://developer.harness.io/docs/continuous-integration/secure-ci/aws-oidc-token-plugin)
+
+# --- example 1 ---
+- step:
+    type: Plugin
+    name: assume-role-with-oidc
+    identifier: assume_role_with_oidc
+    spec:
+      image: plugins/aws-oidc
+      settings:
+        iamRoleArn: arn:aws:iam::123456789012:role/harness-ci-role
+        role_session_name: foo # defaults to harness-aws-oidc
+        duration: 3600 # in seconds
+
+# --- example 2 ---
+- step:
+    type: Run
+    name: Run AWS Command
+    identifier: runAwsCommand
+    spec:
+      image: amazon/aws-cli
+      shell: sh
+      envVariables:
+        AWS_ACCESS_KEY_ID: <+steps.assume_role_with_oidc.output.outputVariables.AWS_ACCESS_KEY_ID>
+        AWS_SECRET_ACCESS_KEY: <+steps.assume_role_with_oidc.output.outputVariables.AWS_SECRET_ACCESS_KEY>
+        AWS_SESSION_TOKEN: <+steps.assume_role_with_oidc.output.outputVariables.AWS_SESSION_TOKEN>
+      command: aws s3 ls

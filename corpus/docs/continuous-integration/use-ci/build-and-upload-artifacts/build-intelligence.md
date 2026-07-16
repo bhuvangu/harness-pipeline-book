@@ -1,0 +1,446 @@
+---
+title: Build Intelligence Overview
+description: Learn about the Build Intelligence in Harness CI.
+sidebar_position: 7
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Build Intelligence is part of [Harness CI Intelligence](/docs/continuous-integration/use-ci/harness-ci-intelligence), a suite of features in Harness CI designed to improve build times. By storing these outputs remotely and retrieving them when inputs haven't changed, Build Intelligence avoids unnecessary rebuilds, significantly accelerating the build process and enhancing efficiency.
+
+Build Intelligence is currently available for **Gradle**, **Bazel** and **Maven** build tools. Regardless of the programming language used in your projects, as long as you're building with a supported build tool, you can leverage Build Intelligence to optimize your builds.
+
+:::tip Build Intelligence with Maven (Beta)
+**Build Intelligence is now available in beta** for the Maven build tool (version 3.9+). To join the beta program, please contact [Harness Support](https://support.harness.io) or your account representative.
+:::
+
+:::info
+* Build Intelligence is now Generally Available (GA). 
+* Build Intelligence is enabled by default for newly created CI stages. This is configurable in [CI default settings](/docs/platform/settings/default-settings.md#continuous-integration).
+* Build Intelligence currently supports Linux only (AMD and ARM). 
+* Build Intelligence currently supports Cloud and Kubernetes Build infrastructures only. 
+
+:::
+ 
+## Using Build Intelligence
+Build Intelligence seamlessly integrates into your workflow without requiring changes to your build commands. Harness automatically detects supported build tools in your pipeline and injects the necessary configurations into the relevant files within the build workspace. This ensures Build Intelligence optimizes your builds during Gradle or Bazel operations performed in `Test` or `Run` steps. 
+
+To enable Build Intelligence, use the UI editor to enable the stage property `Build Intelligence` in Build stage overview tab. Alternatively, it can be enabled from YAML editor as shown below.
+
+
+Below is an example of a CI stage using Build Intelligence: 
+
+```YAML
+- stage:
+    identifier: build
+    name: build
+    type: CI
+    spec:
+      cloneCodebase: true
+      buildIntelligence: 
+        enabled: true # Build intelligence enabled
+      execution:
+        steps:
+          - step:
+              type: Action
+              name: Set up Gradle
+              identifier: Set_up_Gradle
+              spec:
+                uses: gradle/gradle-build-action@v2
+                with:
+                  gradle-version: "8.5"
+          - step:
+              type: Run
+              name: build
+              identifier: build
+              spec:
+                shell: Sh
+                command: ./gradlew build --profile  # '--profile' is optional but advised for gradle
+```
+
+You can also enable or disable Build Intelligence based on an expression directly in the YAML. For example, you can conditionally set whether Build Intelligence is on or off using a pipeline variable expression like `<+pipeline.variables.someVar>`.
+
+<Tabs>
+  <TabItem value="Cloud" label="Harness Cloud" default>
+
+
+The cache storage limit depends on your subscription plan type. Please visit [Subscriptions and licenses](/docs/continuous-integration/get-started/ci-subscription-mgmt.md#usage-limits) page to learn more about usage limits.
+
+Harness doesn't limit the number of caches you can store, but, once you reach your storage limit, Harness continues to save new caches by automatically evicting old caches.
+
+The cache retention window is 15 days, which resets whenever a cache is updated.
+
+  </TabItem>
+
+
+  <TabItem value="Self Hosted" label="Self Hosted" default>
+  :::info
+   - Build Intelligence is only supported for Kubernetes on self-hosted build infrastructure. 
+   - By default, Build Intelligence uses port 8082, and downloads the Build Intelligence plugin from Maven Central. You can change the default behaviour in [CI default settings](/docs/platform/settings/default-settings.md#continuous-integration).
+  :::
+
+  - When using Build Intelligence with self-hosted infrastructure, you need object storage for cache storage. Build Intelligence supports Azure Blob Storage, GCP Cloud Storage, AWS S3, and any S3-compatible storage. Go to [configure default object storage](/docs/platform/settings/default-settings.md#continuous-integration) to set up your storage.
+  - By default, the Build Intelligence step configures a proxy on port 8082. However, for self-hosted setups, you can configure the port by setting the stage variable `CACHE_SERVICE_HTTPS_BIND`, or in [CI default settings](/docs/platform/settings/default-settings.md#continuous-integration).
+  - You can also override the storage connector, region, bucket name, and sidecar container settings at the stage level. Go to [Override storage and sidecar settings](#override-storage-and-sidecar-settings) to configure per-stage overrides.
+  - When using Azure Blob Storage, authenticate with the Azure connector using **Service Principal** or **OIDC**. Managed Identity authentication is not supported for Build Intelligence.
+
+Example Pipeline YAML:
+
+```YAML
+pipeline:
+  projectIdentifier: YOUR_PROJECT_ID
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CONNECTOR_REF
+        build: <+input>
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: false
+          buildIntelligence:
+            enabled: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: k8
+              namespace: harness-delegate-ng
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Run_1
+                  identifier: Run_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: gradle:8.1.1-jdk17
+                    shell: Sh
+                    command: |-
+                      ./gradlew build
+        variables:
+          - name: MAVEN_URL
+            type: String
+            required: false
+            value: https://your-artifactory-domain/artifactory/your-repository/
+          - name: CACHE_SERVICE_HTTPS_BIND
+            type: String
+            description: "Custom port for self-hosted Build Intelligence proxy"
+            required: false
+            value: "8284"  # Example custom port
+  identifier: YOUR_PIPELINE_ID
+  name: YOUR_PIPELINE_NAME
+```
+
+  - By default, the Build Intelligence plugin is downloaded from Maven Central. If your environment does not have access to Maven Central or you prefer using a custom Maven repository, you can configure this by setting a stage variable named `MAVEN_URL`, or in [CI default settings](/docs/platform/settings/default-settings.md#continuous-integration). See [Build Intelligence plugin](https://central.sonatype.com/artifact/io.harness/gradle-cache/overview ) 
+
+  </TabItem>
+</Tabs>
+
+### How does Build Intelligence work 
+Harness auto-detects supported build tools (Gradle and Bazel). It auto injects required configuration to appropriate files on the build workspace. This will allow Build Intelligence to automatically optimize your builds when bazel/gradle operation are done in `Test` or `Run` steps. 
+
+#### Gradle Config
+When using gradle, Harness creates an init.gradle file in `~/.gradle/init.d` or `$GRADLE_HOME/init.d` or `$GRADLE_USER_HOME/init.d` folder if not found, with the required configuration. 
+
+#### Bazel Config
+When using bazel, Harness create a ~/.bazelrc file (if it does not exist), with the required configuration. 
+
+The config will look like:
+`build --remote_cache=http://endpoint:port/cache/bazel (endpoint is localhost:8082)`
+
+#### Maven Config
+For Maven builds, the following configuration files are injected into the environment:
+
+`.mvn/maven-build-cache-config.xml`
+
+`.mvn/extensions.xml`
+
+`~/.m2/settings.xml`
+
+There are two ways to apply settings.xml:
+
+- Maven installation-wide: `${maven.home}/conf/settings.xml`
+
+- User-specific: `${user.home}/.m2/settings.xml`
+
+These configurations enable build caching and repository access based on your pipeline’s setup.
+
+### Using a Private Maven Repository for Build Intelligence Extensions
+
+If your environment restricts access to Maven Central, you can configure Build Intelligence to download required extensions (like the Maven build cache extension) from your private or third-party artifact registry.
+
+This support is built-in and requires the following:
+
+1. Upload Required Maven Artifacts
+Ensure the following artifacts are available in your private Maven repository under the correct path structure (i.e., `org/apache/maven/extensions/maven-build-cache-extension/1.2.0/`):
+
+- [maven-build-cache-extension-1.2.0.pom](https://repo.maven.apache.org/maven2/org/apache/maven/extensions/maven-build-cache-extension/1.2.0/maven-build-cache-extension-1.2.0.pom)
+
+- [maven-build-cache-extension-1.2.0.jar](https://repo.maven.apache.org/maven2/org/apache/maven/extensions/maven-build-cache-extension/1.2.0/maven-build-cache-extension-1.2.0.jar)
+
+This ensures Maven clients can resolve the artifacts properly using the standard package coordinates, which are required by Build Intelligence to enable caching for Maven builds.
+
+2. Update Your `pom.xml`
+
+Point your Maven build to use your private registry:
+
+```xml
+<repositories>
+  <repository>
+    <id>maven-dev</id>
+    <url>https://your-private-maven-registry.example.com/repository/maven-releases</url>
+    <releases>
+      <enabled>true</enabled>
+      <updatePolicy>always</updatePolicy>
+    </releases>
+    <snapshots>
+      <enabled>true</enabled>
+      <updatePolicy>always</updatePolicy>
+    </snapshots>
+  </repository>
+</repositories>
+```
+3. (Optional) Add Authentication
+If your registry requires authentication, add this to your `settings.xml` file:
+
+```xml
+<settings>
+  <servers>
+    <server>
+      <id>maven-dev</id>
+      <username>YOUR_USERNAME</username>
+      <password>YOUR_PASSWORD</password>
+    </server>
+  </servers>
+</settings>
+```
+
+Make sure the `<id>` in settings.xml matches the one in the `<repository>` section of your pom.xml.
+
+### Using '--profile'
+Appending `--profile' to your build command, enables publishing Build Intelligence savings to Harness. This will allow you to clearly view the performance and benefits of using Build Intelligence. Note that even when omitted, Build Intelligence will continue to work and optimize your run as expected, but the savings will not be visible in the UI and relevant dashboards.
+
+For example:  `./gradlew build --profile`
+
+This is currently supported with Gradle build tool only . 
+
+![Build Intelligence Savings](./static/build-intelligence-savings.png)
+
+Visit [Intelligence Savings](/docs/continuous-integration/use-ci/harness-ci-intelligence#intelligence-savings) for more information.
+
+---
+
+## Override storage and sidecar settings
+
+When running Build Intelligence on self-managed Kubernetes infrastructure, the Build Intelligence sidecar uses storage connector and container settings from your account-level Default Settings by default. You can override any of these individually per stage under `stage.spec.buildIntelligence` to use different connectors, bucket configurations, or resource allocations for specific stages.
+
+:::info Fallback behavior
+Each field falls back independently. You only need to specify the fields you want to override. For example, if you specify `connectorRef` but omit `region` and `bucket_name`, the stage uses the stage-level connector with the account-level region and bucket name. Any field not specified at the stage level uses the value from [CI default settings](/docs/platform/settings/default-settings.md#continuous-integration).
+:::
+
+:::note
+These settings apply only to Kubernetes build infrastructure.
+:::
+
+### Override the storage connector and bucket
+
+Use `connectorRef`, `region`, and `bucket_name` to override the storage settings configured in your account-level Default Settings.
+
+- `connectorRef` specifies the connector ID for cloud storage. This overrides the Cloud Storage Connector from Default Settings. Supported connector types include Azure Blob Storage, GCP Cloud Storage, AWS S3, and any S3-compatible storage. When using an Azure connector, authenticate with **Service Principal** or **OIDC** only; Managed Identity is not supported.
+- `region` specifies the bucket region. This overrides the account-level Region setting.
+- `bucket_name` specifies the bucket name. This overrides the account-level Bucket Name setting.
+
+```yaml
+- stage:
+    name: build
+    identifier: build
+    type: CI
+    spec:
+      buildIntelligence:
+        enabled: true
+        connectorRef: aws_connector
+        region: us-east-1
+        bucket_name: my-build-cache-bucket
+      cloneCodebase: true
+```
+
+### Configure run-as-user
+
+Use `runAsUser` to set the user ID (UID) for the Build Intelligence sidecar container. This corresponds to the Kubernetes `securityContext.runAsUser` property.
+
+This is useful when your cluster enforces non-root security policies or when you need root access (UID 0) for the sidecar container.
+
+```yaml
+- stage:
+    name: build
+    identifier: build
+    type: CI
+    spec:
+      buildIntelligence:
+        enabled: true
+        runAsUser: 0
+      cloneCodebase: true
+```
+
+### Configure sidecar container resources
+
+Use `resources` to define Kubernetes resource requests and limits for the Build Intelligence sidecar container. This controls memory and CPU allocation to prevent the sidecar from being OOMKilled or starving other containers in the pod.
+
+```yaml
+- stage:
+    name: build
+    identifier: build
+    type: CI
+    spec:
+      buildIntelligence:
+        enabled: true
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 400m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+      cloneCodebase: true
+```
+
+### Full YAML reference
+
+The following example shows all available `buildIntelligence` properties:
+
+```yaml
+- stage:
+    name: build
+    identifier: build
+    type: CI
+    spec:
+      buildIntelligence:
+        enabled: true
+        connectorRef: my_connector
+        region: us-east-1
+        bucket_name: my-build-cache-bucket
+        runAsUser: 0
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 400m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+      cloneCodebase: true
+      infrastructure:
+        type: KubernetesDirect
+        spec:
+          connectorRef: k8
+          namespace: harness-delegate-ng
+          os: Linux
+```
+
+---
+
+## Troubleshooting
+
+### License-checking plugins flagging Build Intelligence files
+
+Build Intelligence generates XML configuration files in the `.mvn/` directory of your build workspace. License-compliance plugins — such as [Apache RAT (Release Audit Tool)](https://creadur.apache.org/rat/), [License Maven Plugin](https://www.mojohaus.org/license-maven-plugin/), or similar source-auditing tools — may flag these generated files for missing license headers, causing build failures.
+
+#### Option 1: Exclude Harness-generated files from the scan
+
+Add the Harness-generated directories to your plugin's exclusion list. The key directories to exclude are:
+
+- **Build Intelligence:** `/harness/.mvn`
+- **Cache Intelligence:** `/harness/.m2`, `/harness/.mvn`
+
+Add the following snippet under the `<build>` section to configure the apache-rat-plugin to ignore these paths:
+
+**Example: Apache RAT plugin in `pom.xml`**
+
+```xml
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.apache.rat</groupId>
+      <artifactId>apache-rat-plugin</artifactId>
+      <version>0.15</version> <!-- Or use the latest version -->
+      <configuration>
+        <excludes>
+          <exclude>/harness/.mvn</exclude>
+          <exclude>/harness/.m2</exclude>
+        </excludes>
+      </configuration>
+      <executions>
+        <execution>
+          <phase>verify</phase>
+          <goals>
+            <goal>check</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+```
+
+**Example: `.rat-excludes` file**
+
+```
+.mvn/**
+```
+
+**Example: License Maven Plugin in `pom.xml`**
+
+```xml
+<excludes>
+  <exclude>.mvn/**</exclude>
+</excludes>
+```
+
+Refer to your specific plugin's documentation for the correct exclusion syntax.
+
+#### Option 2: Inject license headers into generated files
+
+If excluding files is not an option, add a **Run** step before your build step that injects the required license headers into the generated XML files. The example below uses an Apache Software Foundation header, but you should adapt it to the header your plugin expects:
+
+```shell
+#!/bin/bash
+LICENSE_HEADER='<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements. See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership. The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License. You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing,
+  software distributed under the License is distributed on an
+  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+  KIND, either express or implied. See the License for the
+  specific language governing permissions and limitations
+  under the License.
+-->'
+
+for file in .mvn/*.xml; do
+  [ -f "$file" ] || continue
+  grep -q "Licensed to the Apache Software Foundation" "$file" && continue
+  if head -1 "$file" | grep -q '<?xml'; then
+    XML_DECL=$(head -1 "$file")
+    REST=$(tail -n +2 "$file")
+    printf '%s\n%s\n%s\n' "$XML_DECL" "$LICENSE_HEADER" "$REST" > "$file"
+  else
+    printf '%s\n%s\n' "$LICENSE_HEADER" "$(cat "$file")" > "$file"
+  fi
+done
+```
+
+Place this **Run** step after the codebase clone and before your build/test steps so the headers are present when the scan runs.

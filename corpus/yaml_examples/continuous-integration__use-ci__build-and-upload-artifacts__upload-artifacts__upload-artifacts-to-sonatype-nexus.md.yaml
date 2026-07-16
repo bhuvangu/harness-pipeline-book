@@ -1,0 +1,91 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-artifacts-to-sonatype-nexus.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-artifacts-to-sonatype-nexus)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: upload_sonatype
+                  identifier: upload_sonatype
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                    image: harnesscommunity/publish-nexus-repository:1.1.1
+                    settings:
+                      username: deploy-user ## Nexus Repository Manager username
+                      password: <+secrets.getValue("nexus_password")> ## Nexus Repository Manager password
+                      server_url: http://11.222.333.444:8000/ ## Nexus Repository instance URL
+                      filename: ./target/example-1.0.jar ## Path to the artifact to upload
+                      format: maven2 ## Repository format
+                      repository: maven-releases ## Destination repository name
+                      attributes: "-CgroupId=org.dronetest -CartifactId=example -Cversion=1.0 -Aextension=jar -Aclassifier=bin" ## Key-value pairs providing additional metadata
+
+# --- example 2 ---
+               - step:
+                  type: Plugin
+                  name: publish artifact metadata
+                  identifier: publish_artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://complete/url/to/artifact/on/nexus
+                      artifact_file: artifact.txt
+
+# --- example 3 ---
+pipeline:
+  name: YOUR_PIPELINE_NAME
+  identifier: YOUR_PIPELINE_ID
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR
+        repoName: YOUR_CODE_REPO
+        build: <+input>
+  stages:
+    - stage:
+        name: stage1
+        identifier: stage1
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Build
+                  identifier: build
+                  spec:
+                    shell: Sh
+                    command: "mvn clean package"
+              - step:
+                  type: Plugin
+                  name: upload_nexus
+                  identifier: upload_nexus
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: harnesscommunity/publish-nexus-repository:1.1.1
+                    settings:
+                      username: test-user
+                      password: <+secrets.getValue("nexus_password")>
+                      server_url: http://11.222.333.444:8000/
+                      format: maven2
+                      filename: ./target/example-1.0.jar
+                      repository: maven-releases
+                      attributes: "-CgroupId=org.dronetest -CartifactId=example -Cversion=1.0 -Aextension=jar -Aclassifier=bin"
+               - step:
+                  type: Plugin
+                  name: publish artifact metadata
+                  identifier: publish_artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://repository.sonatype.org/content/sites/...
+                      artifact_file: artifact.txt
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}

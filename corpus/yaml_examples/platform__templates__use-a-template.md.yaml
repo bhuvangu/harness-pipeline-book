@@ -1,0 +1,39 @@
+# source: docs/platform/templates/use-a-template.md  (https://developer.harness.io/docs/platform/templates/use-a-template)
+
+# --- example 1 ---
+  pipeline:
+    identifier: run
+    name: run
+    template:
+      templateRef: pipelineTemplate
+      versionLabel: V1
+      templateInputs:
+        stages:
+          - stage:
+              identifier: shell
+              type: Custom
+              variables:
+                - name: var1
+                  type: String
+                  value: testingInput
+    stages:
+      - stage:
+          identifier: shell
+          type: Custom
+          name: shell
+          spec:
+            execution:
+              steps:
+                - step:
+                    identifier: ShellScript_1
+                    type: ShellScript
+                    name: ShellScript_1
+                    spec:
+                      shell: Bash
+                      source:
+                        type: Inline
+                        spec:
+                          script: echo 1
+                    timeout: 10m
+    projectIdentifier: myProject
+    orgIdentifier: default

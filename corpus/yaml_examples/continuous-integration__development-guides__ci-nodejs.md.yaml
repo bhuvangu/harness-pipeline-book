@@ -1,0 +1,229 @@
+# source: docs/continuous-integration/development-guides/ci-nodejs.md  (https://developer.harness.io/docs/continuous-integration/development-guides/ci-nodejs)
+
+# --- example 1 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      shell: Sh
+      command: |-
+        npm install express@4.18.2 --no-save
+
+# --- example 2 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: node:14.18.2-alpine
+      command: |-
+        npm install express@14.18.2 --no-save
+
+# --- example 3 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+
+# --- example 4 ---
+spec:
+  key: cache-{{ checksum "package-lock.json" }}
+
+# --- example 5 ---
+spec:
+  key: cache-{{ checksum "yarn.lock" }}
+
+# --- example 6 ---
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "package-lock.json" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  ...
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  ...
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "package-lock.json" }}
+                    sourcePaths:
+                      - node_modules
+                    archiveFormat: Tar
+
+# --- example 7 ---
+- step:
+    type: Run
+    name: npm test
+    identifier: npm_test
+    spec:
+      shell: Sh
+      command: |-
+        npm install
+        npm run build --if-present
+        npm test
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - report.xml
+
+# --- example 8 ---
+- step:
+    type: Run
+    name: npm test
+    identifier: npm test
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: node:latest
+      shell: Sh
+      command: |-
+        npm install
+        npm run build --if-present
+        npm test
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - report.xml
+
+# --- example 9 ---
+reports:
+  type: JUnit
+  spec:
+    paths:
+      - report.xml
+
+# --- example 10 ---
+- step:
+    type: Run
+    name: Install Node
+    identifier: installnode
+    spec:
+      shell: Sh
+      envVariables:
+        NODE_VERSION: 18.16.0
+      command: |-
+        mkdir $HOME/nodejs
+        curl -L https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz | tar xJ -C $HOME/nodejs
+        export PATH=$HOME/nodejs/node-v${NODE_VERSION}-linux-x64/bin:$PATH
+
+# --- example 11 ---
+- stage:
+    strategy:
+      matrix:
+        nodeVersion:
+          - 18.16.0
+          - 20.2.0
+
+# --- example 12 ---
+- step:
+    type: Run
+    name: Install node
+    identifier: installnode
+    spec:
+      shell: Sh
+      command: |-
+        mkdir $HOME/nodejs
+        curl -L https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz | tar xJ -C $HOME/nodejs
+        export PATH=$HOME/nodejs/node-v${NODE_VERSION}-linux-x64/bin:$PATH
+      envVariables:
+        NODE_VERSION: <+matrix.nodeVersion>
+
+# --- example 13 ---
+- step:
+    type: Run
+    name: Node Version
+    identifier: nodeversion
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: node:18.16.0
+      shell: Sh
+      command: |-
+        npm version
+
+# --- example 14 ---
+- stage:
+    strategy:
+      matrix:
+        nodeVersion:
+          - 18.16.0
+          - 20.2.0
+
+# --- example 15 ---
+- step:
+    type: Run
+    name: Node Version
+    identifier: nodeversion
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: node:<+matrix.nodeVersion>
+      shell: Sh
+      command: |-
+        npm version
+
+# --- example 16 ---
+pipeline:
+  name: nodejs-sample
+  identifier: nodejssample
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Build Node App
+        identifier: Build_Node_App
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: npm test
+                  identifier: npm_test
+                  spec:
+                    shell: Sh
+                    command: |-
+                      npm install
+                      npm run build --if-present
+                      npm test
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: BuildAndPushDockerRegistry_1
+                  identifier: BuildAndPushDockerRegistry_1
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    repo: YOUR_DOCKER_HUB_USERNAME/DOCKER_REPO_NAME
+                    tags:
+                      - <+pipeline.sequenceId>
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>

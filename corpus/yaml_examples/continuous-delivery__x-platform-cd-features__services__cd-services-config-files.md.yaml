@@ -1,0 +1,90 @@
+# source: docs/continuous-delivery/x-platform-cd-features/services/cd-services-config-files.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/services/cd-services-config-files)
+
+# --- example 1 ---
+service:
+  name: Config files
+  identifier: Config_files
+  tags: {}
+  serviceDefinition:
+    spec:
+      configFiles:
+        - configFile:
+            identifier: plainText
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Config files/my-plain-text-file.txt
+        - configFile:
+            identifier: encodedTextFile
+            spec:
+              store:
+                type: Harness
+                spec:
+                  secretFiles:
+                    - sshnov7
+    type: Ssh
+
+# --- example 2 ---
+                  files:
+                    - /Config files/file1.json
+                    - /dev/file2.json
+
+# --- example 3 ---
+my_file:`my_file:\<+configFile.getAsBase64("myFile")>`
+
+# --- example 4 ---
+data:  
+  keyname: |  
+{{.Values.my_file | b64dec | indent 4}}
+
+# --- example 5 ---
+environment:
+  name: Config Files
+  identifier: Config_Files
+  tags: {}
+  type: PreProduction
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  variables: []
+  overrides:
+    configFiles:
+      - configFile:
+          identifier: EnvironmentPlainText
+          spec:
+            store:
+              type: Harness
+              spec:
+                files:
+                  - /Config files/my-plain-text-file.txt
+      - configFile:
+          identifier: EnvironmentEncodedFile
+          spec:
+            store:
+              type: Harness
+              spec:
+                secretFiles:
+                  - account.Dpk
+
+# --- example 6 ---
+              - step:
+                  type: Command
+                  name: Copy
+                  identifier: Copy
+                  spec:
+                    onDelegate: false
+                    environmentVariables: []
+                    outputVariables: []
+                    commandUnits:
+                      - identifier: Copy
+                        name: Copy
+                        type: Copy
+                        spec:
+                          sourceType: Config
+                          destinationPath: /
+                  timeout: 10m
+                  failureStrategies: []
+                  strategy:
+                    repeat:
+                      items: <+stage.output.hosts>

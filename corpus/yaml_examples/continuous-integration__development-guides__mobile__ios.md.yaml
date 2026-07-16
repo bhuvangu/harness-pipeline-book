@@ -1,0 +1,509 @@
+# source: docs/continuous-integration/development-guides/mobile/ios.md  (https://developer.harness.io/docs/continuous-integration/development-guides/mobile/ios)
+
+# --- example 1 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      type: CI
+      spec:
+        cloneCodebase: true
+        platform:
+          os: MacOS ## selects macOS operating system
+          arch: Arm64 ## selects M1 architecture
+        runtime:
+          type: Cloud
+          spec: {}
+
+# --- example 2 ---
+stages:
+  - stage:
+      name: build
+      identifier: build
+      description: ""
+      type: CI
+      spec:
+        cloneCodebase: true
+        infrastructure:
+          type: VM
+          spec:
+            type: Pool
+            spec:
+              poolName: YOUR_VM_POOL_NAME
+              os: MacOS
+
+# --- example 3 ---
+- step:
+    type: Run
+    identifier: dependencies_ruby_gems
+    name: dependencies-ruby-gems
+    spec:
+      shell: Sh
+      command: |-
+        brew install fastlane
+
+# --- example 4 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      shell: Sh
+      command: |-
+        xcodebuild -resolvePackageDependencies
+
+# --- example 5 ---
+- step:
+    type: Run
+    identifier: dependencies_install_brew
+    name: dependencies-install-brew
+    spec:
+      shell: Sh
+      command: |-
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+- step:
+    type: Run
+    identifier: dependencies_ruby_gems
+    name: dependencies-ruby-gems
+    spec:
+      shell: Sh
+      command: |-
+        brew install fastlane
+
+# --- example 6 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      shell: Sh
+      command: |-
+        xcodebuild -resolvePackageDependencies
+
+# --- example 7 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+        paths:
+          - /Users/anka/Library/Developer/Xcode/DerivedData
+      sharedPaths:
+        - /Users/anka/Library/Developer/Xcode/DerivedData
+
+# --- example 8 ---
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "cache.ipa" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  ...
+              - step:
+                  type: Run
+                  ...
+              - step:
+                  type: Run
+                  identifier: create_cache
+                  name: create cache
+                  spec:
+                    shell: Sh
+                    command: |-
+                      xcodebuild archive
+                      xcodebuild -exportArchive
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "cache.ipa" }}
+                    sourcePaths:
+                      - "/Users/anka/Library/Developer/Xcode/DerivedData"
+                    archiveFormat: Tar
+
+# --- example 9 ---
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      shell: Sh
+      command: |-
+        xcodebuild
+        xcodebuild test -scheme SampleApp
+
+# --- example 10 ---
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      shell: Sh
+      command: |-
+        brew install xcpretty
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      shell: Sh
+      command: |-
+        xcodebuild
+        xcodebuild test -scheme SampleApp | xcpretty -r junit
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - "build/reports/junit.xml"
+
+# --- example 11 ---
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      shell: Sh
+      command: |-
+        xcodebuild
+        xcodebuild test -scheme SampleApp
+
+# --- example 12 ---
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      shell: Sh
+      command: |-
+        brew install xcpretty
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      shell: Sh
+      command: |-
+        xcodebuild
+        xcodebuild test -scheme SampleApp | xcpretty -r junit
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - "build/reports/junit.xml"
+
+# --- example 13 ---
+- step:
+    type: Run
+    name: set_xcode_version
+    identifier: set_xcode_version
+    spec:
+      shell: Sh
+      command: |-
+        sudo xcode-select -switch /Applications/Xcode_15.1.0.app
+        xcodebuild -version
+
+# --- example 14 ---
+              - step:
+                  type: Run
+                  name: set_xcode_version
+                  identifier: set_xcode_version
+                  spec:
+                    shell: Sh
+                    command: |-
+                      xcode-select --install
+
+# --- example 15 ---
+- step:
+    type: Run
+    name: set_xcode_version
+    identifier: set_xcode_version
+    spec:
+      shell: Sh
+      command: |-
+        sudo xcode-select -switch /Applications/Xcode_15.1.0.app
+        xcodebuild -version
+
+# --- example 16 ---
+              - step:
+                  type: Run
+                  name: set_xcode_version
+                  identifier: set_xcode_version
+                  spec:
+                    shell: Sh
+                    command: |-
+                      xcode-select --install
+
+# --- example 17 ---
+- step:
+    type: Run
+    name: Fastlane Build
+    identifier: Fastlane_Build
+    spec:
+      shell: Sh
+      command: |-
+        export LC_ALL=en_US.UTF-8
+        export LANG=en_US.UTF-8
+
+        export APP_ID="osx.hello-harness"
+        export APP_STORE_CONNECT_KEY_ID="FW...CV3"
+        export APP_STORE_CONNECT_ISSUER_ID="80...e54"
+        export APP_STORE_CONNECT_KEY_FILEPATH="/tmp/build_certificate.p12"
+
+        export FASTLANE_USER=sample@mail.com
+        export FASTLANE_PASSWORD=<+secrets.getValue('fastlanepassword')>
+        export BUILD_CERTIFICATE_BASE64=<+secrets.getValue('BUILD_CERTIFICATE_BASE64')>
+        export BUILD_PROVISION_PROFILE_BASE64=<+secrets.getValue('BUILD_PROVISION_PROFILE_BASE64')>
+        export P12_PASSWORD=<+secrets.getValue('certpassword')>
+        export KEYCHAIN_PASSWORD=admin
+        export FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=<+secrets.getValue('fastlaneapppassword')>
+        export FASTLANE_SESSION='-..._at: *1\n'
+        export APP_STORE_CONNECT_KEY_BASE64=<+secrets.getValue('appstoreapikey')>
+
+        sudo xcode-select -switch /Applications/Xcode_14.1.0.app
+        cd hello-harness
+
+        CERTIFICATE_PATH=/tmp/build_certificate.p12
+        PP_PATH=/tmp/profile.mobileprovision
+        KEYCHAIN_PATH=/tmp/app-signing.keychain-db
+        KEY_FILE_PATH="/tmp/app_store_connect_key.p8"
+
+        echo "$BUILD_CERTIFICATE_BASE64" >> ce
+        base64 -i ce --decode > $CERTIFICATE_PATH
+
+        echo "$BUILD_PROVISION_PROFILE_BASE64" >> prof
+        base64 -i prof --decode > $PP_PATH
+
+        echo "$APP_STORE_CONNECT_KEY_BASE64" >> key_base64
+        base64 -i key_base64 --decode > $KEY_FILE_PATH
+        export APP_STORE_CONNECT_KEY_FILEPATH="$KEY_FILE_PATH"
+
+        security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+        security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security list-keychain -d user -s $KEYCHAIN_PATH
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+        gem install bundler
+        bundle install
+
+        bundle exec fastlane beta
+        echo $ABC
+      envVariables:
+        ABC: samples
+- step:
+    type: Run
+    name: Run_2
+    identifier: Run_2
+    spec:
+      shell: Sh
+      command: echo $ABC
+
+# --- example 18 ---
+- step:
+    type: Run
+    name: Fastlane Build
+    identifier: Fastlane_Build
+    spec:
+      shell: Sh
+      command: |-
+        export LC_ALL=en_US.UTF-8
+        export LANG=en_US.UTF-8
+
+        export APP_ID="osx.hello-harness"
+        export APP_STORE_CONNECT_KEY_ID="FW...CV3"
+        export APP_STORE_CONNECT_ISSUER_ID="801...e54"
+        export APP_STORE_CONNECT_KEY_FILEPATH="/tmp/build_certificate.p12"
+
+        export FASTLANE_USER=sample@mail.com
+        export FASTLANE_PASSWORD=<+secrets.getValue('fastlanepassword')>
+        export BUILD_CERTIFICATE_BASE64=<+secrets.getValue('BUILD_CERTIFICATE_BASE64')>
+        export BUILD_PROVISION_PROFILE_BASE64=<+secrets.getValue('BUILD_PROVISION_PROFILE_BASE64')>
+        export P12_PASSWORD=<+secrets.getValue('certpassword')>
+        export KEYCHAIN_PASSWORD=admin
+        export FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD=<+secrets.getValue('fastlaneapppassword')>
+        export FASTLANE_SESSION='-...*1\n'
+        export APP_STORE_CONNECT_KEY_BASE64=<+secrets.getValue('appstoreapikey')>
+
+        sudo xcode-select -switch /Applications/Xcode_14.1.0.app
+        cd hello-harness
+
+        CERTIFICATE_PATH=/tmp/build_certificate.p12
+        PP_PATH=/tmp/profile.mobileprovision
+        KEYCHAIN_PATH=/tmp/app-signing.keychain-db
+        KEY_FILE_PATH="/tmp/app_store_connect_key.p8"
+
+        echo "$BUILD_CERTIFICATE_BASE64" >> ce
+        base64 -i ce --decode > $CERTIFICATE_PATH
+
+        echo "$BUILD_PROVISION_PROFILE_BASE64" >> prof
+        base64 -i prof --decode > $PP_PATH
+
+        echo "$APP_STORE_CONNECT_KEY_BASE64" >> key_base64
+        base64 -i key_base64 --decode > $KEY_FILE_PATH
+        export APP_STORE_CONNECT_KEY_FILEPATH="$KEY_FILE_PATH"
+
+        security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+        security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+        security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+        security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+        security list-keychain -d user -s $KEYCHAIN_PATH
+        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+        cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+        gem install bundler
+        bundle install
+
+        bundle exec fastlane beta
+        echo $ABC
+      envVariables:
+        ABC: samples
+- step:
+    type: Run
+    name: Run_2
+    identifier: Run_2
+    spec:
+      shell: Sh
+      command: echo $ABC
+
+# --- example 19 ---
+pipeline:
+  name: macostest
+  identifier: macostest
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+            paths:
+              - /Users/anka/Library/Developer/Xcode/DerivedData
+          sharedPaths:
+            - /Users/anka/Library/Developer/Xcode/DerivedData
+          platform:
+            os: MacOS
+            arch: Arm64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: dependencies
+                  spec:
+                    shell: Sh
+                    command: xcodebuild -resolvePackageDependencies
+              - step:
+                  type: Run
+                  name: Run xcode
+                  identifier: Run_xcode
+                  spec:
+                    shell: Sh
+                    command: |-
+                      xcodebuild
+                      xcodebuild test -scheme SampleApp
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+
+# --- example 20 ---
+pipeline:
+  name: macos-test-vm
+  identifier: macostestvm
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1 ## Use your S3 bucket's region.
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "cache.ipa" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: dependencies
+                  spec:
+                    shell: Sh
+                    command: xcodebuild -resolvePackageDependencies
+              - step:
+                  type: Run
+                  name: Run xcode
+                  identifier: Run_xcode
+                  spec:
+                    shell: Sh
+                    command: |-
+                      xcodebuild
+                      xcodebuild test -scheme SampleApp
+              - step:
+                  type: Run
+                  identifier: create_cache
+                  name: create cache
+                  spec:
+                    shell: Sh
+                    command: |-
+                      xcodebuild archive
+                      xcodebuild -exportArchive
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR_ID
+                    region: us-east-1 ## Use your S3 bucket's region.
+                    bucket: YOUR_S3_BUCKET
+                    key: cache-{{ checksum "cache.ipa" }}
+                    sourcePaths:
+                      - /Users/anka/Library/Developer/Xcode/DerivedData
+                    archiveFormat: Tar
+          infrastructure:
+            type: VM
+            spec:
+              type: Pool
+              spec:
+                poolName: YOUR_VM_POOL_NAME
+                os: MacOS
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>

@@ -1,0 +1,36 @@
+# source: docs/continuous-integration/use-ci/run-tests/viewing-tests.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/viewing-tests)
+
+# --- example 1 ---
+              - step:
+                  type: Run
+                  name: Tests
+                  identifier: tests
+                  ...
+                  reports:
+                    type: JUnit
+                    spec:
+                      paths:
+                        - /path/to/test/report.xml
+
+# --- example 2 ---
+   - step:
+       type: Plugin
+       name: publish artifact metadata
+       identifier: publish_artifact_metadata
+       spec:
+         connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+         image: plugins/artifact-metadata-publisher ## Required.
+         settings:
+           file_urls: ## Provide the URL to the artifact that was uploaded in the Upload Artifacts step. If you uploaded multiple artifacts, you can provide a list of URLs.
+           artifact_file: artifact.txt ## Provide any '.txt' file name. Harness uses this to store the artifact URL and display it on the Artifacts tab. This value is not the name of your uploaded artifact, and it has no relationship to the artifact object itself.
+
+# --- example 3 ---
+- step:
+    type: Plugin
+    name: Parse Test Reports Plugin
+    identifier: Parse_Test_Reports_Plugin
+    spec:
+      connectorRef: dockerConnector
+      image: plugins/test-analysis:latest
+      settings:
+        test_globs: folder1/*.xml, folder2/*.xml # paths to junit results

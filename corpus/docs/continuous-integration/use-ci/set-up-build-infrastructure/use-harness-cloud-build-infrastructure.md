@@ -1,0 +1,288 @@
+---
+title: Use Harness Cloud build infrastructure
+description: You can use Harness-managed build infrastructure for your Harness CI pipelines.
+sidebar_position: 20
+redirect_from:
+  - /docs/continuous-integration/use-ci/optimize-and-more/queue-intelligence
+---
+
+<DocsTag  text="Free plan" link="/docs/continuous-integration/ci-quickstarts/ci-subscription-mgmt" /> <DocsTag  text="Team plan" link="/docs/continuous-integration/ci-quickstarts/ci-subscription-mgmt" /> <DocsTag  text="Enterprise plan" link="/docs/continuous-integration/ci-quickstarts/ci-subscription-mgmt" />
+
+With Harness Cloud, you can run builds in isolation on Harness-managed VMs that are preconfigured with tools, packages, and settings commonly used in CI pipelines. Harness hosts, maintains, and upgrades these machines so that you can focus on building software instead of maintaining build infrastructure.
+
+Harness Cloud provides the following advantages:
+
+- Use Cloud credits to run builds on Harness-managed infrastructure. No need to set-up and maintain the infrastructure yourself
+- Starter pipelines for different programming languages.
+- Blazing fast builds on Linux, macOS, and Windows.
+- Get the latest features first. Harness may enable features for Harness Cloud before rolling them out to other build infrastructure options.
+
+For a comparison of build infrastructure options, go to [Which build infrastructure is right for me](./which-build-infrastructure-is-right-for-me.md).
+
+:::info What happens when pipelines run on Harness Cloud?
+
+When a build runs on Harness Cloud, Harness runs each CI stage in a new, ephemeral VM.
+
+![Example pipeline on Harness Cloud](./static/hosted-builds-on-virtual-machines-quickstart-11.png)
+
+The steps in each stage execute on the stage's dedicated VM. This allows the stage's steps to share information through the underlying filesystem. You can run CI steps directly on the VM or in a Docker container. When the stage is complete, the VM automatically terminates.
+
+:::
+
+## Billing and Cloud Credits
+
+Free plans get 2000 free Harness Cloud credits each month.
+If you're using a paid CI plan, you can purchase build credit packages.
+
+Harness can invoice in arrears for overages. For more information about Harness Cloud billing and build credit consumption, go to [Subscriptions and licenses](/docs/continuous-integration/get-started/ci-subscription-mgmt.md#harness-cloud-billing-and-cloud-credits).
+
+Free plans require credit card validation to use Harness Cloud. If you don't want to provide a credit card, consider using [local runner build infrastructure](./define-a-docker-build-infrastructure).
+
+## Platforms and image specifications
+
+Harness Cloud supports **Linux**, **macOS**, and **Windows** platforms. Each CI stage that runs on Harness Cloud is executed on a **Harness-managed VM image**.
+
+The VM image defines:
+1. The **operating system** (for example, Ubuntu 22.04, Ubuntu 24.04, macOS, or Windows)
+2. A **curated set of pre-installed tools** maintained and updated by Harness
+
+For more information about image components and preinstalled software, see [Harness Cloud VM Images](/docs/platform/references/harness-cloud-vm-images).
+
+After selecting a base VM image, you can **customize the build environment at pipeline execution time** by:
+
+1. Locking specific tool versions
+2. Installing additional tools that are not pre-installed
+3. Running steps directly on the host VM or inside Docker containers
+
+These customizations are applied **on top of the selected VM image**, are re-applied on each run, and **do not modify the underlying image**. [Learn more](/docs/platform/references/harness-cloud-vm-images#pre-installed-software-version-management)
+
+You can also use **Bring Your Own Image (BYOI)** to create fully custom VM images with your tools and dependencies pre-installed, eliminating the need to install them at pipeline runtime. For details, see [Harness Cloud BYOI](/docs/platform/references/harness-cloud-byoi) and [BYOI on Harness Cloud VM Images](/docs/platform/references/harness-cloud-vm-images#bring-your-own-image-byoi).
+
+:::tip
+To enable Windows and macOS for Harness Cloud, contact [Harness Support](mailto:support@harness.io).
+:::
+
+## Requirements for connectors and secrets
+
+- All connectors must connect through the Harness Platform, not a delegate.
+- AWS connectors can't use IRSA or AssumeRole.
+- GCP and Azure connectors can't use authentication that inherits credentials from the delegate.
+
+## Use Harness Cloud
+
+You can configure your pipelines to use Harness Cloud in minutes.
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs>
+  <TabItem value="Visual" label="Visual editor" default>
+
+1. Go to the pipeline where you want to use Harness Cloud build infrastructure.
+2. Select the **Build** stage, and then select the **Infrastructure** tab.
+3. Select **Harness Cloud** and the desired **Platform**.
+4. Save and run your pipeline.
+
+</TabItem>
+  <TabItem value="YAML" label="YAML editor">
+
+To enable Harness Cloud build infrastructure in your pipeline YAML, specify the `platform` and `runtime` in the `stage.spec`. For example:
+
+```yaml
+platform:
+  os: Linux
+  arch: Amd64
+runtime:
+  type: Cloud
+  spec: {}
+```
+
+- In `runtime`, you must include `type: Cloud`.
+- In `platform`, specify the `os` and `arch`. For a list of supported operating systems and architectures, go to [Platforms and image specifications](#platforms-and-image-specifications).
+
+<details>
+<summary>Pipeline YAML example</summary>
+
+The following YAML example describes a basic CI pipeline that uses Harness Cloud build infrastructure:
+
+```yaml
+pipeline:
+  name: Build sample-app
+  identifier: Build_sample_app_1677210779657
+  projectIdentifier: my-app-project
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: account.GitHub_example
+        repoName: my-gh-account/example-repo
+        build: <+input>
+  stages:
+    - stage:
+        name: Build
+        identifier: Build
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Echo Welcome Message
+                  identifier: Echo_Welcome_Message
+                  spec:
+                    shell: Sh
+                    command: echo "Welcome to Harness CI"
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+```
+
+</details>
+
+</TabItem>
+</Tabs>
+
+### Using Resource Classes
+
+You can use the yaml editor to change the cloud machine size.
+
+:::note
+Resource Classes support is now Generally Available (GA).
+If this feature is not yet enabled in your account, please reach out to [Harness Support](mailto:support@harness.io) for assistance.
+:::
+
+To select a resource class size, please set the desired size as value for `size` property in the CI stge cloud infrastructure runtime configuration. For example:
+
+```yaml
+platform:
+  os: Linux
+  arch: Amd64
+runtime:
+  type: Cloud
+  spec:
+    size: xlarge # optional
+```
+
+To learn more about all available resource classes in Harness Cloud, please visit [Harness Cloud billing and cloud credits](/docs/continuous-integration/get-started/ci-subscription-mgmt.md#harness-cloud-billing-and-cloud-credits).
+
+### Hardware Acceleration
+
+Harness supports hardware acceleration using nested virtualization on Linux/AMD Cloud machines.
+
+By enabling this feature, Android SDK tools and emulators can run more efficiently within virtualized environments, making Android test execution faster and optimizing build time.
+
+To enable this feature, set the `nestedVirtualization` property to `true` as shown below.
+
+:::note
+
+- To enable `nestedVirtualization` use the YAML editor, as this option is currently unavailable in the visual editor.
+- When using hardware acceleration, run your steps directly on the VM, rather than inside a container. Running inside a container is currently not supported with hardware acceleration.
+- Hardware acceleration is available for all machine sizes, when using Linux with AMD architecture on Harness Cloud.
+  :::
+
+```yaml
+- stage:
+    name: build
+    identifier: build
+    type: CI
+    spec:
+      platform:
+        os: Linux
+        arch: Amd64
+      runtime:
+        type: Cloud
+        spec:
+          nestedVirtualization: true
+          size: xlarge # optional
+```
+
+## Accessing privately hosted resources
+
+When running builds on Harness Cloud, you may need to access internal resources that are not publicly accessible, such as:
+
+- Internal artifact repositories
+- Private source code management systems (SCMs)
+- Internal APIs and services
+- On-premises databases
+
+Harness supports multiple approaches to enable secure communication between Harness Cloud infrastructure and your private network:
+
+1. **IP allowlisting** - Allow Harness Cloud IP ranges through your firewall
+2. **Private network connectivity** - Use cloud provider solutions like AWS PrivateLink or GCP Private Service Connect (Enterprise)
+
+### IP allowlisting
+
+Your networking or security team can allowlist the IP ranges used by Harness Cloud to permit traffic from Harness-managed build infrastructure to your private resources.
+
+To retrieve allowlisted IPs for Harness Cloud via API, see [Retrieve allowlisted IPs for Harness Cloud](/docs/platform/references/allowlist-harness-domains-and-ips#retrieve-allowlisted-ips-for-hosted-ci-via-api).
+
+For comprehensive information about IP allowlisting, see [Allowlist Harness domains and IPs](/docs/platform/references/allowlist-harness-domains-and-ips) or [contact Harness Support](https://support.harness.io/).
+
+### Private network connectivity (Enterprise)
+
+For enterprise customers with strict compliance and security requirements, you can use cloud provider private networking solutions for enhanced security without exposing traffic to the public internet.
+
+For detailed information about private network connectivity options, including AWS PrivateLink and GCP Private Service Connect, see [Private network connectivity options](/docs/platform/references/private-network-connectivity).
+
+## Harness Cloud best practices
+
+- Don't hardcode system environment variables. Instead, use references like `$HOME` or `$USER`.
+- Don't hardcode the number of processors/threads. Instead, use commands like `nproc` to specify threads/jobs in your build and test commands.
+- Don't use tools that only run on a specific cloud environment, such as `gcloud`. Harness Cloud sources its build VMs from a variety of cloud providers. It is impossible to predict which specific cloud provider hosts the Harness Cloud VM that your build uses during any single execution. Therefore, avoid using tools (such as gsutil or gcloud) that require a specific cloud provider's environment.
+- Know the [requirements for connectors and secrets](#requirements-for-connectors-and-secrets).
+- Know that Harness Cloud machine images can change. If your pipeline relies on a specific version of a software, tool, or environment, make sure you [lock versions](/docs/platform/references/harness-cloud-vm-images#lock-versions-or-install-additional-tools) to prevent your pipeline from failing when the image changes.
+- Know that you can add steps to your pipeline to [specify versions of tools](/docs/platform/references/harness-cloud-vm-images#specify-versions) and [lock versions, set up environments, or install additional tools](/docs/platform/references/harness-cloud-vm-images#lock-versions-or-install-additional-tools).
+- Run `apt-get update` before [installing additional software](/docs/platform/references/harness-cloud-vm-images#lock-versions-or-install-additional-tools) that might not be in the image's packages list.
+
+## Queue Intelligence
+
+With Queue Intelligence, Harness CI can queue and run build jobs in sequence when the build infrastructure receives more jobs than it can run concurrently.
+
+The Queue Intelligence feature introduces a `queued` state for individual builds. Builds progress through the following states:
+
+- `pending`: Build request created and waiting for a delegate. The maximum timeout for this state is 12 hours.
+- `queued`: Build request queued by a delegate. The maximum timeout for this state is 12 hours. When viewing the build in the UI, this state is indicated by a **Queued license limit reached** message.
+- `running`: The delegate runs a build for each build stage in the pipeline. The maximum timeout for this state is one hour.
+
+<!-- No longer applicable:
+
+### Concurrency and resource limits
+
+Your CI license `https://www.harness.io/pricing?module=ci#` determines the maximum number of concurrent builds you can run. Each account has a specified maximum that applies to all builds on all pipelines in the account. Upon hitting the concurrency limit, builds show the **Queued license limit reached** state in the UI.
+
+If you're using a Docker build infrastructure, you also have resource limits per delegate. For example, a delegate installed on your laptop might have just enough RAM and CPU to run two builds concurrently. In the `docker-compose.yml` file, you can set the `MAX_CONCURRENCY_LIMIT` if you want to limit the number of concurrent jobs for a delegate based on the node's available resources. Note that this constraint does not apply to Harness Cloud, Kubernetes, and VM-based build infrastructures, which can scale up as needed.
+
+-->
+
+## Troubleshoot Harness Cloud build infrastructure
+
+Go to the [CI Knowledge Base](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs) for questions and issues related to Harness Cloud build infrastructure, including:
+
+- [Account verification error with Harness Cloud on Free plan.](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#account-verification-error-with-harness-cloud-on-free-plan)
+- [Can't use STO steps with Harness Cloud macOS runners.](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#cant-use-sto-steps-with-harness-cloud-macos-runners)
+- [Is Harness Cloud compatible with tools like gsutil or gcloud?](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#does-gsutil-work-with-harness-cloud)
+- [Connector or delegate errors when using Harness Cloud.](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#connector-errors-with-harness-cloud-build-infrastructure)
+- [Built-in Harness Docker Connector isn't working with Harness Cloud build infrastructure.](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#built-in-harness-docker-connector-doesnt-work-with-harness-cloud-build-infrastructure)
+- [Can I use xcode for a MacOS build with Harness Cloud?](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#can-i-use-xcode-for-a-macos-build-with-harness-cloud)
+- [Can I get logs for a service running on Harness Cloud when a specific Run step is executing?](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#can-i-get-logs-for-a-service-running-on-harness-cloud-when-a-specific-run-step-is-executing)
+
+### Known issues
+
+#### Harness Cloud macOS platform .netrc file can have incorrect permissions
+
+There is a known issue impacting macOS machines on [Harness Cloud build infrastructure](/docs/continuous-integration/use-ci/set-up-build-infrastructure/use-harness-cloud-build-infrastructure) due to incorrect permissions for the `.netrc` file at `/Users/anka/.netrc`. The permissions are set to `644` when they should be `600`.
+
+This can cause errors when installing Cocoapods. If your build installs Cocoapods, uses a macOS platform on Harness Cloud build infrastructure, and fails due to an error like `Couldn't determine repo type for URL` when installing Cocoapods, then, until this issue is fixed, make sure the pipeline edits the permissions on the `.netrc` file before attempting to install Cocoapods.
+
+#### Harness Cloud Windows platforms can fail to clone BitBucket Cloud repos
+
+Due to a [BitBucket Cloud issue](https://jira.atlassian.com/browse/BCLOUD-23158), specific versions of BitBucket Cloud could fail to clone repos on Windows platforms running Git version 2.44.
+
+Atlassian released a fix for this issue; however, if you use a Harness Cloud Windows platform and your build is unable to clone your BitBucket Cloud repo, do the folloiwng:
+
+1. [Disable Clone Codebase](/docs/continuous-integration/use-ci/codebase-configuration/create-and-configure-a-codebase.md#disable-clone-codebase-for-specific-stages).
+2. At the beginning of your build stage, add a a [Run step](/docs/continuous-integration/use-ci/run-step-settings) that uses the `harness/drone-git` image and Git commands to clone your BitBucket cloud repo.

@@ -1,0 +1,437 @@
+# source: docs/continuous-integration/migration-guides/migrating-from-circleci.md  (https://developer.harness.io/docs/continuous-integration/migration-guides/migrating-from-circleci)
+
+# --- example 1 ---
+jobs:
+  job1:
+    steps:
+      - checkout
+      - run: "execute-script-for-job1"
+
+# --- example 2 ---
+stages:
+   - stage:
+            steps:
+              - step:
+                  type: Run
+
+# --- example 3 ---
+version: 2.1
+
+executors:
+  linux: # a Linux VM running Ubuntu 20.04
+    machine:
+      image: ubuntu-2004:202107-02
+
+jobs:
+  job1:
+      docker:
+        # Primary Executor
+        - image: openjdk:17.0
+
+        # Dependency Service(s)
+        - image: postgres:10.8
+          environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: postgres
+      steps:
+        - checkout
+        - run: echo "this is the build job"
+  job2:
+    docker:
+      - image: cimg/base:2020.01
+    steps:
+      - checkout
+      - run:
+          name: "echo an env var that is part of our context"
+          command: |
+            echo $MY_ENV_VAR
+            echo ${MY_ENV_VAR}
+  job3:
+    parameters:
+      matrix-var:
+        type: string
+    executor:
+      name: linux
+    steps:
+      - checkout
+      - run:
+          shell: bash
+          command: echo "matrix value << parameters.matrix-var >> "
+          name: step1
+
+workflows:
+  all-tests:
+    jobs:
+      - job1
+      - job2 :
+          context: sample-context
+          requires:
+            - job1
+      - job3:
+          requires:
+            - job2
+          matrix:
+            parameters:
+              matrix-var: ["python", "java"]
+
+# --- example 4 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: Stage1
+        identifier: stage1
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Background
+                  name: Postgres-Dependency-Service
+                  identifier: PostgresDependencyService
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: postgres:10.8
+                    shell: Sh
+                    envVariables:
+                      POSTGRES_USER: postgres
+                      POSTGRES_PASSWORD: <+secrets.getValue("DbPasswordSecret")>
+                      POSTGRES_DB: postgres
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "this runs on openjdk"
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+    - stage:
+        name: Stage2
+        identifier: Stage2
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: node:13.0.0
+                    shell: Bash
+                    command: |-
+                      echo "pipeline var:" <+pipeline.variables.pipelinevar1>
+                      echo "project level var:" <+variable.proj_var>
+                      echo "secret example :" <+secrets.getValue("DbPasswordSecret")>
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+        variables: []
+    - stage:
+        name: matrix stage
+        identifier: Stage4
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    shell: Bash
+                    command: echo "Testing on  <+matrix.testparam>"
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+        strategy:
+          matrix:
+            testparam:
+              - node
+              - python
+              - ubuntu
+          maxConcurrency: 3
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  variables:
+    - name: pipelinevar1
+      type: String
+      description: ""
+      value: someval
+
+# --- example 5 ---
+              - step:
+                  type: Run
+                  name: Install CLI
+                  identifier: install_cli
+                  description: Install the CircleCI local CLI
+                  spec:
+                    shell: Sh
+                    command: curl -fLSs https://raw.githubusercontent.com/CircleCI-Public/circleci-cli/main/install.sh | bash
+
+              - step:
+                  type: Run
+                  name: Notify
+                  identifier: notify
+                  description: Run the slack/notify job defined in .circleci/config.yml in the repository
+                  spec:
+                    shell: Sh
+                    command: circleci local execute --env SLACK_ACCESS_TOKEN=<+secrets.getValue("slack_access_token")> slack/notify
+
+# --- example 6 ---
+              - step:
+                  type: Run
+                  name: install chrome
+                  identifier: install_chrome
+                  description: Run the install-chrome.sh script from the browser-tools orb
+                  spec:
+                    shell: Sh
+                    command: |-
+                      git clone --branch $BROWSER_TOOLS_ORB_VERSION --depth 1 https://github.com/CircleCI-Public/browser-tools-orb.git /tmp/browser-tools-orb
+                      bash /tmp/browser-tools-orb/src/scripts/install-chrome.sh
+                    envVariables:
+                      BROWSER_TOOLS_ORB_VERSION: v1.4.8
+                      ORB_PARAM_REPLACE_EXISTING: "1"
+                      ORB_PARAM_CHANNEL: stable
+                      ORB_PARAM_CHROME_VERSION: 116.0.5845.187
+
+# --- example 7 ---
+version: '2.1'
+orbs:
+  browser-tools: circleci/browser-tools@1.4.8
+jobs:
+  test:
+    executor: browser-tools/default
+    steps:
+      - browser-tools/install-chrome:
+          replace-existing: true
+          chrome-version: 116.0.5845.187
+          channel: stable
+
+# --- example 8 ---
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: my-docker-hub-connector
+                    image: openjdk:17.0-jdk
+                    shell: Bash
+                    command: echo "this runs on openjdk"
+
+# --- example 9 ---
+jobs:
+  job1:
+    docker:
+      - image: cimg/node:17.2.0
+        auth:
+          username: mydockerhub-user
+          password: $DOCKERHUB_PASSWORD
+    steps:
+      - checkout
+      - run: echo "job1"
+job2:
+    docker:
+      - image: cimg/node:17.2.0
+        auth:
+          username: mydockerhub-user
+          password: $DOCKERHUB_PASSWORD
+    steps:
+      - checkout
+      - run: echo "job2"
+job3:
+    docker:
+      - image: cimg/node:17.2.0
+        auth:
+          username: mydockerhub-user
+          password: $DOCKERHUB_PASSWORD
+    steps:
+      - checkout
+      - run: echo "job3"
+job4:
+    docker:
+      - image: cimg/node:17.2.0
+        auth:
+          username: mydockerhub-user
+          password: $DOCKERHUB_PASSWORD
+    steps:
+      - checkout
+      - run: echo "job4"
+
+workflows:
+  version: 2
+  jobs:
+    - job1
+    - job2
+    - job3:
+        requires:
+          - job1
+          - job2
+    - job4:
+        requires:
+          - job3
+
+# --- example 10 ---
+  stages:
+    - parallel:
+        - stage:
+            name: Stage1
+            identifier: Stage1
+            type: CI
+            spec:
+              cloneCodebase: true
+              execution:
+                steps:
+                  - step:
+                      type: Run
+                      name: step1
+                      identifier: step1
+                      spec:
+                        connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                        image: node:13.0.0
+                        shell: Bash
+                        command: echo "Download file in parallel with stage 2 "
+        - stage:
+            name: Stage2
+            identifier: stage2
+            type: CI
+            spec:
+              cloneCodebase: true
+              execution:
+                steps:
+                  - step:
+                      type: Run
+                      name: step1
+                      identifier: step1
+                      spec:
+                        connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                        image: node:13.0.0
+                        shell: Bash
+                        command: echo "step1"
+    - stage:
+        name: Stage3
+        identifier: Stage3
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: node:13.0.0
+                    shell: Bash
+                    command: echo "step 1 in stage3 . stage 3 requires stage 1 and 2 "
+    - stage:
+        name: Stage4
+        identifier: Stage4
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: node:13.0.0
+                    shell: Bash
+                    command: echo "step 1 in stage4 . stage 4 requires stage 3"
+
+# --- example 11 ---
+jobs:
+  job1:
+    steps:
+      - run: echo $MY_ENV_VAR
+
+# --- example 12 ---
+ - stage:
+        name: Stagename
+        identifier: Stagename
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    command: echo "project var: " <+variable.proj_var>
+
+# --- example 13 ---
+jobs:
+  job1:
+    docker:
+      - image: cimg/node:17.2.0
+        auth:
+          username: mydockerhub-user
+          password: $DOCKERHUB_PASSWORD
+    steps:
+      - checkout
+      - run: << parameters.os >>
+
+workflows:
+  all-tests:
+    jobs:
+      - job1:
+          matrix:
+            parameters:
+              os: [node,ubuntu ,python]
+
+# --- example 14 ---
+  stages:
+    - stage:
+        name: Stage1
+        identifier: Stage1
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: step1
+                  identifier: step1
+                  spec:
+                    connectorRef: dockerconectorref
+                    image: dockerimage:tag
+                    shell: Bash
+                    command: echo "Testing on  <+matrix.testparam>"
+        strategy:
+          matrix:
+            testparam:
+              - node
+              - python
+              - ubuntu
+          maxConcurrency: 3

@@ -1,0 +1,62 @@
+# source: docs/continuous-delivery/gitops/gitops-entities/clusters/create-cluster-with-azure-wif.md  (https://developer.harness.io/docs/continuous-delivery/gitops/gitops-entities/clusters/create-cluster-with-azure-wif)
+
+# --- example 1 ---
+# Source: gitops-helm/charts/argo-cd/templates/argocd-application-controller/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+automountServiceAccountToken: true
+metadata:
+  annotations:
+    azure.workload.identity/client-id: your-client-id
+    azure.workload.identity/tenant-id: your-tenant-id
+  name: argocd-application-controller
+  namespace: argocd
+  labels:
+    # ... existing labels
+
+# --- example 2 ---
+# Source: gitops-helm/charts/argo-cd/templates/argocd-repo-server/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argocd-repo-server
+  namespace: argocd
+  # ... other metadata
+spec:
+  template:
+    metadata:
+      annotations:
+        # ... existing annotations
+      labels:
+        azure.workload.identity/use: "true"
+        # ... existing labels
+
+# --- example 3 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitops-cluster-secret
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: cluster
+type: Opaque
+stringData:
+  name: azure-wif-cluster
+  server: https://your-cluster-endpoint
+  config: |
+    {
+      "execProviderConfig": {
+        "command": "argocd-k8s-auth",
+        "env": {
+          "AAD_ENVIRONMENT_NAME": "AzurePublicCloud",
+          "AZURE_CLIENT_ID": "your-client-id",
+          "AAD_LOGIN_METHOD": "workloadidentity"
+        },
+        "args": ["azure"],
+        "apiVersion": "client.authentication.k8s.io/v1beta1"
+      },
+      "tlsClientConfig": {
+        "insecure": false,
+        "caData": "your-base64-encoded-ca-cert"
+      }
+    }

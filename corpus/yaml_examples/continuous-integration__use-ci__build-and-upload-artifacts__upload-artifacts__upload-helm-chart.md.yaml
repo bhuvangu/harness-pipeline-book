@@ -1,0 +1,32 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-helm-chart.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-helm-chart)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: upload_helm_chart
+                  identifier: upload_helm_chart
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/helm-push:ARCH_TAG
+                    settings:
+                      registry_url: LOCATION-docker.pkg.dev
+                      registry_username: oauth2accesstoken
+                      registry_password: <+secrets.getValue("access_token")>
+                      chart_path: path/to/chart
+                      gcloud_project_id: PROJECT_ID
+                      registry_namespace: REPO_ID
+
+# --- example 2 ---
+              - step:
+                  type: Plugin
+                  name: upload_helm_chart
+                  identifier: upload_helm_chart
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/helm-push:ARCH_TAG
+                    settings:
+                      registry_url: registry.hub.docker.com
+                      registry_username: DOCKER_USERNAME
+                      registry_password: <secrets.getValue("docker_pat")>
+                      chart_path: path/to/chart
+                      registry_namespace: DOCKER_NAMESPACE

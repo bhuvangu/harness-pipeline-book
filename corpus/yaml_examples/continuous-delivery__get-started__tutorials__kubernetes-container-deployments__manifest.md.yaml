@@ -1,0 +1,4 @@
+# source: docs/continuous-delivery/get-started/tutorials/kubernetes-container-deployments/manifest.md  (https://developer.harness.io/docs/continuous-delivery/get-started/tutorials/kubernetes-container-deployments/manifest)
+
+# --- example 1 ---
+  kubectl apply -f gitops-agent.yml -n default

@@ -1,0 +1,16 @@
+# source: docs/continuous-delivery/kb-articles/faqs.md  (https://developer.harness.io/docs/continuous-delivery/kb-articles/faqs)
+
+# --- example 1 ---
+name: Stage2
+identifier: Stage2
+description: ""
+type: Deployment
+spec:
+  deploymentType: Kubernetes
+  environments:
+    metadata:
+      parallel: true
+    values:
+      - environmentRef: <+exportedVariables.getValue("pipeline.ENV_INFO.ENV_ID")>
+        deployToAll: false
+        infrastructureDefinitions: <+<+exportedVariables.getValue("pipeline.ENV_INFO.INFRA_IDS")>.split(",")>

@@ -1,0 +1,32 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/notify-users-of-pipeline-events.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/notify-users-of-pipeline-events)
+
+# --- example 1 ---
+notificationRules:
+    - name: test
+      identifier: test
+      pipelineEvents:
+        - type: AllEvents
+        - type: PipelineStart
+        - type: PipelineEnd
+        - type: PipelineSuccess
+        - type: PipelineFailed
+        - type: StageFailed
+        - type: StageSuccess
+        - type: StageStart
+        - type: StepFailed
+        - type: TriggerFailed
+        - type: WaitingForUserAction
+      notificationMethod:
+        type: Webhook
+        spec:
+          webhookUrl: https://app.harness.io/gateway/ng/api/projects/Quality_Assurence?accountIdentifier=ACCOUNT_ID&orgIdentifier=QE_Team
+          headers:
+            accept: "*/*"
+            authorization: <+pipeline.variables.sv1>
+            content-type: application/json
+            Status: <+pipeline.status>
+            Version: v1
+            Content-Encoding: gzip
+            Client-ID: <+pipeline.executionId>
+            If-Match: xyz
+      enabled: true

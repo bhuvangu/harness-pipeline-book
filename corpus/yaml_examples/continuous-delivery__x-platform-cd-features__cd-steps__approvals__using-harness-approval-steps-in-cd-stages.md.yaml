@@ -1,0 +1,20 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/approvals/using-harness-approval-steps-in-cd-stages.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/approvals/using-harness-approval-steps-in-cd-stages)
+
+# --- example 1 ---
+   - step:
+       type: HarnessApproval
+       name: Harness Approval Step
+       identifier: Harness_Approval_Step
+       timeout: 1d
+       spec:
+         approvalMessage: Test
+         includePipelineExecutionHistory: true
+         approvers:
+           userGroups:
+             - docs
+           minimumCount: 1
+           disallowPipelineExecutor: false
+         approverInputs:
+           - name: foo
+             defaultValue: bar
+         isAutoRejectEnabled: false

@@ -1,0 +1,5 @@
+# source: docs/platform/connectors/cloud-providers/connect-to-google-cloud-platform-gcp.md  (https://developer.harness.io/docs/platform/connectors/cloud-providers/connect-to-google-cloud-platform-gcp)
+
+# --- example 1 ---
+           - name: NO_PROXY  
+             value: "169.254.169.254"

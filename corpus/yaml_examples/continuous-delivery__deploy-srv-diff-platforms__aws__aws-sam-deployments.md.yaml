@@ -1,0 +1,12 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/aws/aws-sam-deployments.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/aws/aws-sam-deployments)
+
+# --- example 1 ---
+---
+StockCheckerFunction:
+  Type: AWS::Serverless::Function # More info about Function Resource: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html
+  Properties:
+    CodeUri: functions/stock-checker/
+    Handler: app.lambdaHandler
+    Runtime: { { .Values.runtime } }
+    Architectures:
+      - x86_64

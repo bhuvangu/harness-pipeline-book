@@ -1,0 +1,16 @@
+# source: docs/continuous-integration/use-ci/use-drone-plugins/explore-ci-plugins.md  (https://developer.harness.io/docs/continuous-integration/use-ci/use-drone-plugins/explore-ci-plugins)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: Plugin_1
+                  identifier: Plugin_1
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    image: kytay/sonar-node-plugin ## Sonarscanner plugin image.
+                    settings:
+                      sonar_host:
+                        from_secret: sonar_host
+                      sonar_token:
+                        from_secret: sonar_token
+                      use_node_version: 16.18.1

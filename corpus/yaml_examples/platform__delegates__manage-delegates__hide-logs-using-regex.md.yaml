@@ -1,0 +1,11 @@
+# source: docs/platform/delegates/manage-delegates/hide-logs-using-regex.md  (https://developer.harness.io/docs/platform/delegates/manage-delegates/hide-logs-using-regex)
+
+# --- example 1 ---
+               volumeMounts:
+              - name: "config"
+                mountPath: "/opt/harness-delegate/sanitize-patterns.txt"
+                subPath: sanitize-patterns.txt
+          volumes:
+            - name: "config"
+              configMap:
+                name: "<YOUR_CONFIGMAP_FILE_NAME>"

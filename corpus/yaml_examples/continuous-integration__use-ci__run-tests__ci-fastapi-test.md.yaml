@@ -1,0 +1,198 @@
+# source: docs/continuous-integration/use-ci/run-tests/ci-fastapi-test.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/ci-fastapi-test)
+
+# --- example 1 ---
+- step:
+    type: Run
+    name: Install Dependencies
+    identifier: Install_Dependencies
+    spec:
+      shell: Sh
+      command: |-
+        sudo apt-get update && sudo apt-get install -y python3-dev && sudo apt-get install default-libmysqlclient-dev
+        pip install --cache-dir .pip_cache -r requirements.txt
+      envVariables:
+        PIP_CACHE_DIR: /root/.cache
+
+# --- example 2 ---
+- step:
+    type: Run
+    name: Install Dependencies
+    identifier: Install_Dependencies
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: python:latest
+      shell: Sh
+      command: |-
+        sudo apt-get update && sudo apt-get install -y python3-dev && sudo apt-get install default-libmysqlclient-dev
+        pip install --cache-dir .pip_cache -r requirements.txt
+
+# --- example 3 ---
+- step:
+    type: Run
+    name: Pytest
+    identifier: Pytest
+    spec:
+      shell: Sh
+      command: |-
+        pytest test_main.py --junit-xml=output-test.xml
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - output-test.xml
+
+# --- example 4 ---
+- step:
+    type: Run
+    name: Pytest
+    identifier: Pytest
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: python:latest
+      shell: Sh
+      command: |-
+        pytest test_main.py --junit-xml=output-test.xml
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - output-test.xml
+
+# --- example 5 ---
+pipeline:
+  name: YOUR_PIPELINE_NAME
+  identifier: YOUR_PIPELINE_ID
+  projectIdentifier: YOUR_HARNESS_PROJECT_ID
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_GITHUB_CONNECTOR_ID
+        repoName: fastapi-harness-sample
+        build: <+input>
+  stages:
+    - stage:
+        name: test
+        identifier: test
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Install Dependencies
+                  identifier: Install_Dependencies
+                  spec:
+                    shell: Sh
+                    command: |-
+                      sudo apt-get update && sudo apt-get install -y python3-dev && sudo apt-get install default-libmysqlclient-dev
+                      pip install --cache-dir .pip_cache -r requirements.txt
+                    envVariables:
+                      PIP_CACHE_DIR: /root/.cache
+              - step:
+                  type: Run
+                  name: Pytest
+                  identifier: Pytest
+                  spec:
+                    shell: Sh
+                    command: |
+                      pytest test_main.py --junit-xml=output-test.xml
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - output-test.xml
+
+# --- example 6 ---
+pipeline:
+  name: YOUR_PIPELINE_NAME
+  identifier: YOUR_PIPELINE_ID
+  projectIdentifier: YOUR_HARNESS_PROJECT_ID
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_GITHUB_CONNECTOR_ID
+        repoName: fastapi-harness-sample
+        build: <+input>
+  stages:
+    - stage:
+        name: test
+        identifier: test
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Install Dependencies
+                  identifier: Install_Dependencies
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: python:latest
+                    shell: Sh
+                    command: |-
+                      sudo apt-get update && sudo apt-get install -y python3-dev && sudo apt-get install default-libmysqlclient-dev
+                      pip install --cache-dir .pip_cache -r requirements.txt
+              - step:
+                  type: Run
+                  name: Pytest
+                  identifier: Pytest
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: python:latest
+                    shell: Sh
+                    command: |
+                      pytest test_main.py --junit-xml=output-test.xml
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - output-test.xml
+
+# --- example 7 ---
+trigger:
+  name: fastapi trigger
+  identifier: fastapi_trigger
+  enabled: true
+  encryptedWebhookSecretIdentifier: ""
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  stagesToExecute: []
+  projectIdentifier: YOUR_HARNESS_PROJECT_ID
+  pipelineIdentifier: YOUR_PIPELINE_ID
+  source:
+    type: Webhook
+    spec:
+      type: Github
+      spec:
+        type: Push
+        spec:
+          connectorRef: YOUR_GITHUB_CONNECTOR_ID
+          autoAbortPreviousExecutions: false
+          payloadConditions:
+            - key: targetBranch
+              operator: Equals
+              value: main
+          headerConditions: []
+          repoName: fastapi-harness-sample
+          actions: []

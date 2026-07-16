@@ -1,0 +1,18 @@
+# source: docs/continuous-integration/shared/preserve-metadata.md  (https://developer.harness.io/docs/continuous-integration/shared/preserve-metadata)
+
+# --- example 1 ---
+steps:
+  - step:
+      type: SaveCache
+      name: save-gradle-cache
+      spec:
+        key: gradle-cache
+        paths:
+          - ~/.gradle
+        preserveMetadata: true
+  - step:
+      type: RestoreCache
+      name: restore-gradle-cache
+      spec:
+        key: gradle-cache
+        preserveMetadata: true

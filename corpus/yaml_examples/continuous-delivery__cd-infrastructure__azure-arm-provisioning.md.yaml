@@ -1,0 +1,30 @@
+# source: docs/continuous-delivery/cd-infrastructure/azure-arm-provisioning.md  (https://developer.harness.io/docs/continuous-delivery/cd-infrastructure/azure-arm-provisioning)
+
+# --- example 1 ---
+              - step:
+                  type: AzureCreateARMResource
+                  name: Azure Create ARM Resource
+                  identifier: AzureCreateARMResource_1
+                  spec:
+                    provisionerIdentifier: abc123
+                    configuration:
+                      connectorRef: ACRdocs
+                      template:
+                        store:
+                          type: Harness
+                          spec:
+                            files:
+                              - /Azure ARM/azuredeploy.json
+                      scope:
+                        type: ResourceGroup
+                        spec:
+                          subscription: <+input>
+                          resourceGroup: <+input>
+                          mode: Complete
+                      parameters:
+                        store:
+                          type: Harness
+                          spec:
+                            files:
+                              - /Azure ARM/azuredeploy.parameters.json
+                  timeout: 10m

@@ -1,0 +1,32 @@
+# source: docs/continuous-integration/use-ci/run-tests/run-tests-in-ci.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/run-tests-in-ci)
+
+# --- example 1 ---
+- step:
+    type: Run
+    name: Pytest
+    identifier: Pytest
+    spec:
+      shell: Sh
+      command: |-
+        pytest test_main.py --junit-xml=output-test.xml
+      reports:
+        type: JUnit
+        spec:
+          paths:
+            - output-test.xml
+
+# --- example 2 ---
+- step:
+    type: Test
+    name: RunTestsWithIntelligence
+    identifier: RunTestsWithIntelligence
+    spec:
+      command: |-
+        mvn test -Dmaven.test.failure.ignore=true -DfailIfNoTests=false
+        mvn package -DskipTests
+      shell: Sh
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: maven:3.8-jdk-11
+      intelligenceMode: true
+      reports:
+        - "target/surefire-reports/*.xml"

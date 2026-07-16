@@ -1,0 +1,24 @@
+# source: docs/continuous-integration/secure-ci/github-app-token-in-harness.md  (https://developer.harness.io/docs/continuous-integration/secure-ci/github-app-token-in-harness)
+
+# --- example 1 ---
+- step:
+    identifier: Generate_GitHub_Token
+    type: Plugin
+    name: Generate GitHub App Token
+    spec:
+      connectorRef: YOUR_DOCKER_CONNECTOR
+      image: plugins/github-app-token:latest
+      settings:
+        app_id: "YOUR_GITHUB_APP_ID"
+        private_key: <+secrets.getValue("YOUR_GITHUB_APP_KEY")>
+        permission_contents: write
+
+- step:
+    identifier: Use_Token
+    type: Run
+    name: Use GitHub Token
+    spec:
+      shell: Sh
+      command: |
+        curl -H "Authorization: token <+execution.steps.Generate_GitHub_Token.output.outputVariables.GITHUB_APP_TOKEN>" \
+             https://api.github.com/repos/YOUR_ORG/YOUR_REPO/contents

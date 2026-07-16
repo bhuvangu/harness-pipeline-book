@@ -1,0 +1,577 @@
+---
+title: Bring Your Own Argo CD into Harness GitOps
+description: Learn how to manage a Bring Your Own Argo CD (BYOA) setup in Harness.
+sidebar_position: 1
+helpdocs_topic_id: gzw782fcqz
+helpdocs_category_id: 013h04sxex
+helpdocs_is_private: false
+helpdocs_is_published: true
+redirect_from:
+  - /docs/continuous-delivery/gitops/multiple-argo-to-single-harness
+canonical_url: https://www.harness.io/blog/argo-cd-for-kubernetes
+---
+
+This topic describes how to import your existing Argo CD configuration into Harness GitOps as a Bring Your Own Argo CD (BYOA) setup.
+
+In addition, when you install the Harness GitOps Agent in your existing Argo CD cluster as part of BYOA, you can map Argo CD projects to Harness projects. Harness imports all the Argo CD project entities (applications, clusters, repos, etc.) and creates them in Harness automatically.
+
+Also, whenever new entities are created in the mapped Argo CD projects, they are added to Harness automatically.
+
+With a standard Harness GitOps Agent installation (non-BYOA), Harness can install and manage Argo CD for you. This scenario is different from a BYOA where you are importing an existing Argo CD configuration into Harness GitOps.
+
+For more information, go to [Install a Harness GitOps Agent](/docs/continuous-delivery/gitops/gitops-entities/agents/install-a-harness-git-ops-agent).
+
+### Mapping existing Argo CD projects across different Harness scopes
+
+To map Argo CD projects to Harness projects, you need to install the Harness GitOps Agent from the Harness account or organization level. Then you can map the Argo CD projects to any of the Harness projects in the account or organizations.
+
+If you install the GitOps Agent at the Harness project level, you can only map to the current project.
+
+The following example installs the GitOps Agent at the Harness account level.
+
+## Installing a GitOps Agent in an existing Argo CD setup (BYOA)
+
+The following steps show you how to install a GitOps Agent into an existing Argo CD namespace and then map your existing projects to your Harness project.
+
+1. In your Harness account, select **Account Settings**.
+2. Select **GitOps**, and then select **Agents**.
+   
+   ![](./static/multiple-argo-to-single-harness-64.png)
+
+3. Select **New GitOps Agent**.
+4. In **Agent Installation**, in **Do you have any existing Argo CD instances**, select **Yes**, and then select **Start**.
+   
+   ![](./static/multiple-argo-to-single-harness-65.png)
+
+5. In **Name**, enter a name for your agent, such as `byoa-agent`.
+6. In **GitOps Operator**, select **Argo**.
+
+7. In **Namespace**, enter the namespace where Argo CD is hosted. The default is `argocd`.
+   
+   ![](./static/multiple-argo-to-single-harness-66.png)
+
+8. Select **Continue**.
+9. In **Review YAML**, select **Download & Continue**.
+
+   :::note
+
+   Alternatively, the **Helm Chart** option lets you download a `helm-chart` file for the Harness GitOps Agent. You can download this file and install it in your Harness GitOps Agent cluster if you prefer using Helm.
+
+   You can download an `override.yaml` file which will contain the Helm Value overrides to apply, and you can use the commands mentioned to install the agent using the [public Helm Repository](https://harness.github.io/gitops-helm/) for the GitOps Agent.
+   
+   :::
+
+10. Log in to the cluster hosting Argo CD.
+11. Run the install command provided in the Agent installer, such as `kubectl apply -f gitops-agent.yml -n argocd`. You'll see output similar to this:
+    ```bash
+    serviceaccount/gitops-agent created
+    serviceaccount/gitops-agent-upgrader created
+    secret/gitops-agent created
+    configmap/gitops-agent created
+    configmap/gitops-agent-upgrader created
+    clusterrole.rbac.authorization.k8s.io/byoa-agent-agent created
+    clusterrolebinding.rbac.authorization.k8s.io/byoa-agent-agent created
+    role.rbac.authorization.k8s.io/gitops-agent created
+    role.rbac.authorization.k8s.io/gitops-agent-upgrader created
+    rolebinding.rbac.authorization.k8s.io/gitops-agent created
+    rolebinding.rbac.authorization.k8s.io/gitops-agent-upgrader created
+    deployment.apps/gitops-agent created
+    cronjob.batch/gitops-agent-upgrader created
+    ```
+
+12. In the Harness GitOps Agent installer, select **Continue**.
+   
+   The Agent has registered with Harness.
+   
+   ![](./static/multiple-argo-to-single-harness-67.png)
+
+13.  Select **Continue**. The **Map Projects** settings appear.
+
+:::warning
+
+Ensure that you deploy only one Harness GitOps Agent per Argo CD namespace. Deploying multiple Agents created in different projects or accounts can lead to unpredictable behavior.
+
+Harness supports mapping Argo CD projects into Harness projects through the Agent that controls the Argo CD deployment. When importing Argo CD projects, Harness maps Argo CD projects into Harness projects that belong to one account.
+
+Enabling multiple Agents in one Argo CD namespace implies cross-account resource sharing which Harness does not support.
+
+:::
+
+## Map existing Argo projects
+
+To map your existing Argo CD projects to Harness projects, select the Argo CD projects you want to use, and then select the Harness project where you want to map the Argo CD project.
+
+1. In **Map Projects**, in **Select your Argo Projects to Import**, select the Argo CD projects you want to map.
+   
+   ![](./static/multiple-argo-to-single-harness-68.png)
+
+2. In each row, select the Argo project and the Harness project.
+   
+   ![](./static/multiple-argo-to-single-harness-69.png)
+   
+   :::note
+   Do not map the same Argo CD project to multiple Harness projects.
+   :::
+
+3. To automatically create Harness services and environments during the import, enable the **Enables automatic creation of service environments** toggle on the Map Projects screen.
+
+   ![](./static/map-argo-project.png)
+
+   When this toggle is enabled, Harness checks each Argo CD application for `harness.io/serviceRef` and `harness.io/envRef` labels. If a service or environment matching the label value already exists in the target Harness project, the application is mapped to it. If it does not exist, Harness creates the service or environment automatically and then maps it to the application.
+
+   To use this feature, add the `harness.io/serviceRef` and `harness.io/envRef` labels to the `metadata.labels` section of your Argo CD Application YAML before importing.
+
+   :::warning Identifier naming rules
+   The `harness.io/serviceRef` and `harness.io/envRef` label values become Harness entity identifiers. They must follow these rules:
+
+   - Must start with a letter or underscore (not a number or `$`).
+   - Can only contain alphanumeric characters, underscores (`_`), and dollar signs (`$`).
+   - Maximum length: 128 characters.
+   - Cannot use reserved keywords: `or`, `and`, `eq`, `ne`, `lt`, `gt`, `le`, `ge`, `div`, `mod`, `not`, `null`, `true`, `false`, `new`, `var`, `return`, `step`, `parallel`, `stepGroup`, `org`, `account`, `class`, `shellScriptProvisioner`.
+
+   **Valid examples:** `my_service`, `MyService123`, `_internal_service`, `service_v2$backup`
+
+   **Invalid examples:** `123service` (starts with number), `$service` (starts with `$`), `my-service` (contains hyphen), `my.service` (contains dot), `org` (reserved keyword)
+
+   If a label value does not follow these rules, the auto-creation fails silently for that application.
+   :::
+
+   <details>
+   <summary>Example Application YAML with serviceRef and envRef labels</summary>
+
+   ```yaml
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: dev-corp-banking-api
+     namespace: argocd
+     labels:
+       harness.io/serviceRef: cbcorpbankapi
+       harness.io/envRef: Dev_GitOps_Product_Demo
+   spec:
+     project: banking
+     source:
+       repoURL: https://github.com/example-org/gitops-demo
+       targetRevision: main
+       path: services/corporate-banking/corp-banking-api/overlays/dev
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: corporate-banking
+     syncPolicy:
+       automated:
+         prune: true
+         selfHeal: true
+       syncOptions:
+         - CreateNamespace=true
+   ```
+
+   </details>
+
+   :::tip
+   If you are using ApplicationSets, you can templatize the `harness.io/serviceRef` and `harness.io/envRef` labels so that every generated application automatically includes them. For details, go to [Auto-create services and environments with ApplicationSets](/docs/continuous-delivery/gitops/applicationsets/harness-git-ops-application-set-tutorial#auto-create-services-and-environments).
+   :::
+
+4. Select **Import & Continue**.
+   
+   The Argo CD projects are imported. When auto-creation is enabled, the import summary also shows the number of services, environments, and cluster links created or mapped.
+
+   ![](./static/importing-projects.png)
+
+5. Select **Finish**. The mapping is displayed in the Agent details.
+   
+   ![](./static/multiple-argo-to-single-harness-71.png)
+   
+6. Select **Save**.
+
+## Verify mapping
+
+To see the imported Argo CD entities from the mapping, look in the mapped Harness project.
+
+1. In your Harness project, select **GitOps**, and then select **Applications**.
+   You can see the imported applications.
+   
+   ![](./static/multiple-argo-to-single-harness-72.png)
+
+2. Select **Settings**, and then select **Repositories**.
+   You can see the imported repositories.
+3. Select **Settings**, and then select **Clusters**.
+   You can see the imported clusters.
+
+Do the same for any other mapped project entities.
+
+### Verify auto-created services and environments
+
+If you enabled the **Enables automatic creation of service environments** toggle during the import, verify that the services and environments were created correctly.
+
+1. In your Harness project, select **Services** in the left navigation. You can see the services that Harness created automatically based on the `harness.io/serviceRef` labels in your application manifests.
+
+   ![](./static/services-view.png)
+
+2. Select **Environments** in the left navigation. You can see the environments that Harness created based on the `harness.io/envRef` labels.
+
+   ![](./static/env-view.png)
+
+3. To confirm that an application is mapped to the correct service and environment, go to **GitOps** > **Applications**, select an application, and open the **App Details** tab. The **Service** and **Environment** fields display the mapped values.
+
+   ![](./static/app-details.png)
+
+## Adding new mappings to existing Agent
+
+You can add new mappings to an existing Agent in the Agent's **Mapped Harness Project** settings.
+
+:::warning Redis cache timeout when re-adding a project mapping
+If you remove a project mapping and immediately re-add or re-import it, the autocreate flow for services and environments may not trigger. This is because the Reconcile Application process has a 29-second Redis cache timeout. Wait at least 30 seconds after removing a project mapping before adding it back to ensure the autocreate flow works as expected.
+:::
+
+1. In Harness, open an existing Agent.
+2. Select **Edit**. In this example, the Argo CD project **alpha** is mapped to the Harness project **GitOps**.
+   
+   ![](./static/multiple-argo-to-single-harness-73.png)
+   
+   Let's add a new mapping.
+
+3. In **Mapped Harness Project**, select **Add**.
+4. In **Map Projects**, in **Select your Argo Projects to Import**, select an Argo CD project. Do not select a project you have already mapped.
+5. Map the Argo CD project to a Harness project and select **Import & Continue**.
+   Do not re-map an existing mapping. Harness will throw an error.
+   
+   ![](./static/multiple-argo-to-single-harness-74.png)
+
+6. When the import is complete, select **Finish**.
+
+Both projects are now mapped.
+
+![](./static/multiple-argo-to-single-harness-75.png)
+
+## Adding Argo CD entities to Harness automatically
+
+When an Agent contains Argo CD project mappings to a Harness project, any new entities added to the Argo CD project are added to the mapped Harness project automatically.
+
+Try adding a new Argo CD repository to the mapped Argo CD project.
+
+Once it is saved in Argo CD, go to Harness and look at the GitOps repositories in the mapped Harness project. A new repository is added.
+
+### Automatically added Argo CD repositories
+
+When Argo CD repositories are added to Harness, Harness automatically generates a name for each repository. Name generation is necessary because Argo CD has no name setting for its repositories. When generating a name for a repository, Harness removes any dashes from the name of the repository, and then appends an underscore followed by a unique suffix.
+
+For example, the Argo CD repository `https://github.com/argoproj/gitops-engine.git` is named `gitopsengine_kmjzyrbs` in Harness.
+
+![](./static/multiple-argo-to-single-harness-76.png)
+
+### Ensure your Argo CD entities are visible in Harness
+
+In some Argo CD versions, you are not required to specify a project for your entities. However, for the entities to be visible in Harness, you must associate the entities with a project.
+
+If you are unable to edit an entity from the Argo CD UI, you can edit that entity in the cluster so that they have a project and other required values. The entities are stored in different formats in the cluster. For example, clusters, repositories, and repository credential templates are stored in `Secret`, and GnuPG keys and repository certificates are stored in `ConfigMap` in the namespace where Argo CD is installed. 
+
+Edit the respective secret of the entity and add the fields `project` and `name` in the `data` or `stringData` block. For examples, go to [Manage an Argo CD configuration in Git with Harness GitOps](/docs/continuous-delivery/gitops/connect-and-manage/manage-argo-configs#git-configuration-files).
+
+## Creating GitOps entities with multiple projects
+
+When you have multiple Argo CD projects mapped to your Harness project, you can choose which Argo CD project to use when you create a new GitOps entity (cluster, repository, or application) in your Harness project.
+
+By default, in the Argo CD console, when you create a cluster, it is not associated with an Argo CD project. You can add the cluster by using the `argocd cluster add` CLI and its `--project` option.
+
+The following steps are common to all three entities (clusters, repositories, and applications) when you create them in Harness. We will demonstrate this with GitOps clusters:
+   
+1. While creating a GitOps cluster in the Harness project that is mapped to multiple Argo CD projects, under **GitOps Agent**, select the Agent where you set up the mappings. The **Project** setting appears. <!-- "Agent where"? -->
+
+   If the Agent has only one Argo CD project mapped, the **Project** setting is not shown.
+
+2. In **Project**, select the Argo CD project with the cluster you want to import.
+   
+   ![](./static/multiple-argo-to-single-harness-77.png)
+
+When you have completed [setting up the cluster](/docs/continuous-delivery/gitops/get-started/harness-cd-git-ops-quickstart#step-3-add-a-harness-gitops-cluster), the cluster appears in the GitOps Cluster list.
+
+## Enable Harness Expression Resolution for Existing Installations
+
+With a BYOA setup, you can enable the Harness ArgoCD plugin to use Harness secret expressions directly in your application manifests. This feature allows you to reference secrets stored in Harness (such as database passwords, API keys, etc.) within your Kubernetes manifests, and the expressions are resolved and decrypted during manifest rendering.
+
+For feature requirements, supported secret managers, and usage examples, go to [Harness Secret Expressions in Application Manifests](/docs/continuous-delivery/gitops/application/manage-gitops-applications#harness-secret-expressions-in-application-manifests).
+
+:::note
+
+For existing Agent installations (BYOA or Harness-installed Argo), the **Enable ArgoCD Harness Plugin** checkbox cannot be changed after the initial installation. You must configure the Harness ArgoCD plugin by running a patch script on your existing Argo CD installation using the instructions below.
+
+:::
+
+### For Helm Chart installations
+
+If your GitOps agent was installed using the Harness-provided Helm chart, follow these steps:
+
+1. **Upgrade to the latest chart** and make the following changes to your `values.yaml` file.
+
+2. **Enable the Harness ArgoCD plugin** by adding the following flag:
+
+   <details>
+   <summary>values.yaml: Enable plugin</summary>
+
+   ```yaml
+   harness:
+     argocdHarnessPlugin:
+       enabled: true
+   ```
+
+   </details>
+
+3. **Add the agent service configuration** under the `agent` section:
+
+   <details>
+   <summary>values.yaml: Agent service configuration</summary>
+
+   ```yaml
+   agent:
+     service:
+       enabled: true
+       type: ClusterIP
+       port: 7910
+       targetPort: 7910
+       labels: {}
+       annotations: {}
+   ```
+
+   </details>
+
+4. **Add the plugin container** to the Argo CD repo server by adding the following under `argo-cd.repoServer.extraContainers`:
+
+   <details>
+   <summary>values.yaml: Plugin sidecar container</summary>
+
+   ```yaml
+   argo-cd:
+     repoServer:
+       extraContainers:
+       - command: [ /var/run/argocd/argocd-cmp-server ]
+         image: harness/gitops-agent-installer-helper:v0.0.3
+         imagePullPolicy: IfNotPresent
+         name: argocd-harness-plugin
+         resources:
+           limits:
+             cpu: "0.5"
+             memory: 512Mi
+           requests:
+             cpu: "0.5"
+             memory: 512Mi
+         securityContext:
+           capabilities:
+             drop:
+             - NET_RAW
+           runAsGroup: 999
+           runAsUser: 999
+         terminationMessagePath: /dev/termination-log
+         terminationMessagePolicy: File
+         volumeMounts: 
+         - mountPath: /var/run/argocd
+           name: var-files
+         - mountPath: /home/argocd/cmp-server/plugins
+           name: plugins
+         - mountPath: /tmp
+           name: tmp
+         - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+           name: argocd-harness-plugin
+           subPath: harness.yaml
+   ```
+
+   </details>
+
+5. **Add the ConfigMap volume** to the repo server by adding the following under `argo-cd.repoServer.volumes`:
+
+   <details>
+   <summary>values.yaml: ConfigMap volume</summary>
+
+   ```yaml
+   argo-cd:
+     repoServer:
+       volumes:
+       - name: argocd-harness-plugin
+         configMap:
+           name: argocd-harness-plugin
+   ```
+
+   </details>
+
+6. **Apply the changes** by running the Helm upgrade command:
+
+   ```bash
+   helm upgrade <release-name> gitops-agent/gitops-helm --values values.yaml --namespace <agent-namespace>
+   ```
+
+### For plain Kubernetes manifest installations
+
+If your GitOps agent was installed using plain Kubernetes manifests, follow these steps:
+
+1. **Create the agent service** (if it doesn't already exist):
+
+   <details>
+   <summary>Service manifest</summary>
+
+   ```yaml
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: gitops-agent
+     namespace: <agent-namespace>
+   spec:
+     type: ClusterIP
+     ports:
+       - name: http
+         protocol: TCP
+         port: 7910
+         targetPort: 7910
+     selector:
+       app.kubernetes.io/name: harness-gitops-agent
+       app.kubernetes.io/instance: <release-name>
+   ```
+
+   </details>
+
+   Apply this manifest:
+
+   ```bash
+   kubectl apply -f gitops-agent-service.yaml -n <agent-namespace>
+   ```
+
+2. **Create the plugin ConfigMap** in the same namespace as your GitOps agent/Argo CD:
+
+   <details>
+   <summary>Plugin ConfigMap</summary>
+
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: argocd-harness-plugin
+     namespace: <agent-namespace>
+   data:
+     harness.yaml: |
+       ---
+       apiVersion: argoproj.io/v1alpha1
+       kind: ConfigManagementPlugin
+       metadata:
+         name: argocd-harness-plugin
+       spec:
+         version: v1.0
+         allowConcurrency: true
+         discover:
+           find:
+             command:
+               - /bin/sh
+               - -c
+               - |
+                 if [ -f "Chart.yaml" ] || [ -f "values.yaml" ]; then  
+                   echo "Harness Plugin discovered Helm Chart. Proceeding to generate manifests."
+                 elif find . -name '*.yaml' -o -name '*.yml' | grep -q .; then
+                   echo "Harness Plugin discovered Native Kubernetes Manifests. Proceeding to generate manifests."
+                 else
+                   exit 1
+                 fi
+         generate:
+           command:
+             - /bin/sh
+             - -c
+             - |
+               set -o pipefail 
+               if [ -f "Chart.yaml" ] || [ -f "values.yaml" ]; then
+                 helm template $ARGOCD_APP_NAME -n $ARGOCD_APP_NAMESPACE ${ARGOCD_ENV_HELM_ARGS} --include-crds . \
+                   | argocd-harness-plugin generate -
+               else
+                 argocd-harness-plugin generate .
+               fi
+         lockRepo: false
+   ```
+
+   </details>
+
+   Apply this ConfigMap:
+
+   ```bash
+   kubectl apply -f argocd-harness-plugin-configmap.yaml -n <agent-namespace>
+   ```
+
+3. **Add the plugin sidecar container** to the `argocd-repo-server` deployment:
+
+   Edit the `argocd-repo-server` deployment and add the following container under `spec.template.spec.containers`:
+
+   <details>
+   <summary>Deployment patch for argocd-repo-server</summary>
+
+   ```yaml
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: argocd-repo-server
+     namespace: <agent-namespace>
+   spec:
+     template:
+       spec: 
+         containers:
+         # ... existing containers ...
+         - command: [ /var/run/argocd/argocd-cmp-server ]
+           image: harness/gitops-agent-installer-helper:v0.0.3
+           imagePullPolicy: IfNotPresent
+           name: argocd-harness-plugin
+           resources:
+             limits:
+               cpu: "0.5"
+               memory: 512Mi
+             requests:
+               cpu: "0.5"
+               memory: 512Mi
+           securityContext:
+             capabilities:
+               drop:
+               - NET_RAW
+             runAsGroup: 999
+             runAsUser: 999
+           terminationMessagePath: /dev/termination-log
+           terminationMessagePolicy: File
+           volumeMounts: 
+           - mountPath: /var/run/argocd
+             name: var-files
+           - mountPath: /home/argocd/cmp-server/plugins
+             name: plugins
+           - mountPath: /tmp
+             name: tmp
+           - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+             name: argocd-harness-plugin
+             subPath: harness.yaml
+         volumes:
+         # ... existing volumes ...
+         - configMap:
+             defaultMode: 420
+             name: argocd-harness-plugin
+           name: argocd-harness-plugin
+   ```
+
+   </details>
+
+   Apply the updated deployment:
+
+   ```bash
+   kubectl apply -f argocd-repo-server-deployment.yaml -n <agent-namespace>
+   ```
+
+4. **Verify the installation** by checking that the plugin container is running:
+
+   ```bash
+   kubectl get pods -n <agent-namespace> -l app.kubernetes.io/name=argocd-repo-server
+   kubectl logs -n <agent-namespace> <argocd-repo-server-pod> -c argocd-harness-plugin
+   ```
+
+### Verification
+
+After completing the installation, verify that the Harness plugin is working correctly:
+
+1. Check that the `argocd-repo-server` pods are running with the new sidecar container
+2. Verify that the plugin ConfigMap exists in the namespace
+3. Test expression resolution by deploying an application with Harness secret expressions
+
+For usage examples and expression syntax, refer to [Harness Secret Expressions in Application Manifests](/docs/continuous-delivery/gitops/application/manage-gitops-applications#harness-secret-expressions-in-application-manifests).
+
+## Notes
+
+* Harness honors Argo CD project permissions. If the project selected for the Harness application does not have permissions for the repository or cluster, then Harness returns a permissions-related error. You must go to Argo CD and adjust the project's scoped repositories and destinations.
+* A non-BYOA setup does not support mapping multiple Argo CD projects to a single Harness project.
+* **Upgrading your Argo CD Version**: If you upgrade your Argo CD version to any version that is >= v2.8.0 with a BYO Argo GitOps agent installed, you will have to restart the agent pods in order for the agent to pickup the required configuration change. You canrestart the deployment or the pods individually.

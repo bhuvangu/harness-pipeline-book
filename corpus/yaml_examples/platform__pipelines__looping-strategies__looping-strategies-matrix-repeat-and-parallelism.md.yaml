@@ -1,0 +1,225 @@
+# source: docs/platform/pipelines/looping-strategies/looping-strategies-matrix-repeat-and-parallelism.md  (https://developer.harness.io/docs/platform/pipelines/looping-strategies/looping-strategies-matrix-repeat-and-parallelism)
+
+# --- example 1 ---
+matrix:
+  service: [svc1, svc2, svc3] ## There are three services to iterate over.
+  env: [env1, env2] ## There are two environments to iterate over.
+
+# --- example 2 ---
+pipeline:
+name: matrix-example-2
+identifier: matrixexample2
+projectIdentifier: myproject
+orgIdentifier: myorg
+tags: {}
+stages:
+  - stage:
+      name: echoMatrixSettings
+      identifier: echoMatrixSettings
+      description: ""
+      type: Custom
+      spec:
+        execution:
+          steps:
+            - step:
+                type: ShellScript
+                name: echo
+                identifier: echo
+                spec:
+                  shell: Bash
+                  onDelegate: true
+                  source:
+                    type: Inline
+                    spec:
+                      script: |-
+                        echo "iteration index = <+strategy.iteration>"  
+                        echo "total iterations = <+strategy.iterations>"  
+                        echo "stage values (parent):"  
+                        echo "Current version for stage: <+stage.matrix.service>"  
+                        echo "Current environment for stage: <+stage.matrix.environment>"  
+                        echo "step values (local):"  
+                        echo "Current item (version): <+repeat.item>"
+                  environmentVariables: []
+                  outputVariables: []
+                  executionTarget: {}
+                timeout: 10m
+                failureStrategies: []
+                strategy:
+                  repeat:
+                    items:
+                      - "18"
+                      - "17"
+                      - "16"
+                      - "15"
+                      - "14"
+                      - "13"
+                      - "12"
+                      - "11"
+                      - "10"
+                      - "9"
+                    maxConcurrency: 2
+      tags: {}
+      strategy:
+        matrix:
+          service:
+            - svc1
+            - svc2
+            - svc3
+          environment:
+            - env1
+            - env2
+          exclude:
+            - service: svc1
+              environment: env1
+          maxConcurrency: 2
+
+# --- example 3 ---
+matrix:
+  tag1: [value1, value2, value3]
+  tag2: [value1, value2]
+
+# --- example 4 ---
+- step:
+    type: Run
+    name: Run_tests
+    identifier: Run_test
+    spec:
+      shell: Sh
+      command: |-
+        echo "Testing app in <+matrix.browser> on <+matrix.os>"
+        ...
+
+# --- example 5 ---
+- step:
+    type: Action
+    name: Install python
+    identifier: installpython
+    spec:
+      uses: actions/setup-python@v4
+      with:
+        python-version: <+stage.matrix.pythonVersion>
+        token: <+secrets.getValue("github_token")>
+
+# --- example 6 ---
+matrix:
+  service: [svc1, svc2, svc3]
+  env: [env1, env2]
+  exclude: ## Specify combinations that you do not want to iterate over.
+    - service: svc1 ## Do not run svc1 with env1.
+      env: env1
+    - service: svc3 ## Do not run svc3 with env2.
+      env: env2
+
+# --- example 7 ---
+matrix:
+  browser: [chrome, safari, firefox]
+  os: [macos, windows, linux]
+  exclude:
+    - os: macos
+
+# --- example 8 ---
+matrix:
+  service: [svc1, svc2, svc3]
+  env: [env1, env2]
+  exclude:
+    - service: svc1
+      env: env1
+    - service: svc1
+      env: env2
+    - service: svc2
+      env: env1
+    - service: svc2
+      env: env2
+    - service: svc3
+      env: env1
+    - service: svc3
+      env: env2
+
+# --- example 9 ---
+matrix:
+  service: [svc1, svc2, svc3]
+  env: [env1, env2]
+  maxConcurrency: 2 ## Run no more than 2 instances at once.
+
+# --- example 10 ---
+matrix:
+  service: [svc1, svc2, svc3]
+  env: [env1, env2]
+  nodeName: stage_<+matrix.service>_<+matrix.env>
+
+# --- example 11 ---
+repeat:
+  items: ["18", "17", "16", "15", "14", "13", "12", "11", "10", "9"]
+  maxConcurrency: 5
+
+# --- example 12 ---
+matrix:
+  items: ["18", "17", "16", "15", "14", "13", "12", "11", "10", "9"]
+  maxConcurrency: 5
+
+# --- example 13 ---
+  tags: {}
+  stages:
+    - stage:
+        name: custom_1
+        identifier: custom_1
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo hello
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        strategy:
+          repeat:
+            items:
+              - host1
+              - host2
+              - host3
+            nodeName: TestDeploy_<+repeat.item>
+
+# --- example 14 ---
+tags: {}
+  stages:
+    - stage:
+        name: custom_stage_2
+        identifier: custom_stage_2
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo hello_world
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+                  strategy:
+                    repeat:
+                      items:
+                        - host1
+                        - host2
+                        - host3
+                      nodeName: Test_Deploy_step_<+repeat.item>

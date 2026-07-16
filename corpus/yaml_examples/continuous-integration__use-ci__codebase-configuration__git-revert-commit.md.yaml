@@ -1,0 +1,14 @@
+# source: docs/continuous-integration/use-ci/codebase-configuration/git-revert-commit.md  (https://developer.harness.io/docs/continuous-integration/use-ci/codebase-configuration/git-revert-commit)
+
+# --- example 1 ---
+- step:
+    type: Plugin
+    name: Git Revert Commit
+    identifier: git_revert_commit
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/git-revert-commit:linux-amd64
+      settings:
+        git_pat: <+secrets.getValue("YOUR_GIT_PAT_SECRET")>
+        commit_sha: <+codebase.commitSha>
+        create_revert_branch: "true"

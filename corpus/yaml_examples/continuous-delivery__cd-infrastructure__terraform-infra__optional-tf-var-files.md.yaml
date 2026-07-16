@@ -1,0 +1,20 @@
+# source: docs/continuous-delivery/cd-infrastructure/terraform-infra/optional-tf-var-files.md  (https://developer.harness.io/docs/continuous-delivery/cd-infrastructure/terraform-infra/optional-tf-var-files)
+
+# --- example 1 ---
+                      varFiles:
+                        - varFile:
+                            type: Remote
+                            identifier: optional_var_files_123
+                            spec:
+                              optional: true
+                              store:
+                                type: Github
+                                spec:
+                                  gitFetchType: Branch
+                                  repoName: "organization/repository"
+                                  branch: main
+                                  paths:
+                                    - terraform/localresource/localresourcevars/localresource.tfvars
+                                    - inexistentaasd123a.tvfars
+                                    - iasd13sadfsa6757.tfvars
+                                  connectorRef: vlicaprerequisites

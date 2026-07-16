@@ -1,0 +1,437 @@
+# source: docs/continuous-integration/development-guides/ci-python.md  (https://developer.harness.io/docs/continuous-integration/development-guides/ci-python)
+
+# --- example 1 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      shell: Sh
+      command: |-
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      envVariables:
+        PIP_CACHE_DIR: "/root/.cache"
+
+# --- example 2 ---
+- step:
+    type: Run
+    identifier: dependencies
+    name: Dependencies
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: python:latest
+      command: |-
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+# --- example 3 ---
+- stage:
+    spec:
+      caching:
+        enabled: true
+        key: cache-{{ checksum "requirements.txt" }}
+        paths:
+          - "/root/.cache"
+      sharedPaths:
+        - /root/.cache
+
+# --- example 4 ---
+spec:
+  key: cache-{{ checksum "requirements.txt" }}
+
+# --- example 5 ---
+spec:
+  sourcePaths:
+    - "/root/.cache"
+
+# --- example 6 ---
+            steps:
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "requirements.txt" }}
+                    archiveFormat: Tar
+              - step:
+                  type: Run
+                    envVariables:
+                      PIP_CACHE_DIR: "/root/.cache"
+                  ...
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum "requirements.txt" }}
+                    sourcePaths:
+                      - "/root/.cache"
+                    archiveFormat: Tar
+
+# --- example 7 ---
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      shell: Sh
+      command: |-
+        pip install pytest
+        pytest tests.py --junit-xml=report.xml
+      envVariables:
+        PIP_CACHE_DIR: /root/.cache
+
+# --- example 8 ---
+- step:
+    type: Run
+    name: Test
+    identifier: test
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: python:latest
+      shell: Sh
+      command: |-
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest
+        pytest tests.py --junit-xml=report.xml
+
+# --- example 9 ---
+reports:
+  type: JUnit
+  spec:
+    paths:
+      - report.xml
+
+# --- example 10 ---
+              - step:
+                  type: Test
+                  name: runTestsWithIntelligence
+                  identifier: runTestsWithIntelligence
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: python:latest
+                    command: |-
+                      python3 -m venv .venv
+                      . .venv/bin/activate
+
+                      python3 -m pip install -r requirements/test.txt
+                      python3 -m pip install -e .
+
+                      pytest
+                    shell: Python
+                    intelligenceMode: true
+
+# --- example 11 ---
+- step:
+    type: Run
+    name: Install Python
+    identifier: installpython
+    spec:
+      shell: Sh
+      command: |-
+        sudo apt-get update && sudo apt-get install -y software-properties-common
+        sudo add-apt-repository -y ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install -y python3.10
+        python3.10 --version
+
+# --- example 12 ---
+- stage:
+    strategy:
+      matrix:
+        pythonVersion:
+          - "3.11"
+          - "3.10"
+
+# --- example 13 ---
+- step:
+    type: Run
+    name: Install Python
+    identifier: installpython
+    spec:
+      shell: Sh
+      command: |-
+        sudo apt-get update && sudo apt-get install -y software-properties-common
+        sudo add-apt-repository -y ppa:deadsnakes/ppa
+        sudo apt-get update
+        sudo apt-get install -y python<+matrix.pythonVersion>
+        python<+matrix.pythonVersion> --version
+
+# --- example 14 ---
+- step:
+    type: Run
+    name: Python Version
+    identifier: pythonversion
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: python:3.10.10
+      shell: Sh
+      command: |-
+        python --version
+
+# --- example 15 ---
+- stage:
+    strategy:
+      matrix:
+        pythonVersion:
+          - 3.11.2
+          - 3.10.10
+
+# --- example 16 ---
+- step:
+    type: Run
+    name: Python Version
+    identifier: pythonversion
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: python:<+ stage.matrix.pythonVersion >
+      shell: Sh
+      command: |-
+        python --version
+
+# --- example 17 ---
+pipeline:
+  name: Test a Python app
+  identifier: Test_a_Python_app
+  projectIdentifier: default
+  orgIdentifier: default
+  stages:
+    - stage:
+        name: Test
+        identifier: test
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+            key: cache-{{ checksum "requirements.txt" }}
+            paths:
+              - "/root/.cache"
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: Dependencies
+                  spec:
+                    shell: Sh
+                    command: |-
+                      python -m pip install --upgrade pip
+                      pip install -r requirements.txt
+                    envVariables:
+                      PIP_CACHE_DIR: "/root/.cache"
+              - step:
+                  type: Run
+                  name: Test
+                  identifier: test
+                  spec:
+                    shell: Sh
+                    command: |-
+                      pip install pytest
+                      pytest tests.py --junit-xml=report.xml
+                    envVariables:
+                      PIP_CACHE_DIR: /root/.cache
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - report.xml
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          sharedPaths:
+            - /root/.cache
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+
+# --- example 18 ---
+pipeline:
+  name: Test a Python app
+  identifier: Test_a_Python_app
+  projectIdentifier: default
+  orgIdentifier: default
+  stages:
+    - stage:
+        name: Test
+        identifier: test
+        description: ""
+        type: CI
+        strategy:
+          matrix:
+            pythonVersion:
+              - 3.11.2
+              - 3.10.10
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+            key: cache-{{ checksum "requirements.txt" }}
+            paths:
+              - "/root/.cache"
+          execution:
+            steps:
+              - step:
+                  type: Action
+                  name: Install python
+                  identifier: installpython
+                  spec:
+                    uses: actions/setup-python@v4
+                    with:
+                      python-version: <+ stage.matrix.pythonVersion >
+                      token: <+ secrets.getValue("github_token") >
+              - step:
+                  type: Run
+                  identifier: dependencies
+                  name: Dependencies
+                  spec:
+                    shell: Sh
+                    command: |-
+                      python -m pip install --upgrade pip
+                      pip install -r requirements.txt
+                    envVariables:
+                      PIP_CACHE_DIR: "/root/.cache"
+              - step:
+                  type: Run
+                  name: Test
+                  identifier: test
+                  spec:
+                    shell: Sh
+                    command: |-
+                      pip install pytest
+                      pytest tests.py --junit-xml=report.xml
+                    envVariables:
+                      PIP_CACHE_DIR: /root/.cache
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - report.xml
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          sharedPaths:
+            - /root/.cache
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+
+# --- example 19 ---
+pipeline:
+  identifier: Test a Python app
+  name: Test_a_Python_app
+  orgIdentifier: default
+  projectIdentifier: default
+  stages:
+    - stage:
+        identifier: default
+        name: default
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Test
+                  identifier: test
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: python:3.10.10
+                    shell: Sh
+                    command: |-
+                      pip install pytest
+                      pytest tests.py --junit-xml=report.xml
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - "report.xml"
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+        type: CI
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+
+# --- example 20 ---
+pipeline:
+  identifier: Test a Python app
+  name: Test_a_Python_app
+  orgIdentifier: default
+  projectIdentifier: default
+  stages:
+    - stage:
+        strategy:
+          matrix:
+            pythonVersion:
+              - 3.11.2
+              - 3.10.10
+        identifier: default
+        name: default
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Test
+                  identifier: test
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: python:<+ stage.matrix.pythonVersion >
+                    shell: Sh
+                    command: |-
+                      python -m pip install --upgrade pip
+                      pip install -r requirements.txt
+                      pip install pytest
+                      pytest tests.py --junit-xml=report.xml
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - "report.xml"
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+        type: CI
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>

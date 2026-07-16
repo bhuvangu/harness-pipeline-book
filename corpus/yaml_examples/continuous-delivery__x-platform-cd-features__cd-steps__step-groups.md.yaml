@@ -1,0 +1,105 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/step-groups.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/step-groups)
+
+# --- example 1 ---
+pipeline:
+  projectIdentifier: svcredesignhinger
+  orgIdentifier: harness
+  tags: {}
+  stages:
+    - stage:
+        name: dep
+        identifier: dep
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          service:
+            serviceRef: TestStepGroupOverridesService
+          environment:
+            environmentRef: qa
+            environmentInputs:
+              identifier: qa
+              type: PreProduction
+              variables:
+                - name: rtvar1123
+                  type: String
+                  value: <+input>
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: delegateInfra2
+          execution:
+            steps:
+              - stepGroup:
+                  name: parent
+                  identifier: parent
+                  steps:
+                    - step:
+                        type: ShellScript
+                        name: ShellScript_2
+                        identifier: ShellScript_2
+                        spec:
+                          shell: Bash
+                          onDelegate: true
+                          source:
+                            type: Inline
+                            spec:
+                              script: echo <+serviceVariableOverrides.svarParent>
+                          environmentVariables: []
+                          outputVariables: []
+                        timeout: 10m
+                    - stepGroup:
+                        name: child
+                        identifier: child
+                        steps:
+                          - step:
+                              type: ShellScript
+                              name: ShellScript_1
+                              identifier: ShellScript_1
+                              spec:
+                                shell: Bash
+                                onDelegate: true
+                                source:
+                                  type: Inline
+                                  spec:
+                                    script: |+
+                                      echo <+serviceVariableOverrides.svar1>
+                                      echo <+serviceVariableOverrides.svar2>
+
+                                      echo "child overriding parent value"
+                                      echo <+serviceVariableOverrides.svarParent>
+
+                                environmentVariables: []
+                                outputVariables: []
+                              timeout: 10m
+                        variables:
+                          - name: svar2
+                            type: String
+                            value: fromStepGroup_OverriddenAtChildLevel
+                            description: ""
+                            required: false
+                          - name: svarParent
+                            type: String
+                            value: OverridenByChildStepGroup
+                            description: ""
+                            required: false
+                  variables:
+                    - name: svar1
+                      type: String
+                      value: fromStepGroup_OverriddenAtParentStepGroup
+                      description: ""
+                      required: false
+                    - name: svarParent
+                      type: String
+                      value: DefinedAtParentLevel
+                      description: ""
+                      required: false
+            rollbackSteps: []
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+  identifier: StepGroupLevelOverrides
+  name: StepGroupLevelOverrides

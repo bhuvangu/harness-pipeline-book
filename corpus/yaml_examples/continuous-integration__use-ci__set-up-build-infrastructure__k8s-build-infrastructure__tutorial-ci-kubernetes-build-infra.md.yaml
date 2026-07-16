@@ -1,0 +1,89 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/k8s-build-infrastructure/tutorial-ci-kubernetes-build-infra.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/k8s-build-infrastructure/tutorial-ci-kubernetes-build-infra)
+
+# --- example 1 ---
+pipeline:
+  name: k8s tutorial example
+  identifier: k8s_tutorial_example
+  projectIdentifier: k8s_tutorial_project
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: ghconnector
+        build: <+input>
+  stages:
+    - stage:
+        name: Build Test and Push
+        identifier: Build_Test_and_Push
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: k8stutorial
+              namespace: harness-delegate-ng
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Run Unit Tests
+                  identifier: Run_Unit_Tests
+                  spec:
+                    connectorRef: dockerhubconnector
+                    image: golang:1.17
+                    shell: Sh
+                    command: |2-
+                         go get gotest.tools/gotestsum
+                         gotestsum --format=standard-verbose --junitfile unit-tests.xml || true
+                         CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -tags netgo
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - "*.xml"
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: BuildAndPushDockerRegistry_1
+                  identifier: BuildAndPushDockerRegistry_1
+                  spec:
+                    connectorRef: dockerhubconnector
+                    repo: mydockerhub/ci-tutorial-repo
+                    tags:
+                      - <+pipeline.sequenceId>
+    - stage:
+        name: n test
+        identifier: n_test
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: false
+          infrastructure:
+            useFromStage: Build_Test_and_Push
+          execution:
+            steps:
+              - step:
+                  type: Background
+                  name: Pull and host image
+                  identifier: Pull_and_host_image
+                  spec:
+                    connectorRef: dockerhubconnector
+                    image: mydockerhub/ci-tutorial-repo:<+pipeline.sequenceId>
+                    shell: Sh
+              - step:
+                  type: Run
+                  name: Test server connection
+                  identifier: Test_server_connection
+                  spec:
+                    connectorRef: dockerhubconnector
+                    image: curlimages/curl:7.73.0
+                    shell: Sh
+                    command: |-
+                      sleep 10
+                      curl localhost:8080
+                      curl localhost:8080?Hello!_I_am_a_nice_demo!

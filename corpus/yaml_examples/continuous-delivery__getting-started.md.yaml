@@ -1,0 +1,51 @@
+# source: docs/continuous-delivery/getting-started.md  (https://developer.harness.io/docs/continuous-delivery/getting-started)
+
+# --- example 1 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guestbook-ui
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: guestbook-ui
+  template:
+    metadata:
+      labels:
+        app: guestbook-ui
+    spec:
+      containers:
+      - name: guestbook-ui
+        image: <+artifact.image>
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guestbook-ui
+spec:
+  type: LoadBalancer
+  selector:
+    app: guestbook-ui
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+# --- example 2 ---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: <+service.name>
+spec:
+  template:
+    spec:
+      containers:
+      - image: <+artifact.image>
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ENV
+          value: "production"

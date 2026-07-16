@@ -1,0 +1,22 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/public-docker-images.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/public-docker-images)
+
+# --- example 1 ---
+                 spec:
+                   connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                   image: harnesscommunity/base:latest ## Reference the Docker Hub repo, image, and tag.
+                   shell: Sh
+                   command: sudo npm install -g npm ## This is an example command.
+
+# --- example 2 ---
+                 spec:
+                   connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                   image: harnesscommunity/ruby:latest ## Reference the Docker Hub repo, image, and tag.
+                   shell: Sh
+                   command: bundle exec rake test ## This is an example command.
+
+# --- example 3 ---
+                 spec:
+                   connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+                   image: harnesscommunity/postgres:14.5 ## Reference the Docker Hub repo, image, and tag.
+                   shell: Sh
+                   command: bundle exec rake test ## This is an example command.

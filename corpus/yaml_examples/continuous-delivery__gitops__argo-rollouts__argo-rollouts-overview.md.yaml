@@ -1,0 +1,6 @@
+# source: docs/continuous-delivery/gitops/argo-rollouts/argo-rollouts-overview.md  (https://developer.harness.io/docs/continuous-delivery/gitops/argo-rollouts/argo-rollouts-overview)
+
+# --- example 1 ---
+images:
+  - name: argoproj/rollouts-demo
+    newTag: blue  # Change this to 'green', 'yellow', 'orange', etc.

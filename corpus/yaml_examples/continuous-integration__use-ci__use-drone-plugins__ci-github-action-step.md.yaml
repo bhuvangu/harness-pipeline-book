@@ -1,0 +1,198 @@
+# source: docs/continuous-integration/use-ci/use-drone-plugins/ci-github-action-step.md  (https://developer.harness.io/docs/continuous-integration/use-ci/use-drone-plugins/ci-github-action-step)
+
+# --- example 1 ---
+- step:
+    type: Action
+    name: setup nodejs
+    identifier: setup_nodejs
+    spec:
+      uses: actions/setup-node@v3
+      with:
+        node-version: "16"
+
+# --- example 2 ---
+- step:
+    type: Action
+    name: setup golang
+    identifier: setup_go
+    spec:
+      uses: actions/setup-go@v3
+      with:
+        go-version: "1.17"
+
+# --- example 3 ---
+- step:
+    type: Action
+    name: setup java
+    identifier: setup_java
+    spec:
+      uses: actions/setup-java@v3
+      with:
+        distribution: "temurin"
+        java-version: "17"
+
+# --- example 4 ---
+- step:
+    type: Action
+    name: setup ruby
+    identifier: setup_ruby
+    spec:
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: "2.7.2"
+
+# --- example 5 ---
+- step:
+    type: Action
+    name: setup golang
+    identifier: setup_go
+    spec:
+      uses: actions/setup-go@v3
+      with:
+        go-version: "1.17"
+
+# --- example 6 ---
+pipeline:
+  name: Build and test golang application
+  identifier: Build_test_golang
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        build: <+input>
+  stages:
+    - stage:
+        name: Build golang application
+        identifier: Build_golang_application
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Action
+                  name: setup golang
+                  identifier: setup_go
+                  spec:
+                    uses: actions/setup-go@v3
+                    with:
+                      go-version: 1.19.5
+              - step:
+                  type: Run
+                  name: Build and test
+                  identifier: Build_and_test
+                  spec:
+                    shell: Bash
+                    command: |-
+                      go build .
+                      go test -v ./...
+
+# --- example 7 ---
+- step:
+    type: Action
+    name: hello world
+    identifier: hello_world
+    spec:
+      uses: my-actions-repo/hello-world-javascript-action@main
+      with:
+        who-to-greet: "Mona the Octocat"
+      env:
+        GITHUB_TOKEN: <+secrets.getValue("[SECRET_NAME]")>
+
+# --- example 8 ---
+            steps:
+              - parallel
+                  - step:
+                      type: Action
+                      name: gcsuploader
+                      identifier: gcsuploader
+                      spec:
+                        uses: google-github-actions/upload-cloud-storage@main
+                        with:
+                          path: pom.xml
+                          destination: cie-demo-pipeline/target
+                          credentials: <+stage.variables.GCP_SECRET_KEY_BASE64>
+                         env:
+                          XDG_CACHE_HOME: /home/ubuntu/.cache1
+                  - step:
+                      type: Action
+                      name: gcsuploader2
+                      identifier: gcsuploader2
+                      spec:
+                        uses: google-github-actions/upload-cloud-storage@main
+                        with:
+                          path: pom.xml
+                          destination: cie-prod-pipeline/target
+                          credentials: <+stage.variables.GCP_SECRET_KEY_BASE64>
+                         env:
+                          XDG_CACHE_HOME: /home/ubuntu/.cache2
+
+# --- example 9 ---
+- step:
+    type: Action
+    name: Action docker publish image
+    identifier: Action_docker_publish_image
+    spec:
+      uses: elgohr/Publish-Docker-Github-Action@v4
+      with:
+        name: dockerhub/publish-docker-image
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        workdir: /harness
+
+# --- example 10 ---
+              - step:
+                  type: Action
+                  name: setup golang
+                  identifier: setup_go
+                  spec:
+                    uses: actions/setup-go@v3
+                    with:
+                      go-version: `1.17`
+              - step:
+                  type: Run
+                  name: beta
+                  identifier: beta
+                  spec:
+                    shell: Sh
+                    command: |-
+                      echo <+steps.setup_go.output.outputVariables."go-version">
+                      echo <+execution.steps.setup_go.output.outputVariables."go-version">
+
+# --- example 11 ---
+- name: hello-world
+  uses: actions/hello-world-javascript-action@main
+  with:
+    who-to-greet: "Mona the Octocat"
+  env:
+    hello: world
+
+# --- example 12 ---
+- step:
+    type: Action
+    name: hello world
+    identifier: hello_world
+    spec:
+      uses: actions/hello-world-javascript-action@main
+      with:
+        who-to-greet: "Mona the Octocat"
+      env:
+        hello: world
+
+# --- example 13 ---
+user_data: |
+  #cloud-config
+  runcmd:
+    - 'sed -i "1s|^|HOME=/home/ubuntu\n|" /etc/environment'
+    - 'curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -'
+    - 'sudo apt install -y python3 python-is-python3 nodejs golang'

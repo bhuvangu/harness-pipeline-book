@@ -1,0 +1,70 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-dotnet-to-azure-artifacts.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-dotnet-to-azure-artifacts)
+
+# --- example 1 ---
+identifier: BuildPackagePush_NET_Packages
+name: Build Package and Push .NET Packages
+pipeline:
+  tags: {}
+  stages:
+    - stage:
+        name: Build and Push .NET Package
+        identifier: Pull_and_Push
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: false
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Build and Package DOTNET
+                  identifier: Build_and_Package_DOTNET
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:8.0
+                    shell: Sh
+                    command: |-
+                      dotnet new console --framework net8.0 --use-program-main
+
+                      dotnet build --configuration Release
+
+                      dotnet pack -c Release --version-suffix <+pipeline.sequenceId>
+              - step:
+                  type: Run
+                  name: Push DOTNET Package
+                  identifier: Run_1
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:8.0
+                    shell: Sh
+                    command: |-
+                      # Add Azure Artifacts Feed Nuget Source
+                      NUGET_PAT="<+secrets.getValue("Azure_DevOps_PAT")>"
+                      NUGET_SOURCE="https://pkgs.dev.azure.com/AZURE_ORGANIZATION/_packaging/AZURE_ARTIFACTS_FEED/nuget/v3/index.json"
+
+                      dotnet nuget add source $NUGET_SOURCE -n azuresource -u user -p $NUGET_PAT --store-password-in-clear-text
+
+                      # Push the .NET package
+                      dotnet nuget push ./bin/Release/PACKAGE_NAME.1.0.0-<+pipeline.sequenceId>.nupkg --source azuresource --api-key AzureDevOps
+              - step:
+                  type: Run
+                  name: Download DOTNET Package
+                  identifier: Run_3
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: mcr.microsoft.com/dotnet/sdk:8.0
+                    shell: Sh
+                    command: |-
+                      mkdir newproject && cd newproject
+                      dotnet new console
+                      # Download the .NET package
+                      dotnet add package Harness -v 1.0.0-<+pipeline.sequenceId>
+          caching:
+            enabled: false
+            paths: []

@@ -1,0 +1,18 @@
+# source: docs/continuous-integration/development-guides/mlops/mlops-vertexai.md  (https://developer.harness.io/docs/continuous-integration/development-guides/mlops/mlops-vertexai)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: vertex
+                  identifier: vertex
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: harnesscommunity/gcloud-vertex
+                    settings:
+                      allowlist: sample_notebook.ipynb
+                      project_id: some-gcloud-project
+                      GCLOUD_SOURCE_BUCKET: some-gcloud-buket
+                      GCLOUD_OUTPUT_BUCKET: some-gcloud-bucket/nbr/output
+                      SERVICE_ACCOUNT_KEY: <+secrets.getValue("google_sa_key")>
+                      DISPLAY_NAME: vertex-test
+                    imagePullPolicy: Always

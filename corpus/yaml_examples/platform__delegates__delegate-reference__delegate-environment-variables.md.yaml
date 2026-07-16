@@ -1,0 +1,87 @@
+# source: docs/platform/delegates/delegate-reference/delegate-environment-variables.md  (https://developer.harness.io/docs/platform/delegates/delegate-reference/delegate-environment-variables)
+
+# --- example 1 ---
+        - name: ACCOUNT_ID
+          value: YOUR_ACCOUNT_ID
+
+# --- example 2 ---
+        - name: DELEGATE_DESCRIPTION
+          value: ""
+
+# --- example 3 ---
+        - name: DELEGATE_NAME
+          value: qa
+
+# --- example 4 ---
+        - name: DELEGATE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+
+# --- example 5 ---
+        - name: DELEGATE_TAGS
+          value: "has_jq, has_gcloud"
+
+# --- example 6 ---
+      - name: DYNAMIC_REQUEST_HANDLING
+        value: "true"
+
+# --- example 7 ---
+        - name: DELEGATE_CPU_THRESHOLD
+          value: "80"
+
+# --- example 8 ---
+        - name: DELEGATE_MEMORY_THRESHOLD
+          value: "80"
+
+# --- example 9 ---
+        - name: DELEGATE_TASK_CAPACITY
+          value: "2"
+
+# --- example 10 ---
+        - name: DELEGATE_TYPE
+          value: "KUBERNETES"
+
+# --- example 11 ---
+        - name: INIT_SCRIPT
+          value: |-
+            echo "initializing Delegate"
+            echo "Delegate initialized"
+
+# --- example 12 ---
+        - name: JAVA_OPTS
+          value: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=70.0 -XX:MinRAMPercentage=40.0 -XX:+HeapDumpOnOutOfMemoryError"
+
+# --- example 13 ---
+        - name: MANAGER_HOST_AND_PORT
+          value: https://app.harness.io
+
+# --- example 14 ---
+        - name: POLL_FOR_TASKS
+          value: "false"
+
+# --- example 15 ---
+        - name: STACK_DRIVER_LOGGING_ENABLED
+          value: "false"
+
+# --- example 16 ---
+        - name: PROXY_HOST
+          value: ""
+        - name: PROXY_PORT
+          value: ""
+        - name: PROXY_SCHEME
+          value: ""
+        - name: NO_PROXY
+          value: ""
+        - name: PROXY_MANAGER
+          value: "true"
+        - name: PROXY_USER
+          valueFrom:
+            secretKeyRef:
+              name: mydel-proxy
+              key: PROXY_USER
+        - name: PROXY_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mydel-proxy
+              key: PROXY_PASSWORD

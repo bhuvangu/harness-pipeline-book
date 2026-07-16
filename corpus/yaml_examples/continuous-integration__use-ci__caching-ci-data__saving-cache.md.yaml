@@ -1,0 +1,117 @@
+# source: docs/continuous-integration/use-ci/caching-ci-data/saving-cache.md  (https://developer.harness.io/docs/continuous-integration/use-ci/caching-ci-data/saving-cache)
+
+# --- example 1 ---
+  stages:
+    - stage:
+        identifier: upload_encrypted_s3
+        name: Upload to Encrypted S3
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  identifier: save_cache_s3
+                  name: Save Cache to S3
+                  type: SaveCacheS3
+                  spec:
+                    connectorRef: YOUR_AWS_CONNECTOR
+                    bucket: YOUR_S3_BUCKET
+                    region: AWS_REGION
+                    key: YOUR_CACHE_KEY
+                    sourcePaths:
+                      - node_modules/
+        variables:
+          - name: PLUGIN_ENCRYPTION
+            type: String
+            description: Encryption type for plugin
+            value: AES256
+
+# --- example 2 ---
+If your bucket requires KMS encryption, set:
+
+variables:
+  PLUGIN_ENCRYPTION: aws:kms
+
+# --- example 3 ---
+              - step:
+                  type: SaveCacheS3
+                  name: Save Cache to S3
+                  identifier: Save_Cache_to_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum filePath1 }} # example cache key based on file checksum
+                    sourcePaths:
+                      - directory1 # example first directory to cache
+                      - directory2 # example second directory to cache
+                    archiveFormat: Tar
+...
+
+# --- example 4 ---
+  stages:
+    - stage:
+        spec:
+          sharedPaths:
+            - /example/path # directory outside workspace to share between steps
+
+# --- example 5 ---
+              - step:
+                  type: RestoreCacheS3
+                  name: Restore Cache From S3
+                  identifier: Restore_Cache_From_S3
+                  spec:
+                    connectorRef: AWS_Connector
+                    region: us-east-1
+                    bucket: your-s3-bucket
+                    key: cache-{{ checksum filePath1 }} # example cache key based on file checksum
+                    archiveFormat: Tar
+...
+
+# --- example 6 ---
+                  spec:
+                    key: cache-{{ checksum "go.sum" }}
+
+# --- example 7 ---
+                  spec:
+                    sourcePaths:
+                      - /go/pkg/mod
+                      - /root/.cache/go-build
+
+# --- example 8 ---
+                  spec:
+                    key: cache-{{ checksum "package-lock.json" }}
+
+# --- example 9 ---
+                  spec:
+                    key: cache-{{ checksum "yarn.lock" }}
+
+# --- example 10 ---
+                  spec:
+                    sourcePaths:
+                      - node_modules
+
+# --- example 11 ---
+                  spec:
+                    key: cache-{{ checksum "pom.xml" }}
+
+# --- example 12 ---
+                  spec:
+                    sourcePaths:
+                      - /root/.m2
+
+# --- example 13 ---
+              - step:
+                  ...
+                  when:
+                    stageStatus: Success ## Execute this step if the stage execution is successful thus far.
+                    condition: <+strategy.iteration> == 0 ## And execute this step if this JEXL condition evaluates to true

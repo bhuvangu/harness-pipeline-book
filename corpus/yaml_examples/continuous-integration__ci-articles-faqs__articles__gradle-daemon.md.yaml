@@ -1,0 +1,25 @@
+# source: docs/continuous-integration/ci-articles-faqs/articles/gradle-daemon.md  (https://developer.harness.io/docs/continuous-integration/ci-articles-faqs/articles/gradle-daemon)
+
+# --- example 1 ---
+              - step:
+                  type: Background
+                  name: Gradle_Daemon
+                  identifier: Gradle_Daemon
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    image: gradle
+                    shell: Sh
+                    entrypoint:
+                      - gradle
+                    envVariables:
+                      GRADLE_USER_HOME: /harness/.gradle
+                      GRADLE_OPTS: "-Dorg.gradle.jvmargs=\"-Xms1024m -Xmx2048m\""
+                    resources:
+                      limits:
+                        memory: 1G
+
+# --- example 2 ---
+- stage:
+    spec:
+      sharedPaths:
+        - /tmp

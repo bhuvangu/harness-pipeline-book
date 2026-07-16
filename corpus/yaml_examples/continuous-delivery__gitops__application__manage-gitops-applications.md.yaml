@@ -1,0 +1,42 @@
+# source: docs/continuous-delivery/gitops/application/manage-gitops-applications.md  (https://developer.harness.io/docs/continuous-delivery/gitops/application/manage-gitops-applications)
+
+# --- example 1 ---
+ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: apps
+      kind: StatefulSet
+      jsonPointers:
+        - /spec/replicas
+syncPolicy: 
+  syncOptions: 
+  - RespectIgnoreDifferences=true
+
+# --- example 2 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  resource.customizations: |
+    apps/Deployment:^(app-with-hpa|hpa-enabled-.*|.*-autoscaled)$:
+      ignoreDifferences: |
+        jsonPointers:
+        - /spec/replicas
+
+# --- example 3 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-db-vals
+stringData:
+  # Account-level secret
+  secretfordb: <+secrets.getValue("account.vaultsecret")>
+  # Account-level secret
+  username1: <+secrets.getValue("account.secret2HSM")>
+  # Org-level secret
+  orgSecret: <+secrets.getValue("org.apikey")>
+  # Project-level secret
+  projectSecret: <+secrets.getValue("dbpassword")>

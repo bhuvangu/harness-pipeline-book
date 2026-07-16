@@ -1,0 +1,34 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/email-step.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/email-step)
+
+# --- example 1 ---
+pipeline:
+  name: Email-test
+  identifier: emailtest
+  projectIdentifier: PROJECT_ID
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: s1
+        identifier: s1
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: Email
+                  name: Email_1
+                  identifier: Email_1
+                  spec:
+                    to: RECIPIENT_EMAIL
+                    cc: ""
+                    subject: Pipeline status
+                    body: |-
+                      These are the pipeline details <br> <br>
+                      Pipeline name: <+pipeline.name> <br>
+                      Pipeline status: <+pipeline.status>. <br>
+                      Pipeline step identifier: <+step.identifier>
+                    inputVariables: []
+                  timeout: 10m
+        tags: {}

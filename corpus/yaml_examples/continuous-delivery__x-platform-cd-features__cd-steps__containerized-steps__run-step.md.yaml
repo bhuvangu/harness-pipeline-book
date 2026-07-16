@@ -1,0 +1,136 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/containerized-steps/run-step.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/containerized-steps/run-step)
+
+# --- example 1 ---
+              - step:
+                  ...
+                  spec:
+                    shell: Bash
+                    command: |-
+                      JAVA_VER=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
+                      if [[ $JAVA_VER == 17 ]]; then
+                        echo successfully installed $JAVA_VER
+                      else
+                        exit 1
+                      fi
+
+# --- example 2 ---
+              - step:
+                  ...
+                  spec:
+                    shell: Powershell
+                    command: Wait-Event -SourceIdentifier "ProcessStarted"
+
+# --- example 3 ---
+              - step:
+                  ...
+                  spec:
+                    shell: Pwsh
+                    command: |-
+                      $Events = Get-EventLog -LogName System -Newest 1000
+                      $events | ForEach-Object -Begin {Get-Date} -Process {Out-File -FilePath Events.txt -Append -InputObject $_.Message} -End {Get-Date}
+
+# --- example 4 ---
+              - step:
+                  ...
+                  spec:
+                    connectorRef: account.harnessImage
+                    image: python:latest
+                    shell: Sh
+                    command: |-
+                      echo "Welcome to Harness CI"
+                      uname -a
+                      pip install pytest
+                      pip install pytest-cov
+                      pip install -r requirements.txt
+
+                      pytest -v --cov --junitxml="result.xml" test_api.py test_api_2.py test_api_3.py
+
+# --- example 5 ---
+              - step:
+                  type: Run
+                  name: Run_2
+                  identifier: Run_2
+                  spec:
+                    shell: Python
+                    command: |-
+                      import os
+                      os.environ["OS_VAR"] = value
+                    outputVariables:
+                      - name: OS_VAR
+
+# --- example 6 ---
+              - step:
+                  type: Run
+                  name: alpha
+                  identifier: alpha
+                  spec:
+                    shell: Sh
+                    command: export myVar=varValue
+                    outputVariables:
+                      - name: myVar
+              - step:
+                  type: Run
+                  name: beta
+                  identifier: beta
+                  spec:
+                    shell: Sh
+                    command: |-
+                      echo <+steps.alpha.output.outputVariables.myVar>
+                      echo <+execution.steps.alpha.output.outputVariables.myVar>
+
+# --- example 7 ---
+pipeline:
+  projectIdentifier: myproject
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        identifier: testSimple
+        type: Custom
+        name: testSimple
+        description: ""
+        spec:
+          execution:
+            steps:
+              - stepGroup:
+                  identifier: stepGroup1
+                  name: stepGroup1
+                  steps:
+                    - step:
+                        identifier: Run_1
+                        type: Run
+                        name: Run_1
+                        spec:
+                          shell: Bash
+                          command: |-
+                            export var1="val1"
+                            export var2="val2"
+                          outputVariables:
+                            - name: var1
+                            - name: var2
+                          outputAlias:
+                            key: info
+                            scope: StepGroup
+                        timeout: 10m
+                    - step:
+                        type: Run
+                        name: outputs
+                        identifier: outputs
+                        spec:
+                          shell: Bash
+                          command: |-
+                            echo "reference using aliases:"
+
+                            echo "var1:" <+exportedVariables.getValue("stepGroup.info.var1")>
+                            echo "var2:" <+exportedVariables.getValue("stepGroup.info.var2")>
+                            echo "var map:" <+exportedVariables.getValue("stepGroup.info")>
+
+                            echo "reference using standard output exp:"
+
+                            echo "var1:" <+pipeline.stages.testSimple.spec.execution.steps.stepGroup1.steps.Run_1.output.outputVariables.var1>
+                            echo "var2:" <+pipeline.stages.testSimple.spec.execution.steps.stepGroup1.steps.Run_1.output.outputVariables.var2>
+                          outputVariables: []
+                        timeout: 10m
+        tags: {}
+  identifier: StepGroupExport
+  name: StepGroupExport

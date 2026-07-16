@@ -1,0 +1,98 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/community-ed/harness-community-edition-quickstart.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/community-ed/harness-community-edition-quickstart)
+
+# --- example 1 ---
+  pipeline:  
+      name: quickstart  
+      identifier: quickstart  
+      projectIdentifier: Quickstart  
+      orgIdentifier: default  
+      tags: {}  
+      stages:  
+          - stage:  
+                name: demo  
+                identifier: demo  
+                description: ""  
+                type: Deployment  
+                spec:  
+                    serviceConfig:  
+                        serviceRef: <+input>  
+                        serviceDefinition:  
+                            type: Kubernetes  
+                            spec:  
+                                variables: []  
+                                manifests:  
+                                    - manifest:  
+                                          identifier: nginx  
+                                          type: K8sManifest  
+                                          spec:  
+                                              store:  
+                                                  type: Github  
+                                                  spec:  
+                                                      connectorRef: <+input>  
+                                                      gitFetchType: Branch  
+                                                      paths:  
+                                                          - content/en/examples/application/nginx-app.yaml  
+                                                      repoName: <+input>  
+                                                      branch: main  
+                                              skipResourceVersioning: false  
+                    infrastructure:  
+                        environmentRef: <+input>  
+                        infrastructureDefinition:  
+                            type: KubernetesDirect  
+                            spec:  
+                                connectorRef: <+input>  
+                                namespace: <+input>  
+                                releaseName: release-<+INFRA_KEY>  
+                        allowSimultaneousDeployments: false  
+                    execution:  
+                        steps:  
+                            - step:  
+                                  type: K8sRollingDeploy  
+                                  name: Rollout Deployment  
+                                  identifier: Rollout_Deployment  
+                                  spec:  
+                                      skipDryRun: false  
+                                  timeout: 10m  
+                        rollbackSteps: []  
+                tags: {}  
+                failureStrategies:  
+                    - onFailure:  
+                          errors:  
+                              - AllErrors  
+                          action:  
+                              type: StageRollback
+
+# --- example 2 ---
+version: "3.7"  
+services:  
+  harness-ng-delegate:  
+    restart: unless-stopped  
+    deploy:  
+      resources:  
+        limits:  
+          cpus: "1"  
+          memory: 2048M  
+...
+
+# --- example 3 ---
+# harness-service-account.yml  
+apiVersion: v1  
+kind: ServiceAccount  
+metadata:  
+  name: harness-service-account  
+  namespace: harness
+
+# --- example 4 ---
+# harness-clusterrolebinding.yml  
+apiVersion: rbac.authorization.k8s.io/v1beta1  
+kind: ClusterRoleBinding  
+metadata:  
+  name: harness-admin  
+roleRef:  
+  apiGroup: rbac.authorization.k8s.io  
+  kind: ClusterRole  
+  name: cluster-admin  
+subjects:  
+- kind: ServiceAccount  
+  name: harness-service-account  
+  namespace: harness

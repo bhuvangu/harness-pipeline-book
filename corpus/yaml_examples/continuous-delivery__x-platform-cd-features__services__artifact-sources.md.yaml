@@ -1,0 +1,792 @@
+# source: docs/continuous-delivery/x-platform-cd-features/services/artifact-sources.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/services/artifact-sources)
+
+# --- example 1 ---
+...  
+image: <+artifacts.primary.image>  
+...
+
+# --- example 2 ---
+service:
+  name: k8s_service
+  identifier: k8s_service
+  orgIdentifier: default
+  projectIdentifier: Krishika_CD_Samples
+  serviceDefinition:
+    spec:
+      artifacts:
+        primary:
+          sources:
+            - identifier: demo_artifact
+              type: Har
+              spec:
+                registryRef: dev
+                type: docker
+                spec:
+                  imagePath: function-plugin
+                  tag: <+input>
+                  digest: ""
+          primaryArtifactRef: demo_artifact
+    type: Kubernetes
+
+# --- example 3 ---
+connector:
+  name: Docker Hub with Pwd
+  identifier: Docker_Hub_with_Pwd
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: DockerRegistry
+  spec:
+    dockerRegistryUrl: https://index.docker.io/v2/
+    providerType: DockerHub
+    auth:
+      type: UsernamePassword
+      spec:
+        username: johndoe
+        passwordRef: Docker_Hub_Pwd
+    executeOnDelegate: false
+
+# --- example 4 ---
+service:
+  name: Example K8s2
+  identifier: Example_K8s2
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates/deployment.yaml
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: Docker_Hub_with_Pwd
+                imagePath: library/nginx
+                tag: stable-perl
+              identifier: myimage
+              type: DockerRegistry
+  gitOpsEnabled: false
+
+# --- example 5 ---
+curl --location --request POST 'https://app.harness.io/gateway/ng/api/connectors?accountIdentifier=123456' \
+--header 'Content-Type: text/yaml' \
+--header 'x-api-key: pat.123456.123456' \
+--data-raw 'connector:
+  name: dockerhub
+  identifier: dockerhub
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: APISample
+  type: DockerRegistry
+  spec:
+    dockerRegistryUrl: https://index.docker.io/v2/
+    providerType: DockerHub
+    auth:
+      type: Anonymous'
+
+# --- example 6 ---
+connector:
+  name: GCR
+  identifier: GCR
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Gcp
+  spec:
+    credential:
+      type: InheritFromDelegate
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+
+# --- example 7 ---
+service:
+  name: Google Artifact
+  identifier: Google_Artifact
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      manifests:
+        - manifest:
+            identifier: manifests
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - account:/Templates
+              valuesPaths:
+                - account:/values.yaml
+              skipResourceVersioning: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: GCR
+                imagePath: docs-play/todolist-sample
+                tag: <+input>
+                registryHostname: gcr.io
+              identifier: myapp
+              type: Gcr
+  gitOpsEnabled: false
+
+# --- example 8 ---
+connector:
+  name: GCS
+  identifier: GCS
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: 
+  spec:
+    credential:
+      type: InheritFromDelegate
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+
+# --- example 9 ---
+service:
+  name: GCS
+  identifier: GCS
+  tags: {}
+  serviceDefinition:
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: GCP_Connector
+                project: myapp
+                bucket: functions
+                artifactPath: myfunction.zip
+              identifier: myfunction
+              type: GoogleCloudStorage
+      manifests:
+        - manifest:
+            identifier: myfunction
+            type: GoogleCloudFunctionDefinition
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /google-cloud-function/myfunction
+    type: GoogleCloudFunctions
+
+# --- example 10 ---
+connector:
+  name: Google Artifact Registry
+  identifier: Google_Artifact_Registry
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Gcp
+  spec:
+    credential:
+      type: InheritFromDelegate
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+
+# --- example 11 ---
+service:
+  name: Google Artifact Registry
+  identifier: Google_Artifact_Registry
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: myapp
+              spec:
+                connectorRef: Google_Artifact_Registry
+                repositoryType: docker
+                project: docs-play
+                region: us-central1
+                repositoryName: quickstart-docker-repo
+                package: quickstart-docker-repo
+                version: <+input>
+              type: GoogleArtifactRegistry
+    type: Kubernetes
+
+# --- example 12 ---
+connector:
+  name: Azure Artifacts
+  identifier: Azure_Artifacts
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: AzureArtifacts
+  spec:
+    azureArtifactsUrl: https://dev.azure.com/garvit-test
+    auth:
+      spec:
+        type: PersonalAccessToken
+        spec:
+          tokenRef: azureartifactspat
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+
+# --- example 13 ---
+service:
+  name: Azure Artifacts
+  identifier: Azure_Artifacts
+  tags: {}
+  serviceDefinition:
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: mypackage
+              spec:
+                connectorRef: Azure_Artifacts
+                scope: org
+                feed: garvit-test
+                packageType: maven
+                package: com.mycompany.app:my-app
+                version: 1.1-SNAPSHOT
+              type: AzureArtifacts
+    type: Ssh
+
+# --- example 14 ---
+curl --location --request POST 'https://app.harness.io/gateway/ng/api/connectors?accountIdentifier=12345' \
+--header 'Content-Type: text/yaml' \
+--header 'x-api-key: pat.12345.6789' \
+--data-raw 'connector:
+  name: Azure Artifacts
+  identifier: Azure_Artifacts
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: AzureArtifacts
+  spec:
+    azureArtifactsUrl: https://dev.azure.com/garvit-test
+    auth:
+      spec:
+        type: PersonalAccessToken
+        spec:
+          tokenRef: azureartifactspat
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true'
+
+# --- example 15 ---
+service:
+  name: azure
+  identifier: azure
+  tags: {}
+  serviceDefinition:
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: azure
+              spec:
+                connectorRef: azure
+                scope: org
+                feed: universaltest68137
+                packageType: maven
+                package: my-first-package
+                version: 0.0.1
+              type: AzureArtifacts
+    type: AzureWebApp
+
+# --- example 16 ---
+connector:
+  name: ACR-docs
+  identifier: ACRdocs
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Azure
+  spec:
+    credential:
+      type: ManualConfig
+      spec:
+        applicationId: xxxxx-xxxx-xxxx-xxxx-xxxxx
+        tenantId: xxxxx-xxxx-xxxx-xxxx-xxxxx
+        auth:
+          type: Secret
+          spec:
+            secretRef: acrvalue
+    azureEnvironmentType: AZURE
+    executeOnDelegate: false
+
+# --- example 17 ---
+service:
+  name: Azure with ACR
+  identifier: Azure
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: ACRdocs
+                tag: <+input>
+                subscriptionId: <+input>
+                registry: <+input>
+                repository: <+input>
+              identifier: myapp
+              type: Acr
+    type: Kubernetes
+
+# --- example 18 ---
+connector:
+  name: ECR
+  identifier: ECR
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Aws
+  spec:
+    credential:
+      type: ManualConfig
+      spec:
+        accessKey: xxxxx
+        secretKeyRef: secretaccesskey
+      region: us-east-1
+    delegateSelectors:
+      - doc-immut
+    executeOnDelegate: true
+
+# --- example 19 ---
+service:
+  name: ECR
+  identifier: ECR
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /values.yaml
+              valuesPaths:
+                - /Templates
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: ECR
+                imagePath: todolist-sample
+                tag: "1.0"
+                region: us-east-1
+              identifier: myapp
+              type: Ecr
+    type: Kubernetes
+
+# --- example 20 ---
+connector:
+  name: jsmith-aws
+  identifier: jsmithaws
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: jsmith_project
+  type: Aws
+  spec:
+    credential:
+      type: ManualConfig
+      spec:
+        accessKeyRef: jsmithawsaccesskeyid
+        secretKeyRef: jsmithawssecretaccesskey
+      region: us-east-1
+    executeOnDelegate: false
+
+# --- example 21 ---
+service:
+  name: jsmith-aws-s3-test
+  identifier: jsmithawss3test
+  tags: {}
+  serviceDefinition:
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: jsmithaws
+                bucketName: jsmith-bucket
+                filePath: login-service.sh
+              identifier: jsmith_login_service_test_sh
+              type: AmazonS3
+    type: Ssh
+
+# --- example 22 ---
+connector:
+  name: jsmith-aws
+  identifier: jsmithaws
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: jsmith_project
+  type: Aws
+  spec:
+    credential:
+      type: ManualConfig
+      spec:
+        accessKeyRef: jsmithawsaccesskeyid
+        secretKeyRef: jsmithawssecretaccesskey
+      region: us-east-1
+    executeOnDelegate: false
+
+# --- example 23 ---
+service:
+  name: jsmith-delegate-ami-test
+  identifier: jsmithdelegateamitest
+  tags: {}
+  serviceDefinition:
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: macos_build_farm_for_ci
+              spec:
+                connectorRef: jsmithaws
+                region: us-east-1
+                tags:
+                  - name: Version
+                    value: ""
+                filters:
+                  - name: ami-image-id
+                    value: ami-xxxxxxxxxxxxxxxxx
+                version: macos-build-farm-for-ci  
+              type: AmazonMachineImage
+    type: Asg
+
+# --- example 24 ---
+connector:
+  name: Harness Nexus
+  identifier: Harness_Nexus
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: HttpHelmRepo
+  spec:
+    helmRepoUrl: https://nexus3.dev.harness.io/repository/test-helm/
+    auth:
+      type: UsernamePassword
+      spec:
+        username: harnessadmin
+        passwordRef: nexus3pwd
+    delegateSelectors:
+      - gcpdocplay
+
+# --- example 25 ---
+service:
+  name: Nexus Example
+  identifier: Nexus_Example
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: account.Harness_Nexus
+                repository: todolist
+                repositoryFormat: docker
+                tag: "4.0"
+                spec:
+                  artifactPath: nginx
+                  repositoryPort: "6661"
+              identifier: myapp
+              type: Nexus3Registry
+    type: Kubernetes
+
+# --- example 26 ---
+connector:
+  name: artifactory-tutorial-connector
+  identifier: artifactorytutorialconnector
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Artifactory
+  spec:
+    artifactoryServerUrl: https://harness.jfrog.io/artifactory/
+    auth:
+      type: Anonymous
+    executeOnDelegate: false
+
+# --- example 27 ---
+service:
+  name: Artifactory Example
+  identifier: Artifactory_Example
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - spec:
+                connectorRef: artifactorytutorialconnector
+                artifactPath: alpine
+                tag: 3.14.2
+                digest: sha256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+                repository: bintray-docker-remote
+                repositoryUrl: harness-docker.jfrog.io
+                repositoryFormat: docker
+              identifier: myapp
+              type: ArtifactoryRegistry
+    type: Kubernetes
+
+# --- example 28 ---
+connector:
+  name: Bamboo
+  identifier: Bamboo
+  description: ""
+  orgIdentifier: default
+  projectIdentifier: Docs
+  type: Bamboo
+  spec:
+    bambooUrl: https://bamboo.dev.example.io
+    auth:
+      type: UsernamePassword
+      spec:
+        username: admin
+        passwordRef: bamboo
+    delegateSelectors:
+      - mydelegate
+
+# --- example 29 ---
+service:
+  name: Bamboo
+  identifier: Bamboo
+  tags: {}
+  serviceDefinition:
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: myplan
+          sources:
+            - identifier: myplan
+              spec:
+                connectorRef: Bamboo
+                artifactPaths: artifacts
+                build: 133
+                planKey: PLAN1
+              type: Bamboo
+    type: Ssh
+
+# --- example 30 ---
+connector:
+  name: GitHub Packages
+  identifier: GitHub_Packages
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Github
+  spec:
+    url: https://github.com/johndoe/myapp.git
+    validationRepo: https://github.com/johndoe/test.git
+    authentication:
+      type: Http
+      spec:
+        type: UsernameToken
+        spec:
+          username: johndoe
+          tokenRef: githubpackages
+    apiAccess:
+      type: Token
+      spec:
+        tokenRef: githubpackages
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+    type: Repo
+
+# --- example 31 ---
+service:
+  name: Github Packages
+  identifier: Github_Packages
+  tags: {}
+  serviceDefinition:
+    spec:
+      manifests:
+        - manifest:
+            identifier: myapp
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Templates
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+      artifacts:
+        primary:
+          primaryArtifactRef: <+input>
+          sources:
+            - identifier: myapp
+              spec:
+                connectorRef: GitHub_Packages
+                org: ""
+                packageName: tweetapp
+                packageType: container
+                version: latest
+              type: GithubPackageRegistry
+    type: Kubernetes
+
+# --- example 32 ---
+connector:
+  name: GitHub Packages
+  identifier: GitHub_Packages
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  type: Github
+  spec:
+    url: https://github.com/johndoe/myapp.git
+    validationRepo: https://github.com/johndoe/test.git
+    authentication:
+      type: Http
+      spec:
+        type: UsernameToken
+        spec:
+          username: johndoe
+          tokenRef: githubpackages
+    apiAccess:
+      type: Token
+      spec:
+        tokenRef: githubpackages
+    delegateSelectors:
+      - gcpdocplay
+    executeOnDelegate: true
+    type: Repo
+
+# --- example 33 ---
+name: <+stage.variables.name>  
+replicas: 2  
+  
+image: <+artifacts.primary.image>  
+dockercfg: <+artifacts.primary.imagePullSecret>  
+  
+createNamespace: true  
+namespace: <+infra.namespace>  
+...
+
+# --- example 34 ---
+...  
+{{- if .Values.dockercfg}}  
+apiVersion: v1  
+kind: Secret  
+metadata:  
+  name: {{.Values.name}}-dockercfg  
+  annotations:  
+    harness.io/skip-versioning: true  
+data:  
+  .dockercfg: {{.Values.dockercfg}}  
+type: kubernetes.io/dockercfg  
+---  
+{{- end}}  
+  
+apiVersion: apps/v1  
+kind: Deployment  
+metadata:  
+  name: {{.Values.name}}-deployment  
+spec:  
+  replicas: {{int .Values.replicas}}  
+  selector:  
+    matchLabels:  
+      app: {{.Values.name}}  
+  template:  
+    metadata:  
+      labels:  
+        app: {{.Values.name}}  
+    spec:  
+      {{- if .Values.dockercfg}}  
+      imagePullSecrets:  
+      - name: {{.Values.name}}-dockercfg  
+      {{- end}}  
+      containers:  
+      - name: {{.Values.name}}  
+        image: {{.Values.image}}  
+...

@@ -1,0 +1,454 @@
+# source: docs/platform/delegates/secure-delegates/install-delegates-with-custom-certs.md  (https://developer.harness.io/docs/platform/delegates/secure-delegates/install-delegates-with-custom-certs)
+
+# --- example 1 ---
+           volumeMounts:
+            - mountPath: /opt/harness-delegate/ca-bundle/
+              name: custom-certs
+              readOnly: true
+
+# --- example 2 ---
+         volumes:
+          - name: custom-certs
+            secret:
+              secretName: <secret-name>
+              defaultMode: 400
+
+# --- example 3 ---
+          securityContext:
+            fsGroup: 1001
+
+# --- example 4 ---
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsUser: 0
+
+# --- example 5 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+   labels:
+      harness.io/name: kubernetes-delegate
+   name: kubernetes-delegate
+   namespace: harness-delegate-ng
+spec:
+   replicas: 1
+   minReadySeconds: 120
+   selector:
+      matchLabels:
+         harness.io/name: kubernetes-delegate
+   template:
+      metadata:
+         labels:
+            harness.io/name: kubernetes-delegate
+         annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "3460"
+            prometheus.io/path: "/api/metrics"
+      spec:
+         terminationGracePeriodSeconds: 600
+         restartPolicy: Always
+         securityContext:
+            fsGroup: 1001
+         containers:
+            - image: harness/delegate:yy.mm.verno
+              imagePullPolicy: Always
+              name: delegate
+              securityContext:
+                 allowPrivilegeEscalation: false
+                 runAsUser: 0
+              ports:
+                 - containerPort: 8080
+              resources:
+                 limits:
+                    memory: "2048Mi"
+                 requests:
+                    cpu: "0.5"
+                    memory: "2048Mi"
+              livenessProbe:
+                 httpGet:
+                    path: /api/health
+                    port: 3460
+                    scheme: HTTP
+                 initialDelaySeconds: 10
+                 periodSeconds: 10
+                 failureThreshold: 3
+              startupProbe:
+                 httpGet:
+                    path: /api/health
+                    port: 3460
+                    scheme: HTTP
+                 initialDelaySeconds: 30
+                 periodSeconds: 10
+                 failureThreshold: 15
+              envFrom:
+                 - secretRef:
+                      name: kubernetes-delegate-account-token
+              env:
+                 - name: JAVA_OPTS
+                   value: "-Xms64M"
+                 - name: ACCOUNT_ID
+                   value: PUT_YOUR_HARNESS_ACCOUNTID_HERE
+                 - name: MANAGER_HOST_AND_PORT
+                   value: PUT_YOUR_MANAGER_HOST_AND_PORT_HERE
+                 - name: DELEGATE_NAME
+                   value: kubernetes-delegate
+                 - name: DELEGATE_TYPE
+                   value: "KUBERNETES"
+                 - name: DELEGATE_NAMESPACE
+                   valueFrom:
+                      fieldRef:
+                         fieldPath: metadata.namespace
+                 - name: INIT_SCRIPT
+                   value: ""
+                 - name: DELEGATE_DESCRIPTION
+                   value: ""
+                 - name: DELEGATE_TAGS
+                   value: ""
+                 - name: NEXT_GEN
+                   value: "true"
+              volumeMounts:
+                 - mountPath: /opt/harness-delegate/ca-bundle/
+                   name: custom-certs
+                   readOnly: true
+         volumes:
+            - name: custom-certs
+              secret:
+                 secretName: mycerts
+                 defaultMode: 400
+
+# --- example 6 ---
+   apiVersion: batch/v1
+   kind: CronJob
+   metadata:
+     labels:
+       harness.io/name: kubernetes-delegate-upgrader-job
+     name: kubernetes-delegate-upgrader-job
+     namespace: harness-delegate-ng
+   spec:
+     schedule: "0 */1 * * *"
+     concurrencyPolicy: Forbid
+     startingDeadlineSeconds: 20
+     jobTemplate:
+       spec:
+         template:
+           spec:
+             serviceAccountName: upgrader-cronjob-sa
+             restartPolicy: Never
+             securityContext:
+                fsGroup: 1001
+             containers:
+             - image: harness/upgrader:latest
+               name: upgrader
+               imagePullPolicy: Always
+               envFrom:
+               - secretRef:
+                   name: kubernetes-delegate-upgrader-token
+               volumeMounts:
+                 - mountPath: /ca-bundle
+                   name: custom-certs
+                   readOnly: true
+             volumes:
+               - name: custom-certs
+                 secret:
+                   secretName: new-secret
+                   defaultMode: 400
+
+# --- example 7 ---
+              volumeMounts:
+               - mountPath: /cacerts
+                 name: custom-truststore
+                 readOnly: true
+
+# --- example 8 ---
+            volumes:
+             - name: custom-truststore
+               secret:
+                 secretName: <secret-name>
+                 defaultMode: 400
+
+# --- example 9 ---
+          securityContext:
+            fsGroup: 1001
+
+# --- example 10 ---
+            securityContext:
+              allowPrivilegeEscalation: false
+              runAsUser: 0
+
+# --- example 11 ---
+                     - name: JAVA_OPTS
+                       value: "... -Djavax.net.ssl.trustStore=/cacerts/harness_trustStore.jks -Djavax.net.ssl.trustStorePassword=YOUR_PASSWORD"
+
+# --- example 12 ---
+        volumeMounts:
+        - name: certs
+          mountPath : "/etc/pki/ca-trust/source/anchors/cert1.crt"
+          subPath: cert1.crt
+        - name: certs
+          mountPath : "/etc/pki/ca-trust/source/anchors/cert2.crt"
+          subPath: cert2.crt
+
+# --- example 13 ---
+        - name: INIT_SCRIPT
+          value: |-
+            update-ca-trust
+
+# --- example 14 ---
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 0
+
+# --- example 15 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: harness-delegate-ng
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: harness-delegate-ng-cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: harness-delegate-ng
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret-account-token
+  namespace: harness-delegate-ng
+type: Opaque
+data:
+  ACCOUNT_SECRET: "XXXXXXXXXXXXXXXXXXXXXXXX"
+
+---
+
+# To learn how to proxy a delegate, go to [Configure delegate proxy settings](/docs/platform/delegates/manage-delegates/configure-delegate-proxy-settings/)
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    harness.io/name: my-secret
+  name: my-secret
+  namespace: harness-delegate-ng
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      harness.io/name: my-secret
+  template:
+    metadata:
+      labels:
+        harness.io/name: my-secret
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3460"
+        prometheus.io/path: "/api/metrics"
+    spec:
+      terminationGracePeriodSeconds: 600
+      restartPolicy: Always
+      securityContext:
+        allowPrivilegeEscalation: false
+        runAsUser: 0
+      containers:
+      - image: harness/delegate-immutable:22.07.75836.minimal
+        imagePullPolicy: Always
+        name: delegate
+        ports:
+          - containerPort: 8080
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: "2048Mi"
+          requests:
+            cpu: "0.5"
+            memory: "2048Mi"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3460
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 2
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3460
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 15
+        envFrom:
+        - secretRef:
+            name: my-secret-account-token
+        env:
+        - name: JAVA_OPTS
+          value: "-Xms64M -Djavax.net.ssl.trustStore=/cacerts/harness_trustStore.jks -Djavax.net.ssl.trustStorePassword=mypassword"
+        - name: ACCOUNT_ID
+          value: XXXXXxxxxxx
+        - name: MANAGER_HOST_AND_PORT
+          value: https://qa.harness.io/gratis
+        - name: DEPLOY_MODE
+          value: KUBERNETES
+        - name: DELEGATE_NAME
+          value: my-secret
+        - name: DELEGATE_TYPE
+          value: "KUBERNETES"
+        - name: DELEGATE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: INIT_SCRIPT
+          value: |-
+            update-ca-trust
+        - name: DELEGATE_DESCRIPTION
+          value: ""
+        - name: DELEGATE_TAGS
+          value: ""
+        - name: NEXT_GEN
+          value: "true"
+        - name: CLIENT_TOOLS_DOWNLOAD_DISABLED
+          value: "true"
+        volumeMounts:
+        - mountPath: /cacerts
+          name: custom-keystore
+          readOnly: true
+        - name: certs
+          mountPath : "/usr/local/share/ca-certificates/cert1.crt"
+          subPath: cert1.crt
+        - name: certs
+          mountPath : "/usr/local/share/ca-certificates/cert2.crt"
+          subPath: cert2.crt
+      volumes:
+      - name: custom-keystore
+        secret:
+          secretName: myjks
+          defaultMode: 400
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: delegate-service
+  namespace: harness-delegate-ng
+spec:
+  type: ClusterIP
+  selector:
+    harness.io/name: my-secret
+  ports:
+    - port: 8080
+
+---
+
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: upgrader-cronjob
+  namespace: harness-delegate-ng
+rules:
+  - apiGroups: ["batch", "apps", "extensions"]
+    resources: ["cronjobs"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["extensions", "apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+
+---
+
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: my-secret-upgrader-cronjob
+  namespace: harness-delegate-ng
+subjects:
+  - kind: ServiceAccount
+    name: upgrader-cronjob-sa
+    namespace: harness-delegate-ng
+roleRef:
+  kind: Role
+  name: upgrader-cronjob
+  apiGroup: ""
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: upgrader-cronjob-sa
+  namespace: harness-delegate-ng
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret-upgrader-token
+  namespace: harness-delegate-ng
+type: Opaque
+data:
+  UPGRADER_TOKEN: "XXXXXXXXXXXXXXXXXXXXXXXX"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-secret-upgrader-config
+  namespace: harness-delegate-ng
+data:
+  config.yaml: |
+    mode: Delegate
+    dryRun: false
+    workloadName: my-secret
+    namespace: harness-delegate-ng
+    containerName: delegate
+    delegateConfig:
+      accountId: XXXXXXXXXXXXXXXXXXXXXXXX
+      managerHost: https://qa.harness.io/gratis
+
+---
+
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  labels:
+    harness.io/name: my-secret-upgrader-job
+  name: my-secret-upgrader-job
+  namespace: harness-delegate-ng
+spec:
+  schedule: "0 */1 * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 20
+  jobTemplate:
+    spec:
+      suspend: true
+      template:
+        spec:
+          serviceAccountName: upgrader-cronjob-sa
+          restartPolicy: Never
+          containers:
+          - image: us.gcr.io/qa-target/upgrader:1.0.0
+            name: upgrader
+            imagePullPolicy: Always
+            envFrom:
+            - secretRef:
+                name: my-secret-upgrader-token
+            volumeMounts:
+              - name: config-volume
+                mountPath: /etc/config
+          volumes:
+            - name: config-volume
+              configMap:
+                name: my-secret-upgrader-config

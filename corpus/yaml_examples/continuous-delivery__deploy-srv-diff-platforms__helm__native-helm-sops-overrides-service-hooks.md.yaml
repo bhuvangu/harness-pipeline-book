@@ -1,0 +1,43 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/helm/native-helm-sops-overrides-service-hooks.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/helm/native-helm-sops-overrides-service-hooks)
+
+# --- example 1 ---
+hooks:
+  - postHook:
+      identifier: decrypt_sops
+      storeType: Inline
+      actions:
+        - FetchFiles
+      store:
+        content: |-
+          VALUES_DIRECTORY="${VALUES_OVERRIDE_DIRECTORY:-$MANIFEST_FILES_DIRECTORY/values-overrides}"
+          if [ ! -d "$VALUES_DIRECTORY" ]; then
+            echo "Error: Directory $VALUES_DIRECTORY not found."
+            exit 1
+          fi
+          for file in "$VALUES_DIRECTORY"/*.yaml "$VALUES_DIRECTORY"/*.yml; do
+            [ -e "$file" ] || continue
+            if grep -q "sops:" "$file" && grep -q "ENC\[AES256_GCM" "$file"; then
+              echo "Decrypting SOPS file $file..."
+              sops -d -i "$file"
+            else
+              echo "Skipping $file (no SOPS metadata found)."
+            fi
+          done
+
+# --- example 2 ---
+hooks:
+  - postHook:
+      identifier: decrypt_sops
+      storeType: Inline
+      actions:
+        - FetchFiles
+      store:
+        content: |-
+          WORK_DIR="$(pwd)"
+          cat > "$WORK_DIR/override-file1.yaml" <<EOF
+          override: "override-value-1"
+          EOF
+          cat > "$WORK_DIR/override-file2.yaml" <<EOF
+          override: "override-value-2"
+          EOF
+          export OVERRIDE_FILES="$WORK_DIR/override-file1.yaml,$WORK_DIR/override-file2.yaml"

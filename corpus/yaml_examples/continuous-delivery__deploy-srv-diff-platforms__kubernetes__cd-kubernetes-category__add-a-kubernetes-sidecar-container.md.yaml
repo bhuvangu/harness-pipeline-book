@@ -1,0 +1,100 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-kubernetes-category/add-a-kubernetes-sidecar-container.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-kubernetes-category/add-a-kubernetes-sidecar-container)
+
+# --- example 1 ---
+name: harness-example  
+replicas: 1  
+  
+image: <+artifacts.sidecars.sidecar.imagePath>  
+dockercfg: <+artifacts.sidecars.sidecar.imagePullSecret>  
+  
+createNamespace: true  
+namespace: <+infra.namespace>  
+...
+
+# --- example 2 ---
+...  
+image1: <+artifact.image>  
+dockercfg1: <+artifact.imagePullSecret>  
+  
+image2: <+artifacts.sidecars.sidecar1.image>  
+dockercfg2: <+artifacts.sidecars.sidecar1.imagePullSecret>  
+  
+image3: <+artifacts.sidecars.sidecar2.image>  
+dockercfg3: <+artifacts.sidecars.sidecar2.imagePullSecret>  
+...
+
+# --- example 3 ---
+...  
+apiVersion: apps/v1  
+kind: Deployment  
+metadata:  
+  name: {{ template "todolist.fullname" . }}  
+  namespace: {{ .Values.namespace }}  
+  labels:  
+    app: {{ template "todolist.name" . }}  
+    chart: {{ template "todolist.chart" . }}  
+    release: "{{ .Release.Name }}"  
+    harness.io/release: {{ .Release.Name }}  
+    heritage: {{ .Release.Service }}  
+spec:  
+  replicas: {{ .Values.replicaCount }}  
+  selector:  
+    matchLabels:  
+      app: {{ template "todolist.name" . }}  
+      release: {{ .Release.Name }}  
+  template:  
+    metadata:  
+      labels:  
+        app: {{ template "todolist.name" . }}  
+        release: {{ .Release.Name }}  
+        harness.io/release: {{ .Release.Name }}  
+    spec:  
+      {{- if .Values.dockercfg1}}  
+      imagePullSecrets:  
+      - name: {{.Values.name}}-dockercfg1  
+      - name: {{.Values.name}}-dockercfg2  
+      - name: {{.Values.name}}-dockercfg3  
+      {{- end}}  
+      containers:  
+        - name: {{ .Chart.Name }}-1  
+          image: {{.Values.image1}}  
+          imagePullPolicy: {{ .Values.pullPolicy }}  
+          {{- if or .Values.env.config .Values.env.secrets}}  
+          envFrom:  
+          {{- if .Values.env.config}}  
+          - configMapRef:  
+              name: {{.Values.name}}  
+          {{- end}}  
+          {{- if .Values.env.secrets}}  
+          - secretRef:  
+              name: {{.Values.name}}  
+          {{- end}}  
+          {{- end}}  
+        - name: {{ .Chart.Name }}-2  
+          image: {{.Values.image2}}  
+          imagePullPolicy: {{ .Values.pullPolicy }}  
+          {{- if or .Values.env.config .Values.env.secrets}}  
+          envFrom:  
+          {{- if .Values.env.config}}  
+          - configMapRef:  
+              name: {{.Values.name}}  
+          {{- end}}  
+          {{- if .Values.env.secrets}}  
+          - secretRef:  
+              name: {{.Values.name}}  
+          {{- end}}  
+          {{- end}}  
+        - name: {{ .Chart.Name }}-3  
+          image: {{.Values.image3}}  
+          imagePullPolicy: {{ .Values.pullPolicy }}  
+          {{- if or .Values.env.config .Values.env.secrets}}  
+          envFrom:  
+          {{- if .Values.env.config}}  
+          - configMapRef:  
+              name: {{.Values.name}}  
+          {{- end}}  
+          {{- if .Values.env.secrets}}  
+          - secretRef:  
+              name: {{.Values.name}}  
+          {{- end}}  
+          {{- end}}

@@ -1,0 +1,68 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/use-harness-cloud-build-infrastructure.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/use-harness-cloud-build-infrastructure)
+
+# --- example 1 ---
+platform:
+  os: Linux
+  arch: Amd64
+runtime:
+  type: Cloud
+  spec: {}
+
+# --- example 2 ---
+pipeline:
+  name: Build sample-app
+  identifier: Build_sample_app_1677210779657
+  projectIdentifier: my-app-project
+  orgIdentifier: default
+  properties:
+    ci:
+      codebase:
+        connectorRef: account.GitHub_example
+        repoName: my-gh-account/example-repo
+        build: <+input>
+  stages:
+    - stage:
+        name: Build
+        identifier: Build
+        type: CI
+        spec:
+          cloneCodebase: true
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: Echo Welcome Message
+                  identifier: Echo_Welcome_Message
+                  spec:
+                    shell: Sh
+                    command: echo "Welcome to Harness CI"
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+
+# --- example 3 ---
+platform:
+  os: Linux
+  arch: Amd64
+runtime:
+  type: Cloud
+  spec:
+    size: xlarge # optional
+
+# --- example 4 ---
+- stage:
+    name: build
+    identifier: build
+    type: CI
+    spec:
+      platform:
+        os: Linux
+        arch: Amd64
+      runtime:
+        type: Cloud
+        spec:
+          nestedVirtualization: true
+          size: xlarge # optional

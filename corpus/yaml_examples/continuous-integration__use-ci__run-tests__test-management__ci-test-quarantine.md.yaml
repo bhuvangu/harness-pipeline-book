@@ -1,0 +1,25 @@
+# source: docs/continuous-integration/use-ci/run-tests/test-management/ci-test-quarantine.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/test-management/ci-test-quarantine)
+
+# --- example 1 ---
+env:
+  CI_ENABLE_QUARANTINED_TEST_SKIP: "true"
+
+# --- example 2 ---
+- run:
+    script: |-
+      pytest --junitxml=test-results.xml -v
+      hcli test-reports upload test-results.xml
+    env:
+      CI_ENABLE_QUARANTINED_TEST_SKIP: "true"
+
+# --- example 3 ---
+- step:
+    type: Run
+    name: Run Tests
+    spec:
+      shell: Sh
+      command: |
+        ./gradlew clean test
+        hcli test-reports upload "build/test-results/test/*.xml"
+      envVariables:
+        CI_ENABLE_QUARANTINED_TEST_SKIP: "true"

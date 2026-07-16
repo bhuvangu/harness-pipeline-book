@@ -1,0 +1,37 @@
+# source: docs/continuous-integration/use-ci/caching-ci-data/save-restore-cache-in-harness.md  (https://developer.harness.io/docs/continuous-integration/use-ci/caching-ci-data/save-restore-cache-in-harness)
+
+# --- example 1 ---
+- step:
+    type: SaveCache
+    name: Save Cache to Harness
+    identifier: Save_Cache_to_Harness
+    spec:
+      key: "harness-cache-{{ checksum 'pom.xml' }}"
+      sourcePaths:
+        - /root/.m2/repository
+      archiveFormat: Tar
+      override: true
+
+# --- example 2 ---
+- step:
+    type: RestoreCache
+    name: Restore Cache from Harness
+    identifier: Restore_Cache_from_Harness
+    spec:
+      key: "harness-cache-{{ checksum 'pom.xml' }}"
+      archiveFormat: Tar
+
+# --- example 3 ---
+- step:
+    type: Run
+    name: Install Dependencies
+    identifier: Install_Dependencies
+    spec:
+      shell: Sh
+      # Only run install if cache was NOT restored
+      command: |
+        if [ "<+steps.Restore_Cache_from_Harness.output.outputVariables.cacheHit>" == "false" ]; then
+          mvn clean install
+        else
+          echo "Cache restored, skipping install"
+        fi

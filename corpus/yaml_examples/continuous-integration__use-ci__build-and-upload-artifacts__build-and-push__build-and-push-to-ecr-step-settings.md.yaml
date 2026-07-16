@@ -1,0 +1,14 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push/build-and-push-to-ecr-step-settings.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push/build-and-push-to-ecr-step-settings)
+
+# --- example 1 ---
+- step:
+    type: BuildAndPushECR
+    name: BuildAndPushECR_1
+    identifier: BuildAndPushECR_1
+    spec:
+      connectorRef: YOUR_AWS_CONNECTOR_ID
+      region: us-east-1
+      account: "12345"
+      imageName: test-image
+      tags:
+        - latest

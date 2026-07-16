@@ -1,0 +1,25 @@
+# source: docs/continuous-integration/development-guides/mlops/mlops-azureml.md  (https://developer.harness.io/docs/continuous-integration/development-guides/mlops/mlops-azureml)
+
+# --- example 1 ---
+              - step:
+                  type: Plugin
+                  name: Azure ml plugin
+                  identifier: azure_ml_plugin
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: harnesscommunity/azure-ml
+                    settings:
+                      username: <+secrets.getValue("azure_ml_user")>
+                      password: <+secrets.getValue("azure_ml_pass")>
+                      tenant_id: <+secrets.getValue("azure_ml_tenant")>
+                      SUBSCRIPTION_ID: <+secrets.getValue("azure_ml_subscription")>
+                      AZURE_ML_WORKSPACE_NAME: my-azure-workspace
+                      RESOURCE_GROUP: my-azure-resource-group
+                      PROJECT_PATH: https://github.com/Azure/azureml-examples
+                      TRAINING_JOB_FILE: azureml-examples/cli/jobs/single-step/scikit-learn/iris/job.yml
+                      MODEL_NAME: iris-model-test
+                      ENDPOINT_NAME: iris-endpoint-test
+                      ENDPOINT_YAML: azureml-examples/cli/endpoints/online/managed/sample/endpoint.yml
+                      DEPLOYMENT_NAME: deploy-iris
+                      DEPLOYMENT_YAML: azureml-examples/cli/endpoints/online/managed/sample/blue-deployment.yml
+                    imagePullPolicy: Always

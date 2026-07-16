@@ -1,0 +1,9 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/download-manifests.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/download-manifests)
+
+# --- example 1 ---
+- step:
+    type: DownloadManifests
+    name: DownloadManifests
+    identifier: DownloadManifests
+    spec: {}
+    timeout: 10m

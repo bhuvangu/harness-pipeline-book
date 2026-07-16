@@ -1,0 +1,175 @@
+# source: docs/continuous-integration/ci-articles-faqs/articles/monitor-ci-pod-events-without-cloudwatch.md  (https://developer.harness.io/docs/continuous-integration/ci-articles-faqs/articles/monitor-ci-pod-events-without-cloudwatch)
+
+# --- example 1 ---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ci-pod-monitor-sa
+  namespace: harness-delegate-ng
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ci-pod-monitor-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "events"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ci-pod-monitor-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ci-pod-monitor-role
+subjects:
+- kind: ServiceAccount
+  name: ci-pod-monitor-sa
+  namespace: harness-delegate-ng
+
+# --- example 2 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-config
+  namespace: harness-delegate-ng
+data:
+  provider: "gcp"  # Options: gcp, aws, azure
+  bucket: "your-bucket-name"  # Replace with your actual bucket name
+
+# --- example 3 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: build-logger-script
+  namespace: harness-delegate-ng
+data:
+  build-logger.sh: |
+    #!/bin/bash
+
+    FILTER="harnessci"  # All Harness CI pods start with "harnessci"
+    OUTPUT_DIR="/logs"
+    TOUCHED="/tmp/logged_pods.txt"
+    CLOUD_SYNC_INTERVAL=60
+
+    mkdir -p "$OUTPUT_DIR"
+    touch "$TOUCHED"
+
+    # Function 1: Upload logs to cloud bucket every CLOUD_SYNC_INTERVAL seconds
+    sync_logs() {
+      while true; do
+        echo "[SYNC] Uploading logs to cloud storage..."
+        if [ "$CLOUD_PROVIDER" = "gcp" ]; then
+          gsutil -m cp "$OUTPUT_DIR"/* "gs://$CLOUD_BUCKET/"
+        elif [ "$CLOUD_PROVIDER" = "aws" ]; then
+          aws s3 sync "$OUTPUT_DIR" "s3://$CLOUD_BUCKET/"
+        elif [ "$CLOUD_PROVIDER" = "azure" ]; then
+          az storage blob upload-batch --source "$OUTPUT_DIR" --destination "$CLOUD_BUCKET"
+        fi
+        sleep "$CLOUD_SYNC_INTERVAL"
+      done
+    }
+
+    # Function 2: Stream logs from pods matching FILTER
+    stream_pod_logs() {
+      while true; do
+        kubectl get pods --all-namespaces -o json | jq -r '.items[] | select(.metadata.name | test("'$FILTER'")) | [.metadata.namespace, .metadata.name] | @tsv' |
+        while IFS=$'\t' read -r namespace pod; do
+          if grep -q "$namespace/$pod" "$TOUCHED"; then
+            continue
+          fi
+          echo "[$(date)] Starting log stream for $namespace/$pod"
+          echo "$namespace/$pod" >> "$TOUCHED"
+          kubectl logs -n "$namespace" "$pod" -f > "$OUTPUT_DIR/${namespace}_${pod}.log" 2>&1 &
+        done
+        sleep 5
+      done
+    }
+
+    # Function 3: Collect cluster-wide Kubernetes events every 30 seconds
+    collect_events() {
+      while true; do
+        timestamp=$(date +%Y%m%d-%H%M%S)
+        kubectl get events --all-namespaces > "$OUTPUT_DIR/events_$timestamp.txt" 2>&1
+        sleep 30
+      done
+    }
+
+    # Function 4: Capture kubectl describe pod output for matching pods
+    log_pod_description() {
+      while true; do
+        kubectl get pods --all-namespaces -o json | jq -r '.items[] | select(.metadata.name | test("'$FILTER'")) | [.metadata.namespace, .metadata.name] | @tsv' |
+        while IFS=$'\t' read -r namespace pod; do
+          desc_file="$OUTPUT_DIR/${namespace}_${pod}_describe.txt"
+          if [ ! -f "$desc_file" ]; then
+            echo "[$(date)] Capturing pod description for $namespace/$pod"
+            kubectl describe pod -n "$namespace" "$pod" > "$desc_file" 2>&1
+          fi
+        done
+        sleep 60
+      done
+    }
+
+    # Run all collectors in background
+    sync_logs &
+    collect_events &
+    log_pod_description &
+    stream_pod_logs
+
+# --- example 4 ---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ci-pod-monitor
+  namespace: harness-delegate-ng
+spec:
+  selector:
+    matchLabels:
+      app: ci-pod-monitor
+  template:
+    metadata:
+      labels:
+        app: ci-pod-monitor
+    spec:
+      serviceAccountName: ci-pod-monitor-sa
+      containers:
+      - name: logger
+        image: google/cloud-sdk:latest
+        command: ["/bin/bash", "-c"]
+        args:
+          - |
+            apt-get update && \
+            DEBIAN_FRONTEND=noninteractive apt-get install -y jq && \
+            /script/build-logger.sh
+        env:
+        - name: CLOUD_PROVIDER
+          valueFrom:
+            configMapKeyRef:
+              name: cloud-config
+              key: provider
+        - name: CLOUD_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: cloud-config
+              key: bucket
+        volumeMounts:
+        - name: script
+          mountPath: /script
+        - name: log-output
+          mountPath: /logs
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: script
+        configMap:
+          name: build-logger-script
+          defaultMode: 0755
+      - name: log-output
+        emptyDir: {}

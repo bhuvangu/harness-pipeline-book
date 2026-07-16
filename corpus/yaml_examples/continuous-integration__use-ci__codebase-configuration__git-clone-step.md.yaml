@@ -1,0 +1,54 @@
+# source: docs/continuous-integration/use-ci/codebase-configuration/git-clone-step.md  (https://developer.harness.io/docs/continuous-integration/use-ci/codebase-configuration/git-clone-step)
+
+# --- example 1 ---
+              - step:
+                  type: GitClone
+                  name: clone second repo
+                  identifier: clone_second_repo
+                  spec:
+                    connectorRef: account.git2
+                    build:
+                      type: branch
+                      spec:
+                        branch: main
+
+# --- example 2 ---
+- step:
+    type: GitClone
+    name: clone repo
+    identifier: clone_repo
+    spec:
+      connectorRef: YOUR_CONNECTOR_ID
+      build:
+        type: branch
+        spec:
+          branch: <+codebase.branch>
+      depth: 0
+      preFetchCommand: git fetch --filter=blob:none origin <+codebase.branch>
+
+# --- example 3 ---
+- step:
+    type: GitClone
+    name: clone repo
+    identifier: clone_repo
+    spec:
+      connectorRef: YOUR_CONNECTOR_ID
+      build:
+        type: branch
+        spec:
+          branch: <+codebase.branch>
+      preFetchCommand: |-
+        <+<+pipeline.variables.cleanVar>=="TRUE"?"git clean -fdx":"git --version">
+        <+<+pipeline.variables.resetVar>=="TRUE"?"git fetch origin <+pipeline.variables.branch> && git reset --hard origin/<+pipeline.variables.branch>":"git --version">
+
+# --- example 4 ---
+variables:
+  - name: cleanVar
+    type: String
+    value: <+input>.default(TRUE)
+  - name: resetVar
+    type: String
+    value: <+input>.default(TRUE)
+  - name: branch
+    type: String
+    value: <+input>.default(<+codebase.branch>)

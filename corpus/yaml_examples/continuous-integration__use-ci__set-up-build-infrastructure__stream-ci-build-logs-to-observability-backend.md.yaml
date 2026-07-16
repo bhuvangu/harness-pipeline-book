@@ -1,0 +1,60 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/stream-ci-build-logs-to-observability-backend.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/stream-ci-build-logs-to-observability-backend)
+
+# --- example 1 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: harness-delegate
+  namespace: harness-delegate-ng
+spec:
+  template:
+    spec:
+      containers:
+        - name: harness-delegate-instance
+          env:
+            - name: HARNESS_LOG_STREAMING_STDOUT_ENABLED
+              value: "true"
+
+# --- example 2 ---
+receivers:
+  filelog:
+    # Tail CI build pods (prefixed with harnessci-) and delegate execution logs
+    include:
+      - /var/log/pods/<your-namespace>_harnessci-*/**/*.log
+      - /var/log/pods/<your-namespace>_<your-delegate-name>-*/**/*.log
+    start_at: end
+    include_file_path: true
+    operators:
+      # Parse CRI log format: <time> <stream> <flags> <log>
+      - type: regex_parser
+        regex: '^(?P<time>[^ ]+) (?P<stream>stdout|stderr) (?P<flags>[^ ]+) (?P<log>.*)$'
+        on_error: send
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+      # Parse the nested JSON envelope written by the containers
+      - type: json_parser
+        parse_from: attributes.log
+        if: 'attributes["log"] matches "^\\{.*"'
+        on_error: send
+
+processors:
+  batch:
+    timeout: 2s
+    send_batch_size: 500
+  resource:
+    attributes:
+      - key: service.name
+        value: harness-ci
+        action: insert
+
+exporters:
+  otlphttp:
+    endpoint: http://<your-backend-endpoint>:3100/otlp
+
+service:
+  pipelines:
+    logs:
+      receivers: [filelog]
+      processors: [batch, resource]
+      exporters: [otlphttp]

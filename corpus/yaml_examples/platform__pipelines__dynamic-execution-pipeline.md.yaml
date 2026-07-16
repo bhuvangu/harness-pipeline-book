@@ -1,0 +1,61 @@
+# source: docs/platform/pipelines/dynamic-execution-pipeline.md  (https://developer.harness.io/docs/platform/pipelines/dynamic-execution-pipeline)
+
+# --- example 1 ---
+pipeline:
+  name: Dynamic Stage Example
+  identifier: Dynamic_Stage_Example
+  projectIdentifier: <PROJECT_ID>
+  orgIdentifier: <ORG_ID>
+  stages:
+    - stage:
+        name: generate_yaml
+        identifier: generate_yaml
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+            override: true
+            paths: []
+          buildIntelligence:
+            enabled: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: <K8S_CONNECTOR>
+              namespace: default
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Plugin
+                  name: Generate_Pipeline_YAML
+                  identifier: Generate_Pipeline_YAML
+                  spec:
+                    connectorRef: <DOCKER_CONNECTOR>
+                    image: <PLUGIN_IMAGE>:<IMAGE_TAG>
+                    settings:
+                      source_yaml: <SOURCE_YAML_PATH>
+                      options: "--repo-connector <REPO_CONNECTOR> --docker-connector <DOCKER_CONNECTOR> --build-branch <BUILD_BRANCH>"
+    - stage:
+        name: execute_generated_yaml
+        identifier: execute_generated_yaml
+        description: ""
+        type: Dynamic
+        spec:
+          source: <+pipeline.stages.generate_yaml.spec.execution.steps.Generate_Pipeline_YAML.output.outputVariables.PLUGIN_HARNESS_YAML>
+        tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: <REPO_CONNECTOR>
+        build: <+input>
+        sparseCheckout: []
+        resources:
+          limits:
+            cpu: 1600m
+            memory: 2000Mi
+  tags: {}

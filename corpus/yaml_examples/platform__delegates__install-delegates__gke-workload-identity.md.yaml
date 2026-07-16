@@ -1,0 +1,16 @@
+# source: docs/platform/delegates/install-delegates/gke-workload-identity.md  (https://developer.harness.io/docs/platform/delegates/install-delegates/gke-workload-identity)
+
+# --- example 1 ---
+      apiVersion: v1
+      kind: Pod
+      metadata:
+      name: workload-identity-test
+      namespace: harness-delegate-ng
+      spec:
+      containers:
+      - image: google/cloud-sdk:slim
+         name: workload-identity-test
+         command: ["sleep","infinity"]
+      serviceAccountName: ksa
+      nodeSelector:
+         iam.gke.io/gke-metadata-server-enabled: "true"

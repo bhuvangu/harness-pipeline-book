@@ -1,0 +1,131 @@
+# source: docs/continuous-integration/shared/output-var.md  (https://developer.harness.io/docs/continuous-integration/shared/output-var)
+
+# --- example 1 ---
+              - step:
+                  type: Run
+                  name: alpha
+                  identifier: alpha
+                  spec:
+                    shell: Sh
+                    command: export myVar=varValue
+                    outputVariables:
+                      - name: myVar
+              - step:
+                  type: Run
+                  name: beta
+                  identifier: beta
+                  spec:
+                    shell: Sh
+                    command: |-
+                      echo <+steps.alpha.output.outputVariables.myVar>
+                      echo <+execution.steps.alpha.output.outputVariables.myVar>
+
+# --- example 2 ---
+              - step:
+                  type: Run
+                  name: alpha
+                  identifier: alpha
+                  spec:
+                    shell: Sh
+                    command: export myVar=varValue
+                    outputVariables:
+                      - name: myVar
+              - step:
+                  type: Run
+                  name: beta
+                  identifier: beta
+                  spec:
+                    shell: Sh
+                    command: |-
+                      echo $myVar
+
+# --- example 3 ---
+    - stage:
+        name: stage1
+        identifier: stage1
+        type: CI
+        spec:
+          ...
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: alpha
+                  identifier: alpha
+                  spec:
+                    shell: Sh
+                    command: export myVar=varValue
+                    outputVariables:
+                      - name: myVar
+    - stage:
+        name: stage2
+        identifier: stage2
+        type: CI
+        spec:
+          ...
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: beta
+                  identifier: beta
+                  spec:
+                    shell: Sh
+                    command: |-
+                      echo <+stages.stage1.spec.execution.steps.alpha.output.outputVariables.myVar>
+
+# --- example 4 ---
+              - step:
+                  type: Run
+                  name: alpha
+                  identifier: alpha
+                  spec:
+                    shell: Sh
+                    command: export myVar=varValue1
+                    outputVariables:
+                      - name: myVar
+              - step:
+                  type: Run
+                  name: zeta
+                  identifier: zeta
+                  spec:
+                    shell: Sh
+                    command: export myVar=varValue2
+                    outputVariables:
+                      - name: myVar
+              - step:
+                  type: Run
+                  name: beta
+                  identifier: beta
+                  spec:
+                    shell: Sh
+                    command: |-
+                      echo $myVar
+
+# --- example 5 ---
+              - step:
+                  type: Run
+                  name: alpha
+                  identifier: alpha
+                  spec:
+                    shell: Sh
+                    command: export myVar=varValue1
+                    outputVariables:
+                      - name: myVar
+              - step:
+                  type: Run
+                  name: zeta
+                  identifier: zeta
+                  spec:
+                    shell: Sh
+                    command: export myVar=varValue2
+                    outputVariables:
+                      - name: myVar
+              - step:
+                  type: Run
+                  name: beta
+                  identifier: beta
+                  spec:
+                    shell: Sh
+                    command: |-
+                      echo <+steps.alpha.output.outputVariables.myVar>

@@ -1,0 +1,32 @@
+# source: docs/platform/variables-and-expressions/harness-expressions-reference.md  (https://developer.harness.io/docs/platform/variables-and-expressions/harness-expressions-reference)
+
+# --- example 1 ---
+...
+      manifests:
+        - manifest:
+            identifier: mymanifest                # <+manifests.MANIFEST_ID.identifier>
+            type: K8sManifest                     # <+manifests.MANIFEST_ID.type>
+            spec:
+              store:                              # <+manifests.MANIFEST_ID.store>
+                type: Harness
+                spec:
+                  files:
+                    - account:/Templates
+              valuesPaths:
+                - account:/values.yaml
+              skipResourceVersioning: false
+...
+
+# --- example 2 ---
+  ...
+        manifests:
+          - manifest:
+              identifier: mymanifest
+              type: K8sManifest
+              spec:
+                store:
+                  type: Harness
+                  spec:
+                    files:
+                      - account:/Templates
+  ...

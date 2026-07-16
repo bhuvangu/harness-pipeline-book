@@ -1,0 +1,13 @@
+# source: docs/platform/delegates/delegate-concepts/graceful-delegate-shutdown-process.md  (https://developer.harness.io/docs/platform/delegates/delegate-concepts/graceful-delegate-shutdown-process)
+
+# --- example 1 ---
+ spec:
+     terminationGracePeriodSeconds: 600
+     restartPolicy: Always
+     containers:
+     - image: example/org:custom-delegate
+       imagePullPolicy: Always
+       name: delegate
+       securityContext:
+         allowPrivilegeEscalation: false
+         runAsUser: 0

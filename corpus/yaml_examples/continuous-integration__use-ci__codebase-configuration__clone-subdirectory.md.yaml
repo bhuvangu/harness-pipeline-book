@@ -1,0 +1,54 @@
+# source: docs/continuous-integration/use-ci/codebase-configuration/clone-subdirectory.md  (https://developer.harness.io/docs/continuous-integration/use-ci/codebase-configuration/clone-subdirectory)
+
+# --- example 1 ---
+pipeline:
+  name: git_clone_pipeline
+  identifier: git_clone_pipeline
+  projectIdentifier: default_project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: clone_subdirectory_example
+        identifier: clone_subdirectory_example
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          caching:
+            enabled: true
+            paths: []
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: run_step
+                  identifier: run_step
+                  spec:
+                    shell: Sh
+                    command: ls -la docs
+  properties:
+    ci:
+      codebase:
+        connectorRef: github_connector
+        repoName: harness/developer-hub
+        build: <+input>
+        sparseCheckout:
+          - docs/continuous-integration
+          - docs/code-repository
+
+# --- example 2 ---
+              - step:
+                  type: Run
+                  identifier: clone
+                  name: clone
+                  spec:
+                    shell: Sh
+                    command: |-
+                      git sparse-checkout ...

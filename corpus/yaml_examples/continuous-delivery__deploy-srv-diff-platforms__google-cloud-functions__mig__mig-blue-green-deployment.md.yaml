@@ -1,0 +1,641 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/mig/mig-blue-green-deployment.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/mig/mig-blue-green-deployment)
+
+# --- example 1 ---
+- step:
+    type: DownloadManifests
+    name: DownloadManifests
+    identifier: DownloadManifests
+    spec: {}
+    failureStrategies: []
+
+# --- example 2 ---
+- step:
+    type: GoogleMigBlueGreenDeploy
+    name: BlueGreen_Deploy
+    identifier: BlueGreen_Deploy
+    spec:
+      blueEnvironment:
+        backendService: projects/PROJECT_ID/locations/global/backendServices/BACKEND_SERVICE_NAME
+        mig: MIG_NAME
+      trafficConfig:
+        type: CSM
+            spec:
+          type: GRPCRoute
+          route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+      connectorRef: account.harnessImage
+      image: harness/google-mig-bluegreen-deploy:0.1.0-linux-amd64
+      imagePullPolicy: Always
+      resources:
+        limits:
+          memory: 512Mi
+          cpu: 0.5
+      outputVariables: []
+    timeout: 10m
+
+# --- example 3 ---
+- step:
+    identifier: mig_steady_state_check
+    type: GoogleMigSteadyState
+    name: Steady_State_Check
+  spec:
+      mig: <+pipeline.stages.Deploy.spec.execution.steps.STEP_GROUP_ID.steps.DEPLOY_STEP_ID.GoogleMigBlueGreenDeployOutcome.stageMig>
+      instanceTemplate: <+pipeline.stages.Deploy.spec.execution.steps.STEP_GROUP_ID.steps.DEPLOY_STEP_ID.GoogleMigBlueGreenDeployOutcome.rollbackData.deploymentMetadata.stage.instanceTemplate>
+      connectorRef: account.harnessImage
+      image: harness/google-mig-steady-state:0.1.0-linux-amd64
+      imagePullPolicy: Always
+      resources:
+        limits:
+          memory: 512Mi
+          cpu: 0.5
+      outputVariables: []
+
+# --- example 4 ---
+- step:
+    identifier: traffic_shift_100
+    type: GoogleMigTrafficShift
+    name: Traffic_Shift_100
+    spec:
+      trafficConfig:
+        type: CSM
+        spec:
+          type: GRPCRoute
+          route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+          destinations:
+            - destination: stable
+              weight: 0
+            - destination: stage
+              weight: 100
+      downsizeOldMig: true
+      connectorRef: account.harnessImage
+      image: harness/google-mig-traffic-shift:0.1.0-linux-amd64
+      imagePullPolicy: Always
+      resources:
+        limits:
+          memory: 512Mi
+          cpu: 0.5
+      outputVariables: []
+
+# --- example 5 ---
+- step:
+    identifier: traffic_shift_with_headers
+    type: GoogleMigTrafficShift
+    name: Traffic Shift with Header Routing
+    spec:
+      trafficConfig:
+        type: CSM
+        spec:
+          type: GRPCRoute
+          route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+          destinations:
+            - destination: stage
+              weight: 100
+            - destination: stable
+              weight: 0
+          headerRoutingAdd:
+            - key: X-Test-Stage
+              value: "true"
+              matchType: exact
+              destination: stage
+            - key: X-QA-Version
+              value: <+pipeline.variables.versionTag>
+              matchType: regex
+              destination: stage
+      connectorRef: account.harnessImage
+      image: harness/google-mig-traffic-shift:0.1.0-linux-amd64
+      imagePullPolicy: Always
+      resources:
+        limits:
+          memory: 512Mi
+          cpu: 0.5
+
+# --- example 6 ---
+- step:
+    name: Traffic Shift - 10%
+    type: GoogleMigTrafficShift
+    spec:
+                  destinations:
+        - environment: stable
+          weight: 90
+        - environment: stage
+          weight: 10
+
+        - step:
+    name: Approval - Validate 10%
+    type: HarnessApproval
+            spec:
+      approvalMessage: Validate metrics before proceeding to 50%
+
+        - step:
+    name: Traffic Shift - 50%
+            type: GoogleMigTrafficShift
+            spec:
+      destinations:
+        - environment: stable
+          weight: 50
+        - environment: stage
+          weight: 50
+
+- step:
+    name: Traffic Shift - 100%
+    type: GoogleMigTrafficShift
+                spec:
+                  destinations:
+        - environment: stable
+                      weight: 0
+        - environment: stage
+                      weight: 100
+
+# --- example 7 ---
+      rollbackSteps:
+        - step:
+            type: GoogleMigBlueGreenRollback
+      name: Rollback on Failure
+      identifier: rollback_on_failure
+            spec:
+        deleteNewResources: true
+        preserveCapacity: false
+        connectorRef: account.harnessImage
+        image: harness/google-mig-bluegreen-rollback:0.1.0-linux-amd64
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: 0.5
+            timeout: 15m
+
+# --- example 8 ---
+pipeline:
+  projectIdentifier: PROJECT_ID
+  orgIdentifier: ORG_ID
+  tags: {}
+  stages:
+    - stage:
+        name: Deploy
+        identifier: Deploy
+        description: Blue-Green MIG Deployment
+        type: Deployment
+        spec:
+          deploymentType: GoogleManagedInstanceGroup
+          service:
+            serviceRef: MIG_SERVICE_REF
+            serviceInputs:
+              serviceDefinition:
+                type: GoogleManagedInstanceGroup
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: ENVIRONMENT_REF
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: INFRA_ID
+          execution:
+            steps:
+              - stepGroup:
+                  steps:
+                    - step:
+                        type: DownloadManifests
+                        name: DownloadManifests
+                        identifier: DownloadManifests
+                        spec: {}
+                        failureStrategies: []
+                    - step:
+                        type: GoogleMigBlueGreenDeploy
+                        name: BlueGreen_Deploy
+                        identifier: BlueGreen_Deploy
+                        spec:
+                          blueEnvironment:
+                            backendService: projects/PROJECT_ID/locations/global/backendServices/BACKEND_SERVICE_NAME
+                            mig: MIG_NAME
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-bluegreen-deploy:0.1.0-linux-amd64
+                          imagePullPolicy: Always
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: 0.5
+                          outputVariables: []
+                        timeout: 10m
+                    - step:
+                        identifier: mig_steady_state_check
+                        type: GoogleMigSteadyState
+                        name: Steady_State_Check
+                        spec:
+                          mig: <+pipeline.stages.Deploy.spec.execution.steps.Google_MIG_Step_Group.steps.BlueGreen_Deploy.GoogleMigBlueGreenDeployOutcome.stageMig>
+                          instanceTemplate: <+pipeline.stages.Deploy.spec.execution.steps.Google_MIG_Step_Group.steps.BlueGreen_Deploy.GoogleMigBlueGreenDeployOutcome.rollbackData.deploymentMetadata.stage.instanceTemplate>
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-steady-state:0.1.0-linux-amd64
+                          imagePullPolicy: Always
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: 0.5
+                          outputVariables: []
+                    - step:
+                        identifier: traffic_shift_100
+                        type: GoogleMigTrafficShift
+                        name: Traffic_Shift_100
+                        spec:
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                              destinations:
+                                - destination: stable
+                                  weight: 0
+                                - destination: stage
+                                  weight: 100
+                          downsizeOldMig: true
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-traffic-shift:0.1.0-linux-amd64
+                          imagePullPolicy: Always
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: 0.5
+                          outputVariables: []
+                  name: Google MIG Step Group
+                  identifier: Google_MIG_Step_Group
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: K8S_CONNECTOR_ID
+                      namespace: NAMESPACE
+                      serviceAccountName: SERVICE_ACCOUNT_NAME
+                      automountServiceAccountToken: true
+            rollbackSteps:
+              - stepGroup:
+                  name: Google Mig Rollback
+                  identifier: Google_Mig_Rollback
+                  steps:
+                    - step:
+                        type: GoogleMigBlueGreenRollback
+                        name: GoogleMigBlueGreenRollback_1
+                        identifier: GoogleMigBlueGreenRollback_1
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-bluegreen-rollback:0.1.0-linux-amd64
+                        timeout: 10m
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: K8S_CONNECTOR_ID
+                      namespace: NAMESPACE
+                      serviceAccountName: SERVICE_ACCOUNT_NAME
+                      automountServiceAccountToken: true
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+  delegateSelectors:
+    - DELEGATE_SELECTOR
+  identifier: PIPELINE_ID
+  name: Blue-Green MIG Deployment Pipeline
+
+# --- example 9 ---
+pipeline:
+  identifier: PIPELINE_ID
+  name: mig-staging-validation
+  projectIdentifier: PROJECT_ID
+  orgIdentifier: ORG_ID
+  tags: {}
+  stages:
+    - stage:
+        name: Deploy
+        identifier: Deploy
+        description: Blue-Green MIG Deployment with Staging Validation
+        type: Deployment
+        spec:
+          deploymentType: GoogleManagedInstanceGroup
+          service:
+            serviceRef: MIG_SERVICE_REF
+          environment:
+            environmentRef: ENVIRONMENT_REF
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: INFRA_ID
+          execution:
+            steps:
+              # Step Group 1: Blue Green Deployment
+              - stepGroup:
+                  name: Blue Green Deployment
+                  identifier: blueGreenDeployment
+                  steps:
+                    - step:
+                        type: DownloadManifests
+                        name: Download Manifests
+                        identifier: DownloadManifests
+                        spec: {}
+                        failureStrategies: []
+                    - step:
+                        name: Google MIG Blue Green Deploy
+                        identifier: GoogleMigBlueGreenDeploy
+                        type: GoogleMigBlueGreenDeploy
+                        timeout: 10m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-bluegreen-deploy:0.1.0-linux-amd64
+                          blueEnvironment:
+                            backendService: projects/PROJECT_ID/locations/global/backendServices/BACKEND_SERVICE_NAME
+                            mig: MIG_NAME
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                          targetSize: 3
+                    - step:
+                        name: Google MIG Traffic Shift
+                        identifier: GoogleMigTrafficShift
+                        type: GoogleMigTrafficShift
+                        timeout: 10m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-traffic-shift:0.1.0-linux-amd64
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                              destinations:
+                                - destination: stage
+                                  weight: 100
+                                - destination: stable
+                                  weight: 0
+                              headerRoutingAdd:
+                                - key: X-Test-Stage
+                                  value: "true"
+                                  matchType: exact
+                                  destination: stage
+                                - key: X-QA-Version
+                                  value: <+pipeline.variables.versionTag>
+                                  matchType: regex
+                                  destination: stage
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: "0.5"
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: K8S_CONNECTOR_ID
+                      namespace: NAMESPACE
+              
+              # Validation Step (outside containerized step group)
+              - step:
+                  type: ShellScript
+                  name: Validate Stage Environment
+                  identifier: ValidateStageEnvironment
+                  timeout: 10m
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          # Run automated tests against staging with header X-Test-Stage: true
+                          # Example: curl with custom header to access staging backend
+                          echo "Running validation tests against staging environment..."
+                    environmentVariables: []
+                    outputVariables: []
+              
+              # Step Group 2: Traffic Cutover
+              - stepGroup:
+                  name: Traffic Cutover
+                  identifier: trafficCutover
+                  steps:
+                    - step:
+                        name: Google MIG Traffic Shift Cutover
+                        identifier: GoogleMigTrafficShiftCutover
+                        type: GoogleMigTrafficShift
+                        timeout: 10m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-traffic-shift:0.1.0-linux-amd64
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                              destinations:
+                                - destination: stage
+                                  weight: 100
+                                - destination: stable
+                                  weight: 0
+                              headerRoutingRemove:
+                                - key: X-Test-Stage
+                                - key: X-QA-Version
+                          downsizeOldMig: true
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: "0.5"
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: K8S_CONNECTOR_ID
+                      namespace: NAMESPACE
+            rollbackSteps:
+              - stepGroup:
+                  name: Blue Green Rollback
+                  identifier: blueGreenRollback
+                  steps:
+                    - step:
+                        name: Google MIG Blue Green Rollback
+                        identifier: GoogleMigBlueGreenRollback
+                        type: GoogleMigBlueGreenRollback
+                        timeout: 10m
+                        spec:
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-bluegreen-rollback:0.1.0-linux-amd64
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: K8S_CONNECTOR_ID
+                      namespace: NAMESPACE
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+
+# --- example 10 ---
+pipeline:
+  projectIdentifier: PROJECT_ID
+  orgIdentifier: ORG_ID
+  tags: {}
+  stages:
+    - stage:
+        name: Deploy
+        identifier: Deploy
+        description: Gradual Traffic Shift (20% -> 50% -> 100%)
+        type: Deployment
+        spec:
+          deploymentType: GoogleManagedInstanceGroup
+          service:
+            serviceRef: MIG_SERVICE_REF
+            serviceInputs:
+              serviceDefinition:
+                type: GoogleManagedInstanceGroup
+                spec:
+                  artifacts:
+                    primary:
+                      primaryArtifactRef: <+input>
+                      sources: <+input>
+          environment:
+            environmentRef: ENVIRONMENT_REF
+            deployToAll: false
+            infrastructureDefinitions:
+              - identifier: INFRA_ID
+          execution:
+            steps:
+              - stepGroup:
+                  steps:
+                    - step:
+                        type: DownloadManifests
+                        name: DownloadManifests
+                        identifier: DownloadManifests
+                        spec: {}
+                        failureStrategies: []
+                    - step:
+                        type: GoogleMigBlueGreenDeploy
+                        name: BlueGreen_Deploy
+                        identifier: BlueGreen_Deploy
+                        spec:
+                          blueEnvironment:
+                            backendService: projects/PROJECT_ID/locations/global/backendServices/BACKEND_SERVICE_NAME
+                            mig: MIG_NAME
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-bluegreen-deploy:0.1.0-linux-amd64
+                          imagePullPolicy: Always
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: 0.5
+                          outputVariables: []
+                        timeout: 10m
+                    - step:
+                        identifier: mig_steady_state_check
+                        type: GoogleMigSteadyState
+                        name: Steady_State_Check
+                        spec:
+                          mig: <+pipeline.stages.Deploy.spec.execution.steps.Google_MIG_Step_Group.steps.BlueGreen_Deploy.GoogleMigBlueGreenDeployOutcome.stageMig>
+                          instanceTemplate: <+pipeline.stages.Deploy.spec.execution.steps.Google_MIG_Step_Group.steps.BlueGreen_Deploy.GoogleMigBlueGreenDeployOutcome.rollbackData.deploymentMetadata.stage.instanceTemplate>
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-steady-state:0.1.0-linux-amd64
+                          imagePullPolicy: Always
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: 0.5
+                          outputVariables: []
+                    - step:
+                        identifier: traffic_shift_20
+                        type: GoogleMigTrafficShift
+                        name: Traffic_Shift_20_Percent
+                        spec:
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                              destinations:
+                                - destination: stable
+                                  weight: 80
+                                - destination: stage
+                                  weight: 20
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-traffic-shift:0.1.0-linux-amd64
+                          imagePullPolicy: Always
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: 0.5
+                          outputVariables: []
+                    - step:
+                        identifier: traffic_shift_50
+                        type: GoogleMigTrafficShift
+                        name: Traffic_Shift_50_Percent
+                        spec:
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                              destinations:
+                                - destination: stable
+                                  weight: 50
+                                - destination: stage
+                                  weight: 50
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-traffic-shift:0.1.0-linux-amd64
+                          imagePullPolicy: Always
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: 0.5
+                          outputVariables: []
+                    - step:
+                        identifier: traffic_shift_100
+                        type: GoogleMigTrafficShift
+                        name: Traffic_Shift_100_Percent
+                        spec:
+                          trafficConfig:
+                            type: CSM
+                            spec:
+                              type: GRPCRoute
+                              route: projects/PROJECT_ID/locations/global/grpcRoutes/ROUTE_NAME
+                              destinations:
+                                - destination: stable
+                                  weight: 0
+                                - destination: stage
+                                  weight: 100
+                          downsizeOldMig: true
+                          connectorRef: account.harnessImage
+                          image: harness/google-mig-traffic-shift:0.1.0-linux-amd64
+                          imagePullPolicy: Always
+                          resources:
+                            limits:
+                              memory: 512Mi
+                              cpu: 0.5
+                          outputVariables: []
+                  name: Google MIG Step Group
+                  identifier: Google_MIG_Step_Group
+                  stepGroupInfra:
+                    type: KubernetesDirect
+                    spec:
+                      connectorRef: K8S_CONNECTOR_ID
+                      namespace: NAMESPACE
+                      serviceAccountName: SERVICE_ACCOUNT_NAME
+                      automountServiceAccountToken: true
+            rollbackSteps: []
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
+  delegateSelectors:
+    - DELEGATE_SELECTOR
+  identifier: PIPELINE_ID
+  name: Gradual Traffic Shift MIG Pipeline

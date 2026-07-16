@@ -1,0 +1,565 @@
+---
+title: Cache Intelligence
+description: Caching dependencies can improve build times.
+sidebar_position: 20
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Modern continuous integration systems execute pipelines inside ephemeral environments that are provisioned solely for pipeline execution and are not reused from prior pipeline runs. As builds often require downloading and installing many library and software dependencies, caching these dependencies for quick retrieval at runtime can save a significant amount of time.
+
+
+With **Cache Intelligence**, a [Harness CI Intelligence](/docs/continuous-integration/use-ci/harness-ci-intelligence.md) feature, Harness automatically caches and restores software dependencies to speed up your builds - hassle free.
+
+You can use Cache Intelligence with any [build infrastructure](/docs/continuous-integration/use-ci/set-up-build-infrastructure/which-build-infrastructure-is-right-for-me.md).
+
+:::info
+* Cache Intelligence is GA.
+* Supported on Cloud and Kubernetes build infrastructure.
+* Cache Intelligence is enabled by default for newly created CI stages (configurable in [CI Build stage settings](/docs/continuous-integration/use-ci/set-up-build-infrastructure/ci-stage-settings/).
+
+**S3 options via stage variables (applies to both Cache Intelligence _and_ S3 cache steps):**
+- **Path Style**: Set `PLUGIN_PATH_STYLE: "true"` as a **stage variable**. This is injected into all steps and used by Cache Intelligence and S3 cache steps.
+- **Encryption**: To enable server-side encryption for cache artifacts uploaded to S3, set the **encryption stage variables** described in [Caching with bucket encryption policies](/docs/continuous-integration/use-ci/caching-ci-data/saving-cache#caching-with-bucket-encryption-policies). These variables are **stage-scoped** and affect **both** Cache Intelligence and S3 cache steps.
+:::
+
+## Supported tools and paths
+
+Cache Intelligence fully supports **Bazel**, **Maven**, **Gradle**, **Yarn**, **Go**, **Node**,  **VB** (with .Net), **F#** (with .Net) and **MSBuild/dotnet** (only for C#) build tools, as long as default cache paths are used. 
+
+Below is a list of the default locations cached using Cache Intelligence:
+
+| **Build Tool** | **Dependency Management file**  | **Default Path cached** 
+|----------------|---------------------------------|-------------------------|
+| `Maven` | pom.xml | .m2/repository
+| `Gradle` | build.gradle | .gradle
+| `Bazel` | WORKSPACE | .bazel
+| `Node` | yarn.lock | .yarn
+| `Go` | go.mod | .go
+| `C# .Net` | *.csproj | .nuget/packages
+| `VB .Net` | *.vbproj | .nuget/packages
+| `F# .Net` | *.fsproj | .nuget/packages
+
+
+By default, Cache Intelligence searches for the exact filenames listed in the table above under the **Dependency Management file**.  
+
+Harness Cache Intelligence will explore the root directory as well as one directory depth below for the file to determine the tool that a customer is using in the repository.
+
+This then determines the **Default Path Cached** location that Harness will save and restore as a part of the Cache Intelligence process.  
+
+To make modifications for other build tools or non-default cache locations, use Cache Intelligence with [custom cache paths](#customize-cache-paths).
+
+
+## Cache storage
+
+When you use Cache Intelligence with Harness CI Cloud, the cache is stored in the Harness-managed environment. When running builds on self-managed infrastructure, you will need to provide your own storage. 
+
+<Tabs>
+<TabItem value="cloud" label="Harness Cloud" default>
+
+When you use Cache Intelligence with [Harness CI Cloud](/docs/continuous-integration/use-ci/set-up-build-infrastructure/use-harness-cloud-build-infrastructure.md), you don't need to bring your own storage, because the cache is stored in Harness-managed Harness Cloud storage.
+
+All pipelines in the account use the same cache storage, and each build tool has a unique cache key that is used to restore the appropriate cache data at runtime.
+
+The cache storage limit depends on your subscription plan type. Please visit [Subscriptions and licenses](/docs/continuous-integration/get-started/ci-subscription-mgmt.md#usage-limits) page to learn more about usage limits.
+
+Harness doesn't limit the number of caches you can store, but, once you reach your storage limit, Harness continues to save new caches by automatically evicting old caches.
+
+The cache retention window is 15 days, which resets whenever a cache is updated.
+
+For blobs larger than 5 GB, multi-part upload (enabled via FF `CI_ENABLE_MULTIPART`) is used for caching to storage, while standard uploads are used for blobs up to 5 GB.
+
+</TabItem>
+<TabItem value="sm" label="Self-managed build infrastructures">
+
+When running builds in self-managed infrastructures, [configure default object storage (Azure Blob Storage, GCP Cloud Storage, AWS S3, or any S3-compatible storage)](/docs/platform/settings/default-settings.md#continuous-integration) that Harness can use to seamlessly store and manage the cache.
+
+We suggest that you consider setting bucket level retention policy for efficient cache management.
+
+You can also override the storage connector and configure sidecar container settings at the stage level. Go to [Override storage and sidecar settings](#override-storage-and-sidecar-settings) to configure per-stage overrides.
+
+</TabItem>
+</Tabs>
+
+
+## Enable Cache Intelligence
+
+1. If you're *not* using Harness Cloud build infrastructure, you must [configure global object storage (Azure Blob Storage, GCP Cloud Storage, AWS S3, or any S3-compatible storage)](/docs/platform/settings/default-settings.md#continuous-integration) that Harness can use to store and manage caches.
+
+   This is not required for Harness Cloud build infrastructure. For more information, go to [Cache storage](#cache-storage).
+
+2. Enable Cache Intelligence in each applicable stage in your pipeline.
+
+   To do this in the Visual editor, select a **Build** stage, select the stage's **Overview** tab, and then select **Enable Cache Intelligence**.
+
+   To do this in the YAML editor, add the following to your pipeline's `stage.spec`:
+
+      ```yaml
+      caching:
+        enabled: true
+      ```
+
+3. Add [custom cache paths](#customize-cache-paths) if you're using an unsupported build tool, a non-default cache location, or a Windows platform. For a list of supported tools, go to [Supported tools and paths](#supported-tools-and-paths).
+
+4. You can also:
+
+   * [Add custom cache keys.](#customize-cache-keys)
+   * [Define the cache policy.](#define-cache-policy)
+   * [Enable cache override.](#enable-cache-override)
+   * [Override storage and sidecar settings.](#override-storage-and-sidecar-settings)
+
+## Customize cache paths
+
+Cache Intelligence stores the data to be cached in the `/harness` directory by default. You can use `paths` to specify a list of locations to be cached. This is useful if:
+
+- You're *not* using a [fully supported build tool](#supported-tools-and-paths).
+- You have customized cache locations, such as with `yarn config set cache-folder`.
+- You're using a Windows platform.
+
+:::warning
+When using custom paths, you must also provide a cache key. **If a cache path is specified without a key, Cache Intelligence will be disabled**, skipping cache operations.
+:::
+
+<Tabs>
+<TabItem value="Visual" label="Visual editor">
+
+1. In the same stage where you enabled Cache Intelligence, go to the **Overview** tab, and make sure **Enable Cache Intelligence** is selected.
+2. In **Paths**, specify cache paths.
+
+   On Windows platforms, you might need to specify the cache path from `C:`, such as `C:\harness\node_modules`.
+
+   <!-- ![](./static/cache_int_paths.png) -->
+
+   <DocImage path={require('./static/cache_int_paths.png')} />
+
+3. Cache paths outside the `/harness` directory must _also_ be declared in **[Shared Paths](../set-up-build-infrastructure/ci-stage-settings.md#shared-paths)**.
+
+   <!-- ![](./static/cache_int_shared_paths.png) -->
+
+   <DocImage path={require('./static/cache_int_shared_paths.png')} />
+
+</TabItem>
+<TabItem value="YAML" label="YAML editor" default>
+
+In the same stage where you enabled Cache Intelligence, add a list of `paths` to cache under `stage.spec.caching`. For example:
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        paths:
+          - /harness/node_modules
+      cloneCodebase: true
+```
+
+On Windows platforms, you might need to specify the cache path from `C:`, such as `C:\harness\node_modules`.
+
+Cache paths outside the `/harness` directory must _also_ be declared in [shared paths](../set-up-build-infrastructure/ci-stage-settings.md#shared-paths). Add the list of `sharedPaths` under `stage.spec`, for example:
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        paths: # All custom cache paths.
+          - /harness/node_modules # Custom cache path within /harness directory.
+          - /my_cache_directory/module_cache1 # Custom cache path outside /harness directory.
+      cloneCodebase: true
+      platform:
+        os: Linux
+        arch: Amd64
+      runtime:
+        type: Cloud
+        spec: {}
+      sharedPaths: # All shared paths outside /harness directory. These can be cache paths or other shared paths for your pipeline.
+        - /my_cache_directory/module_cache1 # Custom cache path outside /harness directory.
+```
+
+</TabItem>
+</Tabs>
+
+## Customize cache keys
+
+Harness generates a cache key from a hash of the build lock file (such as `pom.xml`, `build.gradle`, or `package.json`) that Harness detects. If Harness detects multiple tools or multiple lock files, Harness combines the hashes to create the cache key.
+
+You can define custom cache keys if you don't want to use the default cache key naming behavior or you have a use case that requires defining custom cache keys, such as [caching in parallel stages](#cache-intelligence-in-parallel-stages).
+
+:::note
+When **Cache Intelligence** is enabled, the cache plugin automatically detects build tools and determines cache paths, unless custom paths are specified. Cache paths are stored under `<account_id>/default/path/to/directory`.
+:::
+
+<Tabs>
+<TabItem value="Visual" label="Visual">
+
+1. In the same stage where you enabled Cache Intelligence, go to the **Overview** tab, and make sure **Enable Cache Intelligence** is selected.
+2. Enter the custom key value in **Key**.
+
+   <!-- ![](./static/cache_int_custom_key.png) -->
+
+   <DocImage path={require('./static/cache_int_custom_key.png')} />
+
+</TabItem>
+<TabItem value="YAML" label="YAML" default>
+
+To customize the cache key in the YAML editor, add `key: CUSTOM_KEY_VALUE` under `stage.spec.caching` in the same stage where you enabled Cache Intelligence.
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        key: <+input> # This example uses runtime input so that the user specifies the cache key at runtime.
+      cloneCodebase: true
+```
+
+</TabItem>
+</Tabs>
+
+You can use [fixed values, runtime inputs, and expressions](/docs/platform/variables-and-expressions/runtime-inputs) for the key value.
+
+### Cache Intelligence in parallel stages
+
+If you have multiple stages that run in parallel, you must use [custom cache keys](#customize-cache-keys) for each stage that uses Cache Intelligence. This prevents conflicts when the parallel stages attempt to save or retrieve caches concurrently.
+
+If your stage uses a matrix or repeat [looping strategy](/docs/platform/pipelines/looping-strategies/looping-strategies-matrix-repeat-and-parallelism) that generates multiple stage instances, you can construct a key using a [Harness expression](/docs/platform/variables-and-expressions/harness-variables) to generate unique cache keys, such as `prefix-{{ checksum "<filename>" }}-<+matrix.axesName>`. The `<+matrix.axesName>` expression references the axes name ensuring a unique key for the cell. Follow the snippet below for an example:
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      cloneCodebase: true
+      caching:
+        enabled: true
+        override: true
+        key: cache-{{ checksum "build.gradle" }}-<+matrix.javaVersion>
+```
+This produces a unique cache key for the matrix like so:
+
+`key=cache-f6811cecc83b9b3889c41e720d5ee4a5-17/.gradle`
+
+`key=cache-f6811cecc83b9b3889c41e720d5ee4a5-21/.gradle`
+
+## Define cache policy
+
+The cache policy defines how you use caching in a stage.
+
+For example, if your pipeline has two stages, you might want to restore the cache in the first stage and then save the cache in the second stage, rather than both saving and restoring the cache in both stages.
+
+To configure the cache policy, add `policy: pull | push | pull-push` to `stage.spec.caching`.
+
+* `policy: pull` - Only restore cache.
+* `policy: push` - Only save cache.
+* `policy: pull-push` - Save and restore cache. This is the default setting.
+
+For example, here is a pipeline with two Build (`CI`) stages using Cache Intelligence. The first stage's cache policy is set to `pull` only, and the second stage's cache policy is set to `push` only. When this pipeline runs, the first stage restores the build cache, and the second stage saves the cache at the end of the build.
+
+```yaml
+  stages:
+    - stage:
+        name: buildStage1
+        identifier: buildstage1
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          caching:
+            enabled: true
+            policy: pull # Define cache policy.
+          execution:
+            steps:
+              ...
+    - stage:
+        name: buildStage2
+        identifier: buildstage2
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          caching:
+            enabled: true
+            policy: push # Define cache policy.
+          execution:
+            steps:
+              ...
+```
+
+## Enable cache override
+
+The cache override allows you to force push the cache even if the cache key hasn't changed.
+
+:::note
+By default, cache override is set to `true` regardless of cache changes. This is useful if you have infrequent builds and want to ensure your cache remains fresh. You can change the default behaviour in [CI default settings](/docs/platform/settings/default-settings.md#continuous-integration).
+:::
+
+
+To configure the cache override, add `override: true | false` to `stage.spec.caching`.
+
+* `override: true` - Always save the cache. Currently, this is the default setting.
+* `override: false` - Only save the cache if there are changes.
+
+For example:
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        override: false # Define cache override.
+      cloneCodebase: true
+```
+
+---
+
+## Override storage and sidecar settings
+
+When running Cache Intelligence on self-managed Kubernetes infrastructure, the cache sidecar uses storage connector and container settings from your account-level Default Settings by default. You can override any of these individually per stage under `stage.spec.caching` to use different connectors or resource allocations for specific stages.
+
+:::info Fallback behavior
+Each field falls back independently. You only need to specify the fields you want to override. For example, if you specify `connectorRef` but omit `region`, the stage uses the stage-level connector with the account-level region. Any field not specified at the stage level uses the value from [CI default settings](/docs/platform/settings/default-settings.md#continuous-integration).
+:::
+
+:::note
+These settings apply only to Kubernetes build infrastructure.
+:::
+
+### Override the storage connector and bucket
+
+Use `connectorRef`, `region`, and `bucket_name` to override the storage settings configured in your account-level Default Settings.
+
+- `connectorRef` specifies the connector ID for cloud storage. This overrides the Cloud Storage Connector from Default Settings. Supported connector types include AWS S3, GCP Cloud Storage, Azure Blob Storage, and S3-compatible storage.
+- `region` specifies the bucket region. This overrides the account-level Region setting.
+- `bucket_name` specifies the bucket name. This overrides the account-level Bucket Name setting.
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        connectorRef: azure_connector
+        region: eastus
+        bucket_name: my-cache-bucket
+      cloneCodebase: true
+```
+
+### Configure run-as-user
+
+Use `runAsUser` to set the user ID (UID) for the cache sidecar container. This corresponds to the Kubernetes `securityContext.runAsUser` property.
+
+This is useful when your cluster enforces non-root security policies or when you need root access (UID 0) for the sidecar container.
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        runAsUser: 0
+      cloneCodebase: true
+```
+
+### Configure sidecar container resources
+
+Use `resources` to define Kubernetes resource requests and limits for the cache sidecar container. This controls memory and CPU allocation to prevent the sidecar from being OOMKilled or starving other containers in the pod.
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 400m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+      cloneCodebase: true
+```
+
+### Full YAML reference
+
+The following example shows all available `caching` properties:
+
+```yaml
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        override: true
+        paths:
+          - /harness/node_modules
+        key: cache-{{ checksum "package-lock.json" }}
+        policy: pull-push
+        connectorRef: my_connector
+        region: us-west-2
+        bucket_name: my-cache-bucket
+        runAsUser: 0
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 400m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+      cloneCodebase: true
+```
+
+---
+
+## Cache Intelligence API
+
+You can use the Cache Intelligence API to get information about the cache or delete the cache.
+
+API key authentication is required. You need a [Harness API key](/docs/platform/automation/api/add-and-manage-api-keys) with [core_account_edit](/docs/platform/automation/api/api-permissions-reference) permission. For more information about API keys, go to [Manage API keys](/docs/platform/automation/api/add-and-manage-api-keys). For more information about authentication, go to the [Harness API documentation](https://apidocs.harness.io/#section/Introduction/Authentication).
+
+### Get cache metadata
+
+Get metadata about the cache, such as the size and path.
+
+```
+curl --location --request GET 'https://app.harness.io/gateway/ci/cache/info?accountIdentifier=$YOUR_HARNESS_ACCOUNT_ID' \
+--header 'Accept: application/json' \
+--header 'X-API-KEY: $API_KEY'
+```
+
+### Delete cache
+
+Delete the entire cache, or use the optional `path` parameter to delete a specific subdirectory in the cache.
+
+```
+curl --location --request DELETE 'https://app.harness.io/gateway/ci/cache?accountIdentifier=$YOUR_HARNESS_ACCOUNT_ID&path=/path/to/deleted/directory' \
+--header 'Accept: application/json' \
+--header 'X-API-KEY: $API_KEY'
+```
+
+## Troubleshoot caching
+
+### Ignoring Cache Intel Directories in Apache RAT Scans
+
+If you are using the Apache RAT plugin for license compliance, it may incorrectly mark Harness Cache Intelligence directories as invalid files. This can cause unnecessary failures in your build pipeline.
+
+To avoid this, explicitly exclude the following directories in your `pom.xml` file or plugin configuration.
+
+**Directories to Ignore**
+- Build Intelligence: `/harness/.mvn`
+- Cache Intelligence: `/harness/.m2`, `/harness/.mvn`
+
+Add the following snippet under the `<build>` section to configure the apache-rat-plugin to ignore these paths:
+
+**Example: Apache RAT plugin in `pom.xml`**
+
+```xml
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.apache.rat</groupId>
+      <artifactId>apache-rat-plugin</artifactId>
+      <version>0.15</version> <!-- Or use the latest version -->
+      <configuration>
+        <excludes>
+          <exclude>/harness/.mvn</exclude>
+          <exclude>/harness/.m2</exclude>
+        </excludes>
+      </configuration>
+      <executions>
+        <execution>
+          <phase>verify</phase>
+          <goals>
+            <goal>check</goal>
+          </goals>
+        </execution>
+      </executions>
+    </plugin>
+  </plugins>
+</build>
+```
+
+Refer to your specific plugin's documentation for the correct exclusion syntax. This issue applies to any license-compliance plugin (e.g., [Apache RAT](https://creadur.apache.org/rat/), [License Maven Plugin](https://www.mojohaus.org/license-maven-plugin/), or similar source-auditing tools).
+
+### License-checking plugins flagging files in the cache directory
+
+License-compliance plugins may also flag files stored under the default `/harness` cache directory, including Maven dependencies and other cached artifacts that lack expected license headers.
+
+**Workarounds:**
+
+- **Redirect Maven local repository**: Set `-Dmaven.repo.local=/tmp/.m2/repository` in your Maven command to store dependencies outside the `/harness` directory, so the plugin does not scan them. For example:
+
+  ```shell
+  mvn build -Dmaven.repo.local=/tmp/.m2/repository
+  ```
+
+- **Configure custom cache paths**: Use the [custom cache paths](#customize-cache-paths) option to store cached data in a directory excluded from license scans.
+
+- **Exclude the cache directory in your plugin configuration**: Add the `/harness` directory to your plugin's exclusion list. For example, in a `.rat-excludes` file:
+
+  ```
+  /harness/**
+  ```
+
+  Refer to your specific plugin's documentation for the correct exclusion syntax.
+
+### Gradle cache location
+
+Harness sets the following environment variable for Gradle builds:
+
+```
+GRADLE_USER_HOME=/harness/.gradle
+```
+
+As a result:
+
+- All Gradle dependencies and caches are saved and restored from `/harness/.gradle` because `/harness` is a shared directory that can be accessed across all steps.
+- Cache Intelligence and the Save/Restore Cache steps are optimized for this path.
+- This location is different from the default Gradle cache location (`~/.gradle`).
+
+:::info
+Cache Intelligence is not currently supported on local (self-managed) infrastructure.
+:::
+
+Go to the [CI Knowledge Base](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs) for questions and issues related to caching, data sharing, dependency management, workspaces, shared paths, and more. For example:
+
+* [Why are changes made to a container image filesystem in a CI step is not available in the subsequent step that uses the same container image?](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#why-are-changes-made-to-a-container-image-filesystem-in-a-ci-step-is-not-available-in-the-subsequent-step-that-uses-the-same-container-image)
+* [How can I use an artifact in a different stage from where it was created?](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#how-can-i-use-an-artifact-in-a-different-stage-from-where-it-was-created)
+* [How can I check if the cache was restored?](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#how-can-i-check-if-the-cache-was-restored)
+* [What is the Cache Intelligence cache storage limit?](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#what-is-the-cache-intelligence-cache-storage-limit)
+
+* [How can I share cache between different OS types (Linux/macOS)?](/docs/continuous-integration/ci-articles-faqs/continuous-integration-faqs#how-can-i-share-cache-between-different-os-types-linuxmacos)

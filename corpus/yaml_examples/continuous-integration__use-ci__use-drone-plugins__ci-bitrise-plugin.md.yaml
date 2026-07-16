@@ -1,0 +1,36 @@
+# source: docs/continuous-integration/use-ci/use-drone-plugins/ci-bitrise-plugin.md  (https://developer.harness.io/docs/continuous-integration/use-ci/use-drone-plugins/ci-bitrise-plugin)
+
+# --- example 1 ---
+              - step:
+                  type: Bitrise
+                  name: bitrise android build
+                  identifier: bitrise_android_build
+                  spec:
+                    uses: github.com/bitrise-steplib/bitrise-step-android-build.git
+                    with:
+                      variant: 'debug'
+                      build_type: 'apk'
+
+# --- example 2 ---
+              - step:
+                  type: Bitrise
+                  name: bitrise android build
+                  identifier: bitrise_android_build
+                  spec:
+                    uses: github.com/bitrise-steplib/bitrise-step-android-build.git
+                    with:
+                      variant: 'debug'
+                      build_type: 'apk'
+
+# --- example 3 ---
+      with:
+        variant: 'debug'
+        build_type: 'apk'
+
+# --- example 4 ---
+user_data: |
+  #cloud-config
+  runcmd:
+    - 'sed -i "1s|^|HOME=/home/ubuntu\n|" /etc/environment'
+    - 'curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -'
+    - 'sudo apt install -y python3 python-is-python3 nodejs golang'

@@ -1,0 +1,79 @@
+# source: docs/continuous-delivery/cd-onboarding/new-user/rampup-templates.md  (https://developer.harness.io/docs/continuous-delivery/cd-onboarding/new-user/rampup-templates)
+
+# --- example 1 ---
+template:
+  name: Example Step Template - Bad
+  identifier: Example_Step_Template_Bad
+  type: Step
+  spec:
+    type: ShellScript
+    spec:
+      shell: Bash
+      source:
+        type: Inline
+        spec:
+          script: echo "<+pipeline.variables.my_var>"
+
+# --- example 2 ---
+template:
+  name: Example Step Template - Good
+  type: Step
+  spec:
+    type: ShellScript
+    spec:
+      shell: Bash
+      source:
+        type: Inline
+        spec:
+          script: echo "${SOME_VAR}"
+      environmentVariables:
+        - name: SOME_VAR
+          type: String
+          value: <+input>
+
+# --- example 3 ---
+template:
+  name: Stage Template Example - Bad
+  identifier: Stage_Template_Example_Bad
+  type: Stage
+  spec:
+    type: CI
+    spec:
+      cloneCodebase: true
+      execution:
+        steps:
+          - step:
+              type: Run
+              name: echo
+              identifier: echo
+              spec:
+                shell: Bash
+                command: echo "${MY_VAR}"
+                envVariables:
+                  MY_VAR: <+input>
+
+# --- example 4 ---
+template:
+  name: Stage Template Example - Good
+  identifier: Stage_Template_Example_Good
+  type: Stage
+  spec:
+    type: CI
+    spec:
+      cloneCodebase: true
+      execution:
+        steps:
+          - step:
+              type: Run
+              name: echo
+              identifier: Run_1
+              spec:
+                shell: Bash
+                command: echo "${MY_VAR}"
+                envVariables:
+                  MY_VAR: <+stage.variables.my_var>
+    variables:
+      - name: my_var
+        type: String
+        description: ""
+        value: <+input>

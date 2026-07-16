@@ -1,0 +1,281 @@
+# source: docs/continuous-integration/use-ci/run-step-settings.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-step-settings)
+
+# --- example 1 ---
+    - step:
+        type: Run
+        name: Run pytest
+        identifier: Run_pytest
+        spec:
+          connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+          image: python:latest
+          shell: Sh
+          command: |-
+            echo "Welcome to Harness CI"
+            uname -a
+            pip install pytest
+            pip install pytest-cov
+            pip install -r requirements.txt
+
+            pytest -v --cov --junitxml="result.xml" test_api.py test_api_2.py test_api_3.py
+
+            echo "Done"
+          reports:
+            type: JUnit
+            spec:
+              paths:
+                - "**/*.xml"
+
+# --- example 2 ---
+    - step:
+        type: Run
+        identifier: dependencies
+        name: Dependencies
+        spec:
+          shell: Sh
+          command: |-
+            go get example.com/my-go-module
+
+# --- example 3 ---
+    - step:
+        type: Run
+        name: set_xcode_version
+        identifier: set_xcode_version
+        spec:
+          shell: Sh
+          command: |-
+            sudo xcode-select -switch /Applications/Xcode_15.1.0.app
+            xcodebuild -version
+
+# --- example 4 ---
+    - step:
+        type: Run
+        identifier: clone
+        name: clone
+        spec:
+          shell: Sh
+          command: |-
+            git clone https://GH_PERSONAL_ACCESS_TOKEN@github.com/ACCOUNT_NAME/REPO_NAME.git
+
+# --- example 5 ---
+    - step:
+        type: Run
+        name: Terraform Outputs
+        identifier: tf_outputs
+        spec:
+          connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+          image: kameshsampath/kube-dev-tools
+          shell: Sh
+          command: |-
+            cd /harness/vanilla-gke/infra
+            terraform init
+            GCP_PROJECT=$(terraform output -raw project-name)
+            GCP_ZONE=$(terraform output -raw zone)
+            GKE_CLUSTER_NAME=$(terraform output -raw kubernetes-cluster-name)
+          envVariables:
+            TF_TOKEN_app_terraform_io: <+secrets.getValue("terraform_cloud_api_token")>
+            TF_WORKSPACE: <+trigger.payload.workspace_name>
+            TF_CLOUD_ORGANIZATION: <+trigger.payload.organization_name>
+          outputVariables:
+            - name: GCP_PROJECT
+            - name: GCP_ZONE
+            - name: GKE_CLUSTER_NAME
+          imagePullPolicy: Always
+        description: Get the outputs of terraform provision
+
+# --- example 6 ---
+    - step:
+        type: Run
+        name: SSH setup and build
+        identifier: SSH_Build
+        spec:
+          shell: Sh
+          command: |-
+            mkdir -p ~/.ssh
+            echo '<+secrets.getValue("account.your-ssh-private-key")>' > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no"
+            git clone git@github.com:your-org/private-repo.git
+            ./build.sh
+
+# --- example 7 ---
+    - step:
+        identifier: build_and_test
+        type: Run
+        name: Build and Test
+        spec:
+        connectorRef: my-k8s-connector
+        image: harness/ci-addon:latest
+        shell: Bash
+        command: |-
+            # Step 1: Create markdown content for our reports
+            # A comprehensive build report
+            cat > build-results.md << 'EOF'
+            # 🚀 Build Pipeline Results
+            ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
+            > **Note:** View full build logs [here](https://example.com).
+            ## 🧪 Test Summary
+            - **Total Tests:** 247
+            - **Passed:** ✅ **245**
+            - **Failed:** ❌ **2**
+            - **Coverage:** **92.4%**
+            EOF
+
+            # Step 2: Publish the annotations using hcli
+
+            # Publish the main build report with a WARNING style and high priority
+            hcli annotate --context "build-validation" --style "warning" --summary-file "build-results.md" --priority 8
+
+            # Step 3: Append additional notes to an existing context
+            echo "Flaky tests have been quarantined." > extra-notes.md
+            hcli annotate --context "build-validation" --summary-file "extra-notes.md" --mode "append"
+
+# --- example 8 ---
+    - step:
+        type: Run
+        name: run pytest # Specify a name for the step.
+        identifier: run_pytest # Define a step ID, usually based on the name.
+        spec:
+          connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+          image: python:latest # Specify an image, if required.
+          shell: Sh
+          command: |- # Provide your commands
+            pytest test_main.py --junit-xml=output-test.xml
+
+# --- example 9 ---
+    - step:
+        ...
+        spec:
+          shell: Bash
+          command: |-
+            JAVA_VER=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
+            if [[ $JAVA_VER == 17 ]]; then
+              echo successfully installed $JAVA_VER
+            else
+              exit 1
+            fi
+
+# --- example 10 ---
+    - step:
+        ...
+        spec:
+          shell: Powershell
+          command: Wait-Event -SourceIdentifier "ProcessStarted"
+
+# --- example 11 ---
+    - step:
+        ...
+        spec:
+          shell: Pwsh
+          command: |-
+            $Events = Get-EventLog -LogName System -Newest 1000
+            $events | ForEach-Object -Begin {Get-Date} -Process {Out-File -FilePath Events.txt -Append -InputObject $_.Message} -End {Get-Date}
+
+# --- example 12 ---
+    - step:
+        ...
+        spec:
+          connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+          image: python:latest
+          shell: Sh
+          command: |-
+            echo "Welcome to Harness CI"
+            uname -a
+            pip install pytest
+            pip install pytest-cov
+            pip install -r requirements.txt
+
+            pytest -v --cov --junitxml="result.xml" test_api.py test_api_2.py test_api_3.py
+
+# --- example 13 ---
+    steps:
+      - step:
+          ...
+          spec:
+            shell: Python
+            command: |-
+              print('Hello, world!')
+
+# --- example 14 ---
+    - step:
+        type: Run
+        name: Run_2
+        identifier: Run_2
+        spec:
+          shell: Python
+          command: |-
+            import os
+            os.environ["OS_VAR"] = value
+          outputVariables:
+            - name: OS_VAR
+
+# --- example 15 ---
+    - step:
+        type: Run
+        name: Pytest
+        identifier: Pytest
+        spec:
+          shell: Sh
+          command: |-
+            pytest test_main.py --junit-xml=output-test.xml
+          reports:
+            type: JUnit
+            spec:
+              paths:
+                - output-test.xml
+
+# --- example 16 ---
+pipeline:
+  projectIdentifier: myproject
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        identifier: testSimple
+        type: CI
+        name: testSimple
+        description: ""
+        spec:
+          execution:
+            steps:
+              - stepGroup:
+                  identifier: stepGroup1
+                  name: stepGroup1
+                  steps:
+                    - step:
+                        identifier: Run_1
+                        type: Run
+                        name: Run_1
+                        spec:
+                          shell: Bash
+                          command: |-
+                            export var1="val1"
+                            export var2="val2"
+                          outputVariables:
+                            - name: var1
+                            - name: var2
+                          outputAlias:
+                            key: info
+                            scope: StepGroup
+                        timeout: 10m
+                    - step:
+                        type: Run
+                        name: outputs
+                        identifier: outputs
+                        spec:
+                          shell: Bash
+                          command: |-
+                            echo "reference using aliases:"
+
+                            echo "var1:" <+exportedVariables.getValue("stepGroup.info.var1")>
+                            echo "var2:" <+exportedVariables.getValue("stepGroup.info.var2")>
+                            echo "var map:" <+exportedVariables.getValue("stepGroup.info")>
+
+                            echo "reference using standard output exp:"
+
+                            echo "var1:" <+pipeline.stages.testSimple.spec.execution.steps.stepGroup1.steps.Run_1.output.outputVariables.var1>
+                            echo "var2:" <+pipeline.stages.testSimple.spec.execution.steps.stepGroup1.steps.Run_1.output.outputVariables.var2>
+                          outputVariables: []
+                        timeout: 10m
+        tags: {}
+  identifier: StepGroupExport
+  name: StepGroupExport

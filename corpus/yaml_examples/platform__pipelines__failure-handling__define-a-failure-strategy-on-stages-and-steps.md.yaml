@@ -1,0 +1,101 @@
+# source: docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps.md  (https://developer.harness.io/docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps)
+
+# --- example 1 ---
+- stage:
+    name: k8s
+    identifier: k8s
+    description: ""
+    type: Deployment
+    spec:
+      ...
+    tags: {}
+    failureStrategies:
+      - onFailure:
+          errors:
+            - AllErrors
+          action:
+            type: StageRollback
+
+# --- example 2 ---
+stages:
+  - stage:
+      name: k8s
+      identifier: k8s
+      description: ""
+      type: Deployment
+      spec:
+        ...
+      tags: {}
+      failureStrategies:
+        - onFailure:
+            errors:
+              - AllErrors
+            action:
+              type: Retry
+              spec:
+                onRetryFailure:
+                  action:
+                    type: StageRollback
+                retryCount: 2
+                retryIntervals:
+                  - 1h
+
+# --- example 3 ---
+- step:
+    name: Rollout Deployment
+    identifier: rolloutDeployment
+    type: K8sRollingDeploy
+    timeout: 10m
+    spec:
+      skipDryRun: false
+      pruningEnabled: false
+    failureStrategies:
+      - onFailure:
+          errors:
+            - AllErrors
+          action:
+            type: ManualIntervention
+            spec:
+              onTimeout:
+                action:
+                  type: Abort
+              timeout: 1h
+
+# --- example 4 ---
+- step:
+    name: Rollout Deployment
+    identifier: rolloutDeployment
+    type: K8sRollingDeploy
+    timeout: 10m
+    spec:
+      skipDryRun: false
+      pruningEnabled: false
+    failureStrategies:
+      - onFailure:
+          errors:
+            - AllErrors
+          action:
+            type: Ignore
+
+# --- example 5 ---
+- step:
+    name: Rollout Deployment
+    identifier: rolloutDeployment
+    type: K8sRollingDeploy
+    timeout: 10m
+    spec:
+      skipDryRun: false
+      pruningEnabled: false
+    failureStrategies:
+      - onFailure:
+          errors:
+            - AllErrors
+          action:
+            type: Retry
+            spec:
+              retryCount: 2
+              onRetryFailure:
+                action:
+                  type: StageRollback
+              retryIntervals:
+                - 1h

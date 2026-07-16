@@ -1,0 +1,10 @@
+# source: docs/platform/pipelines/looping-strategies/run-stages-in-parallel.md  (https://developer.harness.io/docs/platform/pipelines/looping-strategies/run-stages-in-parallel)
+
+# --- example 1 ---
+stages:
+    - parallel: ## Stages indented under this flag will run in parallel.
+        - stage:
+          ...
+        - stage:
+          ...
+    - stage: ## This stage is not in the parallel group.

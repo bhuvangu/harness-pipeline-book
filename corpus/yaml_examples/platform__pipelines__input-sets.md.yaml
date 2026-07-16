@@ -1,0 +1,120 @@
+# source: docs/platform/pipelines/input-sets.md  (https://developer.harness.io/docs/platform/pipelines/input-sets)
+
+# --- example 1 ---
+              - step:
+                  identifier: Run_1
+                  type: Run
+                  name: Run_1
+                  spec:
+                    shell: <+input>
+                    command: <+input>
+
+# --- example 2 ---
+inputSet:
+  name: Artifact Input Set
+  tags: {}
+  identifier: Artifact_Input_Set
+  orgIdentifier: default
+  projectIdentifier: CD_Docs
+  pipeline:
+    identifier: kubernetes_demo
+    stages:
+      - stage:
+          identifier: k8s_deployment
+          type: Deployment
+          spec:
+            service:
+              serviceRef: Kubernetes
+              serviceInputs:
+                serviceDefinition:
+                  type: Kubernetes
+                  spec:
+                    artifacts:
+                      primary:
+                        primaryArtifactRef: nginx
+                        sources: ""
+                    variables:
+                      - name: replicas
+                        type: String
+                        value: "3"
+
+# --- example 3 ---
+trigger:
+  name: PR Trigger
+  identifier: pr_trigger
+  enabled: true
+  description: ""
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: myProject
+  pipelineIdentifier: myPipeline
+  source:
+    type: Webhook
+    spec:
+      type: Github
+      spec:
+        type: PullRequest
+        spec:
+          connectorRef: myGithubConnector
+          autoAbortPreviousExecutions: false
+          repoName: myRepo
+          actions:
+            - Open
+            - Reopen
+            - Synchronize
+  pipelineBranchName: main
+  inputSetBranchName: <+trigger.sourceBranch>
+  inputSetRefs:
+    - myInputSet
+
+# --- example 4 ---
+trigger:
+  name: Tag-based Release Trigger
+  identifier: tag_release_trigger
+  enabled: true
+  description: "Execute pipeline from Git tag for releases"
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: myProject
+  pipelineIdentifier: myPipeline
+  source:
+    type: Webhook
+    spec:
+      type: Github
+      spec:
+        type: Push
+        spec:
+          connectorRef: myGithubConnector
+          autoAbortPreviousExecutions: false
+          repoName: myRepo
+  pipelineBranchName: <+"$tag:"+<+trigger.tag>>
+  inputSetBranchName: <+"$tag:"+<+trigger.tag>>
+  inputSetRefs:
+    - production-input-set
+
+# --- example 5 ---
+trigger:
+  name: Stable Pipeline Trigger
+  identifier: stable_pipeline_trigger
+  enabled: true
+  description: "Use stable pipeline version with latest input set"
+  tags: {}
+  orgIdentifier: default
+  projectIdentifier: myProject
+  pipelineIdentifier: myPipeline
+  source:
+    type: Webhook
+    spec:
+      type: Github
+      spec:
+        type: PullRequest
+        spec:
+          connectorRef: myGithubConnector
+          autoAbortPreviousExecutions: false
+          repoName: myRepo
+          actions:
+            - Open
+  pipelineBranchName: $tag:v1.0.0
+  inputSetBranchName: main
+  inputSetRefs:
+    - myInputSet

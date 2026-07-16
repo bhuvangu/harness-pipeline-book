@@ -1,0 +1,34 @@
+# source: docs/continuous-delivery/gitops/application/update-gitops-app-in-pipelines.md  (https://developer.harness.io/docs/continuous-delivery/gitops/application/update-gitops-app-in-pipelines)
+
+# --- example 1 ---
+- step:
+    type: UpdateGitOpsApp
+    name: Update GitOps App
+    identifier: Update_GitOps_App
+    spec:
+      applicationName: <+input>
+      agentId: <+input>
+      targetRevision: <+input>
+      helm:
+        valueFiles:
+          - values.yaml
+        parameters:
+          - name: image.tag
+            value: <+input>
+        fileParameters: []
+    timeout: 10m
+
+# --- example 2 ---
+- step:
+    type: UpdateGitOpsApp
+    name: Update Rollout Image
+    identifier: Update_Rollout_Image
+    spec:
+      applicationName: app-rollout-example
+      agentId: qaargoagent
+      targetRevision: main
+      kustomize:
+        images:
+          - argoproj/rollouts-demo:blue
+        replicas: []
+    timeout: 10m

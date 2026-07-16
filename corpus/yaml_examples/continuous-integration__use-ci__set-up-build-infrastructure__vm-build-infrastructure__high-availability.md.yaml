@@ -1,0 +1,86 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/vm-build-infrastructure/high-availability.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/vm-build-infrastructure/high-availability)
+
+# --- example 1 ---
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: harness-delegate-ng
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drone-runner
+  namespace: harness-delegate-ng
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: drone-runner
+  template:
+    metadata:
+      labels:
+        app: drone-runner
+    spec:
+      containers:
+        - name: drone-runner
+          image: drone/drone-runner-aws:v1.0.0-rc.187
+          args: ["delegate", "--pool", "/runner/pool.yml"]
+          env:
+            - name: DRONE_RUNNER_HA
+              value: "true"
+            - name: DRONE_DATABASE_DRIVER
+              value: postgres
+            - name: DRONE_DATABASE_DATASOURCE
+              value: host=runnerha-postgres-service.harness-delegate-ng.svc.cluster.local port=5431 user=admin password=password dbname=dlite sslmode=disable
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: config-volume
+              mountPath: /runner
+              readOnly: true
+      volumes:
+        - name: config-volume
+          projected:
+            sources:
+              - configMap:
+                  name: drone-runner-config
+              - secret:
+                  name: drone-runner-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: drone-runner-lb
+  namespace: harness-delegate-ng
+spec:
+  type: LoadBalancer
+  selector:
+    app: drone-runner
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
+
+# --- example 2 ---
+version: "1"
+instances:
+  - name: linux-amd64
+    type: google
+    pool: 2
+    limit: 10
+    platform:
+      os: linux
+      arch: amd64 
+    spec:
+      hibernate: false
+      privateIP: true
+      account:
+        project_id: projectname
+        json_path: runner/gcp-secret.json
+      image: projects/projectname/global/images/hosted-vm-64
+      machine_type: e2-medium
+      zones:
+        - us-central1-a
+      disk:
+        size: 100

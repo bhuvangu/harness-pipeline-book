@@ -1,0 +1,4 @@
+.env
+*.key
+corpus/live_samples/
+__pycache__/

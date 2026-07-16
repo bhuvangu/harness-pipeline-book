@@ -1,0 +1,11 @@
+# source: docs/continuous-integration/use-ci/run-tests/ti-overview.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/ti-overview)
+
+# --- example 1 ---
+config:
+  ignore:
+    - "README.md"
+    - ".ticonfig.yaml"
+    - "**/*.go"
+    - "**/Dockerfile*"
+    - "licenses/**/*"
+    - "img/**/*"

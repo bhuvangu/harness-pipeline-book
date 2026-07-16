@@ -1,0 +1,95 @@
+# source: docs/continuous-integration/use-ci/caching-ci-data/save-cache-azure.md  (https://developer.harness.io/docs/continuous-integration/use-ci/caching-ci-data/save-cache-azure)
+
+# --- example 1 ---
+              - step:
+                  type: SaveCacheAzure
+                  name: Save Cache to Azure
+                  identifier: Save_Cache_to_Azure
+                  spec:
+                    connectorRef: account.azure_connector
+                    containerName: ci-cache
+                    storageAccount: yourstorageaccount
+                    key: cache-{{ checksum "pom.xml" }}
+                    sourcePaths:
+                      - /shared
+                    archiveFormat: Tar
+...
+
+# --- example 2 ---
+              - step:
+                  type: RestoreCacheAzure
+                  name: Restore Cache from Azure
+                  identifier: Restore_Cache_from_Azure
+                  spec:
+                    connectorRef: account.azure_connector
+                    containerName: ci-cache
+                    storageAccount: yourstorageaccount
+                    key: cache-{{ checksum "pom.xml" }}
+                    archiveFormat: Tar
+...
+
+# --- example 3 ---
+  stages:
+    - stage:
+        spec:
+          sharedPaths:
+            - /example/path # directory outside workspace to share between steps
+
+# --- example 4 ---
+              - step:
+                  type: Plugin
+                  name: restore cache from Azure
+                  identifier: restore_cache_from_Azure
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/cache
+                    settings:
+                      restore: true
+                      cache_key: <+pipeline.variables.AZURE_CONTAINER>/<+pipeline.identifier>/{{ .Commit.Branch }}-{{ checksum "<+pipeline.variables.BUILD_PATH>/build.gradle" }}
+                      archive_format: gzip
+                      mount:
+                        - <+pipeline.variables.GRADLE_HOME>/caches/
+                      region: <+pipeline.variables.REGION>
+                      account_key: <+pipeline.variables.AZURE_KEY>
+                      account_name: <+pipeline.variables.AZURE_BLOB_ACCOUNT>
+                      backend: azure
+
+# --- example 5 ---
+              - step:
+                  type: Plugin
+                  name: save cache to Azure
+                  identifier: save_cache_to_Azure
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/cache
+                    settings:
+                      rebuild: true
+                      cache_key: <+pipeline.variables.AZURE_CONTAINER>/<+pipeline.identifier>/{{ .Commit.Branch }}-{{ checksum "<+pipeline.variables.BUILD_PATH>/build.gradle" }}
+                      archive_format: gzip
+                      mount:
+                        - <+pipeline.variables.GRADLE_HOME>/caches/
+                      region: <+pipeline.variables.REGION>
+                      account_key: <+pipeline.variables.AZURE_KEY>
+                      account_name: <+pipeline.variables.AZURE_BLOB_ACCOUNT>
+                      backend: azure
+
+# --- example 6 ---
+  variables:
+    - name: AZURE_CONTAINER
+      type: String
+      value: somecontainer
+    - name: AZURE_BLOB_ACCOUNT
+      type: String
+      value: someaccount
+    - name: REGION
+      type: String
+      value: westus2
+    - name: AZURE_KEY
+      type: String
+      value: <+secrets.getValue("azureblobkey")>
+    - name: GRADLE_HOME
+      type: String
+      value: /harness/gradle
+    - name: BUILD_PATH
+      type: String
+      value: gradle-examples/some-gradle-examples

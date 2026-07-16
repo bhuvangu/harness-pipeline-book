@@ -1,0 +1,81 @@
+# source: docs/continuous-integration/use-ci/codebase-configuration/create-and-configure-a-codebase.md  (https://developer.harness.io/docs/continuous-integration/use-ci/codebase-configuration/create-and-configure-a-codebase)
+
+# --- example 1 ---
+pipeline:
+  name: tutorial example
+  identifier: tutorial_example
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        build: <+input>
+
+# --- example 2 ---
+pipeline:
+  name: tutorial example
+  identifier: tutorial_example
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        repoName: YOUR_HARNESS_CODE_REPO_NAME
+        build: <+input>
+
+# --- example 3 ---
+- stage:
+    name: build
+    identifier: build
+    description: ""
+    type: CI
+    spec:
+      cloneCodebase: false
+
+# --- example 4 ---
+pipeline:
+  name: tutorial example
+  identifier: tutorial_example
+  projectIdentifier: tutorial_test
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        build: <+input>
+        depth: 0
+        sslVerify: true
+        prCloneStrategy: MergeCommit
+
+# --- example 5 ---
+properties:
+  ci:
+    codebase:
+      connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+      build: <+input>
+      depth: 0
+      preFetchCommand: git fetch --filter=blob:none origin <+codebase.branch>
+
+# --- example 6 ---
+properties:
+  ci:
+    codebase:
+      connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+      build: <+input>
+      preFetchCommand: |-
+        <+<+pipeline.variables.cleanVar>=="TRUE"?"git clean -fdx":"git --version">
+        <+<+pipeline.variables.resetVar>=="TRUE"?"git fetch origin <+pipeline.variables.branch> && git reset --hard origin/<+pipeline.variables.branch>":"git --version">
+variables:
+  - name: cleanVar
+    type: String
+    value: <+input>.default(TRUE)
+  - name: resetVar
+    type: String
+    value: <+input>.default(TRUE)
+  - name: branch
+    type: String
+    value: <+input>.default(<+codebase.branch>)

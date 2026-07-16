@@ -1,0 +1,17 @@
+# source: docs/platform/delegates/manage-delegates/customize-delegate-logging.md  (https://developer.harness.io/docs/platform/delegates/manage-delegates/customize-delegate-logging)
+
+# --- example 1 ---
+        volumeMounts:
+        - name: config-volume
+          mountPath: /opt/harness-delegate/logback/
+      volumes:
+      - name: config-volume
+        configMap:
+          name: custom-logback
+          items:
+          - key: custom-logback.xml
+            path: custom-logback.xml
+
+# --- example 2 ---
+        - name: JAVA_OPTS
+          value: "-Dlogback.configurationFile=/opt/harness-delegate/logback/custom-logback.xml"

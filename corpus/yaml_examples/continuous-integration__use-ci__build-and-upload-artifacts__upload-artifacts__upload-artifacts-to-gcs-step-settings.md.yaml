@@ -1,0 +1,221 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-artifacts-to-gcs-step-settings.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/upload-artifacts/upload-artifacts-to-gcs-step-settings)
+
+# --- example 1 ---
+- step:
+    type: GCSUpload
+    name: upload report
+    identifier: upload_report
+    spec:
+      connectorRef: YOUR_GCP_CONNECTOR_ID
+      bucket: YOUR_GCS_BUCKET
+      sourcePath: path/to/source
+      target: path/to/upload/location
+
+# --- example 2 ---
+sourcePath: dist/*.zip       # Upload all ZIP files in the dist directory
+ignore: "*.tmp"              # Exclude temporary files
+
+# --- example 3 ---
+- step:
+   type: Plugin
+   name: publish artifact metadata
+   identifier: publish_artifact_metadata
+   spec:
+     connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+     image: plugins/artifact-metadata-publisher
+     settings:
+       file_urls: https://storage.googleapis.com/GCS_BUCKET_NAME/TARGET_PATH/ARTIFACT_NAME_WITH_EXTENSION
+       artifact_file: artifact.txt
+
+# --- example 4 ---
+pipeline:
+  name: default
+  identifier: default
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: test and upload artifact
+        identifier: test_and_upload_artifact
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step: ## Generate test reports.
+                  type: Test
+                  name: runTestsWithIntelligence
+                  identifier: runTestsWithIntelligence
+                  spec:
+                    connectorRef: account.GCR
+                    image: maven:3-openjdk-8
+                    command: mvn test -Dmaven.test.failure.ignore=true -DfailIfNoTests=false
+                    shell: Sh
+                    intelligenceMode: true
+                    reports:
+                      - "target/surefire-reports/*.xml"
+              - step: ## Upload reports to GCS.
+                  type: GCSUpload
+                  name: upload report
+                  identifier: upload_report
+                  spec:
+                    connectorRef: YOUR_GCP_CONNECTOR_ID
+                    bucket: YOUR_GCS_BUCKET
+                    sourcePath: dist/*.zip  # Supports glob patterns
+                    target: <+pipeline.sequenceId>
+              - step: ## Show artifact URL on the Artifacts tab.
+                  type: Plugin
+                  name: publish artifact metadata
+                  identifier: publish_artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://storage.googleapis.com/YOUR_GCS_BUCKET/<+pipeline.sequenceId>/surefure-reports/
+                      artifact_file: artifact.txt
+
+# --- example 5 ---
+pipeline:
+  name: allure-report-upload
+  identifier: allurereportupload
+  projectIdentifier: YOUR_HARNESS_PROJECT_ID
+  orgIdentifier: default
+  tags: {}
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_CODE_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: YOUR_KUBERNETES_CLUSTER_CONNECTOR_ID
+              namespace: YOUR_KUBERNETES_NAMESPACE
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              os: Linux
+          execution:
+            steps:
+              - step: ## Generate test reports.
+                  type: Test
+                  name: runTestsWithIntelligence
+                  identifier: runTestsWithIntelligence
+                  spec:
+                    connectorRef: account.GCR
+                    image: maven:3-openjdk-8
+                    command: mvn test -Dmaven.test.failure.ignore=true -DfailIfNoTests=false
+                    shell: Sh
+                    intelligenceMode: true
+                    reports:
+                      - "target/surefire-reports/*.xml"
+              - step: ## Upload reports to GCS.
+                  type: GCSUpload
+                  name: upload report
+                  identifier: upload_report
+                  spec:
+                    connectorRef: YOUR_GCP_CONNECTOR_ID
+                    bucket: YOUR_GCS_BUCKET
+                    sourcePath: dist/*.zip  # Supports glob patterns
+                    target: <+pipeline.sequenceId>
+              - step: ## Show artifact URL on the Artifacts tab.
+                  type: Plugin
+                  name: publish artifact metadata
+                  identifier: publish_artifact_metadata
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: plugins/artifact-metadata-publisher
+                    settings:
+                      file_urls: https://storage.googleapis.com/YOUR_GCS_BUCKET/<+pipeline.sequenceId>/surefire-reports/
+                      artifact_file: artifact.txt
+
+# --- example 6 ---
+- stage:
+    spec:
+      execution:
+        steps:
+          - step:
+              type: GCSUpload
+              name: GCSUpload_1
+              identifier: GCSUpload_1
+              spec:
+                connectorRef: gcp-oidc-connector
+                bucket: bucketName
+                sourcePath: YOUR_BUCKET_NAME/DIRECTORY
+                target: path/to/download/destination
+      variables:
+        - name: PLUGIN_DOWNLOAD
+          type: String
+          description: ""
+          required: false
+          value: "true"
+
+# --- example 7 ---
+source: dist/*.zip       # Upload all ZIP files in dist directory
+target: my-bucket/builds
+ignore: "*.tmp"          # Exclude temporary files
+
+# --- example 8 ---
+- step:
+    type: Plugin
+    name: download
+    identifier: download
+    spec:
+      connectorRef: YOUR_DOCKER_CONNECTOR
+      image: plugins/gcs
+      settings:
+        token: <+secrets.getValue("gcpserviceaccounttoken")>
+        source: YOUR_BUCKET_NAME/DIRECTORY
+        target: path/to/download/destination
+        download: "true"
+
+# --- example 9 ---
+- step:
+    type: Plugin
+    name: generate-token
+    identifier: generate-token
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+      image: plugins/gcp-oidc
+      settings:
+        project_id: 12345678
+        pool_id: 12345678
+        service_account_email_id: some-email@email.com
+        provider_id: service-account1
+        duration: 7200
+
+# --- example 10 ---
+- step:
+    type: Plugin
+    name: download
+    identifier: download
+    spec:
+      connectorRef: YOUR_DOCKER_CONNECTOR
+      image: plugins/gcs
+      settings:
+        token: <+steps.generate-token.output.outputVariables.GCLOUD_ACCESS_TOKEN>
+        source: YOUR_BUCKET_NAME/DIRECTORY
+        target: path/to/download/destination
+        download: "true"

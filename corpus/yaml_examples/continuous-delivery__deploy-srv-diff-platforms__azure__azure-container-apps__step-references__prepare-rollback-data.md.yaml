@@ -1,0 +1,17 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/prepare-rollback-data.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-container-apps/step-references/prepare-rollback-data)
+
+# --- example 1 ---
+- step:
+    type: AzureContainerAppsPrepareRollbackData
+    name: Azure_Container_Apps_Prepare_Rollback_Data
+    identifier: Azure_Container_Apps_Prepare_Rollback_Data
+    spec:
+      connectorRef: account.harnessImage
+      image: harness/azure-container-apps-plugin:0.0.1-linux-amd64
+      imagePullPolicy: Always
+      skipTrafficShift: false
+      resources:
+        limits:
+          memory: 512Mi
+          cpu: 0.5
+    timeout: 10m

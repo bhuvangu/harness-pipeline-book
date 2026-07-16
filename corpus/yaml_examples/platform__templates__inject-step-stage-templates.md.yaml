@@ -1,0 +1,185 @@
+# source: docs/platform/templates/inject-step-stage-templates.md  (https://developer.harness.io/docs/platform/templates/inject-step-stage-templates)
+
+# --- example 1 ---
+template:
+  name: pipeline_1
+  identifier: pipeline_1
+  versionLabel: v2
+  type: Pipeline
+  projectIdentifier: Krishika_test_autocreation
+  orgIdentifier: default
+  tags: {}
+  spec:
+    stages:
+      - stage:
+          name: custom_2
+          identifier: custom_2
+          description: ""
+          type: Custom
+          spec:
+            execution:
+              steps:
+                - step:
+                    type: ShellScript
+                    name: ShellScript_1
+                    identifier: ShellScript_1
+                    spec:
+                      shell: Bash
+                      executionTarget: {}
+                      source:
+                        type: Inline
+                        spec:
+                          script: echo hello_2
+                      environmentVariables: []
+                      outputVariables: []
+                    timeout: 10m
+          tags: {}
+      - insert:
+          name: insert_2
+          identifier: insert_2
+          stages: <+input>
+      - stage:
+          name: stage_3
+          identifier: stage_3
+          tags: {}
+          template:
+            templateRef: stage_1
+            versionLabel: v2
+            templateInputs:
+              type: Custom
+              spec:
+                execution:
+                  steps:
+                    - parallel:
+                        - insert:
+                            identifier: insert_1
+                            steps: <+input>
+
+# --- example 2 ---
+template:
+  name: stage_1
+  identifier: stage_1
+  versionLabel: v2
+  type: Stage
+  projectIdentifier: Krishika_test_autocreation
+  orgIdentifier: default
+  tags: {}
+  spec:
+    type: Custom
+    spec:
+      execution:
+        steps:
+          - parallel:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo hello
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+              - insert:
+                  name: insert_1
+                  identifier: insert_1
+                  steps: <+input>
+
+# --- example 3 ---
+pipeline:
+  name: pipeline_insert_sample
+  identifier: pipeline_insert_sample
+  tags: {}
+  template:
+    templateRef: pipeline_insert_template
+    versionLabel: v2
+    templateInputs:
+      stages:
+        - insert:
+            identifier: insertStages1
+            stages: <+input>
+        - insert:
+            identifier: insertStages2
+            stages: <+input>
+  projectIdentifier: Insert_block
+  orgIdentifier: default
+
+# --- example 4 ---
+pipeline:
+  name: pipeline_sample
+  identifier: pipeline_sample
+  projectIdentifier: Krishika_test_autocreation
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: stage_1
+        identifier: stage_1
+        tags: {}
+        template:
+          templateRef: stage_insert_template
+          versionLabel: v2
+          templateInputs:
+            type: Custom
+            spec:
+              execution:
+                steps:
+                  - insert:
+                      identifier: insertSteps1
+                      steps:
+                        - parallel:
+                            - step:
+                                identifier: shell1
+                                type: ShellScript
+                                name: shell1
+                                spec:
+                                  shell: Bash
+                                  executionTarget: {}
+                                  source:
+                                    type: Inline
+                                    spec:
+                                      script: echo hello_3
+                                  environmentVariables: []
+                                  outputVariables: []
+                                timeout: 10m
+                                failureStrategies:
+                                  - onFailure:
+                                      errors:
+                                        - AllErrors
+                                      action:
+                                        type: Ignore
+                  - insert:
+                      identifier: insertSteps2
+                      steps: <+input>
+
+# --- example 5 ---
+pipeline:
+  name: pipeline_insert_sample
+  identifier: pipeline_insert_sample
+  projectIdentifier: Krishika_test_autocreation
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: stage_1
+        identifier: stage_1
+        tags: {}
+        template:
+          templateRef: stage_insert_template
+          versionLabel: v2
+          templateInputs:
+            type: Custom
+            spec:
+              execution:
+                steps:
+                  - insert:
+                      identifier: insertSteps1
+                      steps: <+input>
+                  - insert:
+                      identifier: insertSteps2
+                      steps: <+input>

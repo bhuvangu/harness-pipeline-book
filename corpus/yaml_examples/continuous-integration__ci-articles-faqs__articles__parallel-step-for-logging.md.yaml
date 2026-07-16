@@ -1,0 +1,57 @@
+# source: docs/continuous-integration/ci-articles-faqs/articles/parallel-step-for-logging.md  (https://developer.harness.io/docs/continuous-integration/ci-articles-faqs/articles/parallel-step-for-logging)
+
+# --- example 1 ---
+              - parallel:
+                  - step:
+                      type: Run
+                      name: failing step
+                      ...
+                  - step:
+                      type: Run
+                      name: Debug monitor 1
+                      identifier: debug_monitor_1
+                      spec:
+                        connectorRef: YOUR_DOCKER_CONNECTOR ## Specify your Docker connector's ID.
+                        image: alpine ## Specify an image relevant to your build.
+                        shell: Sh
+                        command: top -d 10
+                      timeout: 10m ## Allow enough time to cover the failing step.
+                  - step:
+                      type: Run
+                      name: Debug monitor 2
+                      identifier: debug_monitor_2
+                      spec:
+                        connectorRef: YOUR_DOCKER_CONNECTOR ## Specify your Docker connector's ID.
+                        image: alpine ## Specify an image relevant to your build.
+                        shell: Sh
+                        command: |-
+                          i=0
+                          while [ $i -lt 10 ]
+                          do
+                              df -h
+                              du -sh *
+                              sleep 10
+                              i=`expr $i + 1`
+                          done
+                      timeout: 10m ## Allow enough time to cover the failing step.
+                  - step:
+                      type: Run
+                      name: Backgroung Monitor ## This step lists what background tasks are running which impacts step completion.
+                      identifier: debug_monitor_3
+                      spec:
+                        connectorRef: YOUR_DOCKER_CONNECTOR
+                        image: alpine
+                        shell: Sh
+                        command: |- 
+                          i=0
+                          while [ $i -lt 10 ]
+                          do
+                              ps -ef ##
+                              sleep 10
+                              i=`expr $i + 1`
+                          done
+                      timeout: 10m
+              - step: ## Other steps are outside the parallel group.
+                  type: Run
+                  name: Run 3
+                  ...

@@ -1,0 +1,27 @@
+# source: docs/continuous-delivery/gitops/gitops-entities/agents/gitops-agent-metrics.md  (https://developer.harness.io/docs/continuous-delivery/gitops/gitops-entities/agents/gitops-agent-metrics)
+
+# --- example 1 ---
+agent:
+  metrics:
+    serviceMonitor:
+      enabled: true
+
+# --- example 2 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitops-agent-metrics
+  namespace: <your-agent-namespace>
+  labels:
+    app.kubernetes.io/name: harness-gitops-agent-metrics
+    app.kubernetes.io/component: gitops-agent
+    app.kubernetes.io/part-of: harness-gitops
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-metrics
+      protocol: TCP
+      port: 2112
+      targetPort: metrics
+  selector:
+    app.kubernetes.io/name: harness-gitops-agent

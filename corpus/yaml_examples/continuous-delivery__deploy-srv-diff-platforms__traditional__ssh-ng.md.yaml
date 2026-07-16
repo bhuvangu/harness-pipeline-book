@@ -1,0 +1,80 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/traditional/ssh-ng.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/traditional/ssh-ng)
+
+# --- example 1 ---
+infrastructureDefinition:
+  name: pdc
+  identifier: pdc
+  orgIdentifier: default
+  projectIdentifier: project_id
+  environmentRef: env_id
+  deploymentType: Ssh
+  type: Pdc
+  spec:
+    connectorRef: abc
+    credentialsRef: credentials_ref
+    hostFilter:
+      type: HostAttributes
+      spec:
+        value:
+          region: us-east-1
+          name: node-1
+        matchCriteria: ALL
+  allowSimultaneousDeployments: false
+
+# --- example 2 ---
+infrastructureDefinition:
+  name: pdc
+  identifier: pdc
+  orgIdentifier: default
+  projectIdentifier: project_id
+  environmentRef: env_ref
+  deploymentType: Ssh
+  type: Pdc
+  spec:
+    connectorRef: abc
+    credentialsRef: credentials_ref
+    hostFilter:
+      type: HostAttributes
+      spec:
+        value:
+          region: us-east-1
+          name: node-1
+        matchCriteria: ANY
+  allowSimultaneousDeployments: false
+
+# --- example 3 ---
+infrastructureDefinition:
+  name: aws-ssh-infra
+  identifier: awssshinfra
+  orgIdentifier: default
+  projectIdentifier: alexctest
+  environmentRef: qasetup
+  deploymentType: Ssh
+  type: SshWinRmAws
+  spec:
+    credentialsRef: qasetupcredentials
+    connectorRef: qasetupconnector
+    region: us-east-1
+    awsInstanceFilter:
+      vpcs:
+        - vpc-c20f38b9
+      tags:
+        type: ssh
+    hostConnectionType: PublicIP
+    instanceType: Aws
+    targetedHosts: <+input> ## This will be provided at runtime. 
+  allowSimultaneousDeployments: false
+
+# --- example 4 ---
+repeat:  
+  items: <+stage.output.hosts>  
+  maxConcurrency: 1  
+  partitionSize: 50  
+  unit: Percentage
+
+# --- example 5 ---
+repeat:  
+  items: <+stage.output.hosts>  
+  start: 0  
+  end: 50  
+  unit: Percentage

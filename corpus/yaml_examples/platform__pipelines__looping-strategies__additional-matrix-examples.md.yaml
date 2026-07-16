@@ -1,0 +1,388 @@
+# source: docs/platform/pipelines/looping-strategies/additional-matrix-examples.md  (https://developer.harness.io/docs/platform/pipelines/looping-strategies/additional-matrix-examples)
+
+# --- example 1 ---
+stage:
+ matrix:
+   listOfString: ["a", "b", "c"]
+
+# --- example 2 ---
+stage:
+ matrix:
+   listA: ["a", "b", "c"]
+   listB: ["some", "random", "list"]
+
+# --- example 3 ---
+matrix:
+  TAG: [ "value1", "value2", "value3" ] ## Supply a user-specified tag and a comma-separated list of values.
+  maxConcurrency: 3 ## Optional but recommended. Specify the maximum number of instances that can run concurrently.
+
+# --- example 4 ---
+matrix:
+  jdk: [ "18", "17", "16", "15", "14", "13", "12", "11", "10", "9" ]
+  maxConcurrency: 2
+
+# --- example 5 ---
+repeat:
+  items: [ "18", "17", "16", "15", "14", "13", "12", "11", "10", "9" ] ## 'items' is required. Provide a comma-separated list of values.
+  maxConcurrency: 2 ## Optional but recommended. Specify the maximum number of instances that can run concurrently.
+
+# --- example 6 ---
+matrix:
+  browser: [chrome, safari, firefox]
+  os: [macos, windows, linux]
+  maxConcurrency: 3
+
+# --- example 7 ---
+matrix:
+  service: [svc1, svc2, svc3] ## First dimension.
+  environment: [env1, env2] ## Second dimension.
+  exclude: ## Specify combinations to ignore or skip.
+    - service: svc1
+      environment: env1
+  maxConcurrency: 2 ## Optional but recommended. Specify the maximum number of instances that can run concurrently.
+
+# --- example 8 ---
+pipeline:
+  name: MatrixAxisAsRuntimeInput
+  identifier: MatrixAxisAsRuntimeInput
+  tags: {}
+  stages:
+    - stage:
+        name: exampleStage
+        identifier: exampleStage
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: Shell Script_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "Hello world!"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+                  failureStrategies: []
+                  strategy:
+                    matrix:
+                      goVersion: <+input>
+
+# --- example 9 ---
+pipeline:
+  identifier: MatrixExamples
+  stages:
+    - stage:
+        identifier: exampleStage
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  strategy:
+                    matrix:
+                      goVersion:
+                        - 1.1.0
+                        - 1.1.1
+
+# --- example 10 ---
+ strategy:
+    matrix:
+      image: <+input>
+      version: <+input>
+      tags:
+        - "harness"
+        - "core"
+      maxConcurrency: 3
+
+# --- example 11 ---
+pipeline:
+  name: MatrixAxisAsRuntimeInput
+  identifier: MatrixAxisAsRuntimeInput
+  tags: {}
+  stages:
+    - stage:
+        name: exampleStage
+        identifier: exampleStage
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: Shell Script_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "Hello world!"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+                  failureStrategies: []
+                  strategy:
+                    matrix:
+                      image: <+input>
+                      version: <+input>
+                      tags:
+                       - "harness"
+                       - "core"
+
+# --- example 12 ---
+pipeline:
+  identifier: MatrixExamples
+  stages:
+    - stage:
+        identifier: exampleStage
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  strategy:
+                    matrix:
+                      image:
+                        - nginx
+                        - ingress
+                      version:
+                        - latest
+                        - 1.2.0
+
+# --- example 13 ---
+pipeline:
+  name: MatrixAsRuntimeInput
+  identifier: MatrixAsRuntimeInput
+  tags: {}
+  stages:
+    - stage:
+        name: exampleStage
+        identifier: exampleStage
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: Shell Script_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: echo "Hello world!, my name is <+matrix.name>"
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+                  failureStrategies: []
+                  strategy:
+                    matrix: <+input>
+        tags: {}
+
+# --- example 14 ---
+pipeline:
+  identifier: MatrixExamples
+  stages:
+    - stage:
+        identifier: exampleStage
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  identifier: ShellScript_1
+                  type: ShellScript
+                  strategy:
+                    matrix:
+                      image:
+                        - nginx
+                        - ingress
+                      version:
+                        - 10
+                        - 11
+                        - 12
+                      exclude:
+                        - image: nginx
+                          version: 12
+
+# --- example 15 ---
+pipeline:
+  name: RepeatJiraTickets
+  identifier: RepeatJiraTickets
+  projectIdentifier: naidusanity
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: approval1
+        identifier: approval1
+        description: ""
+        type: Approval
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: JiraApproval
+                  name: Jira Approval_1
+                  identifier: JiraApproval_1
+                  spec:
+                    connectorRef: abc
+                    issueKey: <+matrix.jiraTicket>
+                    approvalCriteria:
+                      type: KeyValues
+                      spec:
+                        matchAnyCondition: true
+                        conditions:
+                          - key: Status
+                            operator: equals
+                            value: Done
+                    rejectionCriteria:
+                      type: KeyValues
+                      spec:
+                        matchAnyCondition: true
+                        conditions: []
+                  timeout: 1d
+                  failureStrategies: []
+                  strategy:
+                    matrix:
+                      jiraTicket: <+<+pipeline.variables.jiraTickets>.split(',')>
+        tags: {}
+  variables:
+    - name: jiraTickets
+      type: String
+      description: ""
+      value: <+input>
+
+# --- example 16 ---
+pipeline:
+  identifier: RepeatJiraTickets
+  variables:
+    - name: jiraTickets
+      type: String
+      value: cd-1,cd-2,cd-3 ## Jira issue numbers provided at runtime.
+
+# --- example 17 ---
+ strategy:
+    matrix:
+        payload: [<+trigger.payload.user.username>, <+trigger.prNumber>]
+
+# --- example 18 ---
+pipeline:
+  name: matrix_split
+  identifier: matrix_split
+  projectIdentifier: naidusanity
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: s2
+        identifier: s2
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: Shell Script_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          echo <+matrix.service.name>
+                          echo <+matrix.service.version>
+                          echo <+json.list("a", <+pipeline.variables.services>)>
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m
+        tags: {}
+        strategy:
+          matrix:
+            service: <+json.list("a", <+pipeline.variables.services>)>
+  variables:
+    - name: services
+      type: String
+      description: ""
+      value: "{\"a\":[ { \"name\": \"svc1\", \"version\": \"<+pipeline.variables.version>\" }, { \"name\": \"svc2\", \"version\": \"1.0.2\" }, { \"name\": \"svc3\", \"version\": \"1.0.1\" } ]}"
+    - name: version
+      type: String
+      value: "1.0.0"
+
+# --- example 19 ---
+pipeline:
+  name: 
+  identifier: project
+  projectIdentifier: project
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: cs1
+        identifier: cs1
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: random_number=$((1 + $RANDOM % 100))
+                    environmentVariables: []
+                    outputVariables:
+                      - name: random_num
+                        type: String
+                        value: random_number
+                  timeout: 10m
+                  strategy:
+                    matrix:
+                      groups:
+                        - name: firstGroup
+                        - name: secondGroup
+                        - name: thirdGroup
+
+# --- example 20 ---
+              - step:
+                  type: ShellScript
+                  name: ShellScript_2
+                  identifier: ShellScript_2
+                  spec:
+                    shell: Bash
+                    executionTarget: {}
+                    source:
+                      type: Inline
+                      spec:
+                        script: |-
+                          t='<+json.format(<+pipeline.stages.cs1.spec.execution.steps.ShellScript_1>)>'
+
+                          echo $t | jq 'to_entries | map(select(.key | startswith("ShellScript_"))) | .[].value.outcome.output.outputVariables.random_num' | jq -s 'map(tonumber) | add'
+                    environmentVariables: []
+                    outputVariables: []
+                  timeout: 10m

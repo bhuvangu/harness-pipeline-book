@@ -1,0 +1,24 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/container-step.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/container-step)
+
+# --- example 1 ---
+              - step:
+                  type: Container
+                  name: Test
+                  identifier: Test
+                  spec:
+                    connectorRef: Docker_Hub_with_Pwd
+                    image: maven:3.6.3-jdk-8
+                    command: echo "Run some smoke tests"
+                    shell: Sh
+                    infrastructure:
+                      type: KubernetesDirect
+                      spec:
+                        connectorRef: K8s_Cluster_1675446740237
+                        namespace: default
+                        resources:
+                          limits:
+                            cpu: "0.5"
+                            memory: 500Mi
+                    outputVariables: []
+                    envVariables: {}
+                  timeout: 1d

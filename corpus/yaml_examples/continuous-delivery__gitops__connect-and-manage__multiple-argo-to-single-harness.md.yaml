@@ -1,0 +1,190 @@
+# source: docs/continuous-delivery/gitops/connect-and-manage/multiple-argo-to-single-harness.md  (https://developer.harness.io/docs/continuous-delivery/gitops/connect-and-manage/multiple-argo-to-single-harness)
+
+# --- example 1 ---
+   apiVersion: argoproj.io/v1alpha1
+   kind: Application
+   metadata:
+     name: dev-corp-banking-api
+     namespace: argocd
+     labels:
+       harness.io/serviceRef: cbcorpbankapi
+       harness.io/envRef: Dev_GitOps_Product_Demo
+   spec:
+     project: banking
+     source:
+       repoURL: https://github.com/example-org/gitops-demo
+       targetRevision: main
+       path: services/corporate-banking/corp-banking-api/overlays/dev
+     destination:
+       server: https://kubernetes.default.svc
+       namespace: corporate-banking
+     syncPolicy:
+       automated:
+         prune: true
+         selfHeal: true
+       syncOptions:
+         - CreateNamespace=true
+
+# --- example 2 ---
+   harness:
+     argocdHarnessPlugin:
+       enabled: true
+
+# --- example 3 ---
+   agent:
+     service:
+       enabled: true
+       type: ClusterIP
+       port: 7910
+       targetPort: 7910
+       labels: {}
+       annotations: {}
+
+# --- example 4 ---
+   argo-cd:
+     repoServer:
+       extraContainers:
+       - command: [ /var/run/argocd/argocd-cmp-server ]
+         image: harness/gitops-agent-installer-helper:v0.0.3
+         imagePullPolicy: IfNotPresent
+         name: argocd-harness-plugin
+         resources:
+           limits:
+             cpu: "0.5"
+             memory: 512Mi
+           requests:
+             cpu: "0.5"
+             memory: 512Mi
+         securityContext:
+           capabilities:
+             drop:
+             - NET_RAW
+           runAsGroup: 999
+           runAsUser: 999
+         terminationMessagePath: /dev/termination-log
+         terminationMessagePolicy: File
+         volumeMounts: 
+         - mountPath: /var/run/argocd
+           name: var-files
+         - mountPath: /home/argocd/cmp-server/plugins
+           name: plugins
+         - mountPath: /tmp
+           name: tmp
+         - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+           name: argocd-harness-plugin
+           subPath: harness.yaml
+
+# --- example 5 ---
+   argo-cd:
+     repoServer:
+       volumes:
+       - name: argocd-harness-plugin
+         configMap:
+           name: argocd-harness-plugin
+
+# --- example 6 ---
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: gitops-agent
+     namespace: <agent-namespace>
+   spec:
+     type: ClusterIP
+     ports:
+       - name: http
+         protocol: TCP
+         port: 7910
+         targetPort: 7910
+     selector:
+       app.kubernetes.io/name: harness-gitops-agent
+       app.kubernetes.io/instance: <release-name>
+
+# --- example 7 ---
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: argocd-harness-plugin
+     namespace: <agent-namespace>
+   data:
+     harness.yaml: |
+       ---
+       apiVersion: argoproj.io/v1alpha1
+       kind: ConfigManagementPlugin
+       metadata:
+         name: argocd-harness-plugin
+       spec:
+         version: v1.0
+         allowConcurrency: true
+         discover:
+           find:
+             command:
+               - /bin/sh
+               - -c
+               - |
+                 if [ -f "Chart.yaml" ] || [ -f "values.yaml" ]; then  
+                   echo "Harness Plugin discovered Helm Chart. Proceeding to generate manifests."
+                 elif find . -name '*.yaml' -o -name '*.yml' | grep -q .; then
+                   echo "Harness Plugin discovered Native Kubernetes Manifests. Proceeding to generate manifests."
+                 else
+                   exit 1
+                 fi
+         generate:
+           command:
+             - /bin/sh
+             - -c
+             - |
+               set -o pipefail 
+               if [ -f "Chart.yaml" ] || [ -f "values.yaml" ]; then
+                 helm template $ARGOCD_APP_NAME -n $ARGOCD_APP_NAMESPACE ${ARGOCD_ENV_HELM_ARGS} --include-crds . \
+                   | argocd-harness-plugin generate -
+               else
+                 argocd-harness-plugin generate .
+               fi
+         lockRepo: false
+
+# --- example 8 ---
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     name: argocd-repo-server
+     namespace: <agent-namespace>
+   spec:
+     template:
+       spec: 
+         containers:
+         # ... existing containers ...
+         - command: [ /var/run/argocd/argocd-cmp-server ]
+           image: harness/gitops-agent-installer-helper:v0.0.3
+           imagePullPolicy: IfNotPresent
+           name: argocd-harness-plugin
+           resources:
+             limits:
+               cpu: "0.5"
+               memory: 512Mi
+             requests:
+               cpu: "0.5"
+               memory: 512Mi
+           securityContext:
+             capabilities:
+               drop:
+               - NET_RAW
+             runAsGroup: 999
+             runAsUser: 999
+           terminationMessagePath: /dev/termination-log
+           terminationMessagePolicy: File
+           volumeMounts: 
+           - mountPath: /var/run/argocd
+             name: var-files
+           - mountPath: /home/argocd/cmp-server/plugins
+             name: plugins
+           - mountPath: /tmp
+             name: tmp
+           - mountPath: /home/argocd/cmp-server/config/plugin.yaml
+             name: argocd-harness-plugin
+             subPath: harness.yaml
+         volumes:
+         # ... existing volumes ...
+         - configMap:
+             defaultMode: 420
+             name: argocd-harness-plugin
+           name: argocd-harness-plugin

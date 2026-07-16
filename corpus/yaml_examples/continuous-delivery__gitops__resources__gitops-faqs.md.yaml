@@ -1,0 +1,38 @@
+# source: docs/continuous-delivery/gitops/resources/gitops-faqs.md  (https://developer.harness.io/docs/continuous-delivery/gitops/resources/gitops-faqs)
+
+# --- example 1 ---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: refi-vehicles-service-dev
+  namespace: harness-gitops
+  labels:
+    harness.io/envRef: test
+    harness.io/serviceRef: vehiclesservice
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: product-engineering
+  destination:
+    name: gkedev
+    namespace: refi-vehicles
+  source:
+    path: cluster-services/vehicles-service
+    repoURL: "https://github.com/motorefi/cluster-manifests"
+    targetRevision: "cluster-dev"
+    helm:
+      releaseName: refi-vehicles-service
+      parameters:
+        - name: image.tag
+          value: 22ad6d6cd44d1cdfbd95751841c860eb3133306c
+      valueFiles:
+        - values.yaml
+        - values.dev.yaml
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true

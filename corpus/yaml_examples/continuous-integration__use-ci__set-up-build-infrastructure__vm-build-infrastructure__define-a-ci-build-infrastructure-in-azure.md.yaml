@@ -1,0 +1,123 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/vm-build-infrastructure/define-a-ci-build-infrastructure-in-azure.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/vm-build-infrastructure/define-a-ci-build-infrastructure-in-azure)
+
+# --- example 1 ---
+version: "1"
+instances:
+  - name: ubuntu-azure-pool
+    default: true
+    type: azure
+    pool: 1
+    limit: 4
+    platform:
+      os: linux
+      arch: amd64
+    spec:
+      account:
+        client_id: XXXXXX ## Required for the runner to be able to create new VMs.
+        client_secret: XXXXX ## Required for the runner to be able to create new VMs.
+        subscription_id: XXXXXX ## Required for the runner to be able to create new VMs.
+        tenant_id: XXXXXX ## Required for the runner to be able to create new VMs.
+      location: eastus2 ## To minimize latency, use the same region as your Azure VM.
+      size: Standard_F2s
+      tags:
+        tagName: tag
+      image: ## Azure VM image specs to use for build VMs.
+        username: azureuser
+        password: XXXXXXX
+        publisher: Canonical
+        offer: UbuntuServer
+        sku: 18.04-LTS
+        version: latest
+
+# --- example 2 ---
+version: "1"
+instances:
+  - name: ubuntu-azure
+    default: true
+    type: azure
+    platform:
+      os: windows
+    spec:
+      account:
+        client_id: XXXXXX ## Required for the runner to be able to create new VMs.
+        client_secret: XXXXX ## Required for the runner to be able to create new VMs.
+        subscription_id: XXXXXX ## Required for the runner to be able to create new VMs.
+        tenant_id: XXXXXX ## Required for the runner to be able to create new VMs.
+      location: eastus2 ## To minimize latency, use the same region as your Azure VM.
+      size: Standard_F2s
+      tags:
+        tagName: tag
+      image: ## Azure VM image specs to use for build VMs.
+        username: XXXXXXX
+        password: XXXXXXX
+        publisher: MicrosoftWindowsServer
+        offer: WindowsServer
+        sku: 2022-datacenter-g2
+        version: latest
+
+# --- example 3 ---
+version: "1"
+instances:
+  - name: linux-amd64
+    type: google
+    pool: 1
+    limit: 10
+    platform:
+      os: linux
+      arch: amd64
+    spec:
+      account:
+        project_id: YOUR_PROJECT_ID
+        json_path: PATH_TO_SERVICE_ACCOUNT_JSON
+      image: IMAGE_NAME_OR_PATH
+      machine_type: e2-medium
+      zones:
+        - YOUR_GCP_ZONE # e.g., us-central1-a
+      disk:
+        size: 100
+      user_data: |
+        #cloud-config
+        {{ if and (.IsHosted) (eq .Platform.Arch "amd64") }}
+        packages: []
+        {{ else }}
+        apt:
+          sources:
+            docker.list:
+              source: deb [arch={{ .Platform.Arch }}] https://download.docker.com/linux/ubuntu $RELEASE stable
+              keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+        packages: []
+        {{ end }}
+        write_files:
+          - path: {{ .CaCertPath }}
+            path: {{ .CertPath }}
+            permissions: '0600'
+            encoding: b64
+            content: {{ .TLSCert | base64 }}
+          - path: {{ .KeyPath }}
+        runcmd:
+          - 'set -x'
+          - |
+            if .ShouldUseGoogleDNS; then
+              echo "DNS=8.8.8.8 8.8.4.4\nFallbackDNS=1.1.1.1 1.0.0.1\nDomains=~." | sudo tee -a /etc/systemd/resolved.conf
+              systemctl restart systemd-resolved
+            fi
+          - ufw allow 9079
+
+# --- example 4 ---
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: VM
+            spec:
+              type: Pool
+              spec:
+                poolName: POOL_NAME_FROM_POOL_YML
+                os: Linux
+          execution:
+            steps:
+            ...

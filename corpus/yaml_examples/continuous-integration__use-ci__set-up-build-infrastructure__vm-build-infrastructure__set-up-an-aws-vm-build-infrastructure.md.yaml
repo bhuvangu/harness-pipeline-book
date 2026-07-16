@@ -1,0 +1,158 @@
+# source: docs/continuous-integration/use-ci/set-up-build-infrastructure/vm-build-infrastructure/set-up-an-aws-vm-build-infrastructure.md  (https://developer.harness.io/docs/continuous-integration/use-ci/set-up-build-infrastructure/vm-build-infrastructure/set-up-an-aws-vm-build-infrastructure)
+
+# --- example 1 ---
+   drone-runner-aws:
+       restart: unless-stopped
+       image: drone/drone-runner-aws
+       network_mode: "host"
+       volumes:
+        - /runner:/runner
+       entrypoint: ["/bin/drone-runner-aws", "delegate", "--pool", "pool.yml"]
+       working_dir: /runner
+
+# --- example 2 ---
+version: "1"
+instances:
+  - name: ubuntu-ci-pool ## The settings nested below this define the Ubuntu pool.
+    default: true
+    type: amazon
+    pool: 1
+    limit: 4
+    platform:
+      os: linux
+      arch: amd64
+    spec:
+      account:
+        region: us-east-2 ## To minimize latency, use the same region as the delegate VM.
+        availability_zone: us-east-2c ## To minimize latency, use the same availability zone as the delegate VM.
+        access_key_id: XXXXXXXXXXXXXXXXX # Optional if using an IAM role
+        access_key_secret: XXXXXXXXXXXXXXXXXXX # Optional if using an IAM role
+        key_pair_name: XXXXX
+      ami: ami-xxx ## Ubuntu Amd64 AMI must be passed
+      size: t2.nano
+      iam_profile_arn: arn:aws:iam::XXXX:instance-profile/XXXXX
+      network:
+        security_groups:
+          - sg-XXXXXXXXXXX
+  - name: windows-ci-pool ## The settings nested below this define the Windows pool.
+    default: true
+    type: amazon
+    pool: 1
+    limit: 4
+    platform:
+      os: windows
+    spec:
+      account:
+        region: us-east-2 ## To minimize latency, use the same region as the delegate VM.
+        availability_zone: us-east-2c ## To minimize latency, use the same availability zone as the delegate VM.
+        access_key_id: XXXXXXXXXXXXXXXXXXXXXX
+        access_key_secret: XXXXXXXXXXXXXXXXXXXXXX
+        key_pair_name: XXXXX
+      ami: ami-xxx ## Windows AMI with Docker Installed should be passed
+      size: m5.large
+      hibernate: true
+      disk:
+        size: 60 ## Min Size Generally Required for Windows based AMI with Docker Installed , The size mentioned is in GBs
+      network:
+        security_groups:
+          - sg-XXXXXXXXXXXXXX
+
+# --- example 3 ---
+instance:
+  platform:
+    os: linux
+    arch: amd64
+    version:
+    os_name: amazon-linux
+
+# --- example 4 ---
+account:
+  region: us-east-2
+  availability_zone: us-east-2c
+  access_key_id: XXXXX
+  access_key_secret: XXXXX
+  key_pair_name: XXXXX
+
+# --- example 5 ---
+network:
+  private_ip: true
+  subnet_id: subnet-XXXXXXXXXX
+  security_groups:
+    - sg-XXXXXXXXXXXXXX
+
+# --- example 6 ---
+version: "1"
+instances:
+  - name: linux-amd64
+    type: google
+    pool: 1
+    limit: 10
+    platform:
+      os: linux
+      arch: amd64
+    spec:
+      account:
+        project_id: YOUR_PROJECT_ID
+        json_path: PATH_TO_SERVICE_ACCOUNT_JSON
+      image: IMAGE_NAME_OR_PATH
+      machine_type: e2-medium
+      zones:
+        - YOUR_GCP_ZONE # e.g., us-central1-a
+      disk:
+        size: 100
+      user_data: |
+        #cloud-config
+        {{ if and (.IsHosted) (eq .Platform.Arch "amd64") }}
+        packages: []
+        {{ else }}
+        apt:
+          sources:
+            docker.list:
+              source: deb [arch={{ .Platform.Arch }}] https://download.docker.com/linux/ubuntu $RELEASE stable
+              keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
+        packages: []
+        {{ end }}
+        write_files:
+          - path: {{ .CaCertPath }}
+            path: {{ .CertPath }}
+            permissions: '0600'
+            encoding: b64
+            content: {{ .TLSCert | base64 }}
+          - path: {{ .KeyPath }}
+        runcmd:
+          - 'set -x'
+          - |
+            if .ShouldUseGoogleDNS; then
+              echo "DNS=8.8.8.8 8.8.4.4\nFallbackDNS=1.1.1.1 1.0.0.1\nDomains=~." | sudo tee -a /etc/systemd/resolved.conf
+              systemctl restart systemd-resolved
+            fi
+          - ufw allow 9079
+
+# --- example 7 ---
+disk:
+  size: 16
+  type: io1
+  iops: iops
+  kms_key_id: arn:aws:kms:us-west-2:111122223333:key/1234abcd-12ab-34cd-56ef-1234567890ab
+  tags:
+    volumekey: volumeValue
+    key1: value1
+
+# --- example 8 ---
+    - stage:
+        name: build
+        identifier: build
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: VM
+            spec:
+              type: Pool
+              spec:
+                poolName: POOL_NAME_FROM_POOL_YML
+                os: Linux
+          execution:
+            steps:
+            ...

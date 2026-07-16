@@ -1,0 +1,34 @@
+# source: docs/platform/delegates/secure-delegates/delegate-mtls-support.md  (https://developer.harness.io/docs/platform/delegates/secure-delegates/delegate-mtls-support)
+
+# --- example 1 ---
+                  - name: DELEGATE_CLIENT_CERTIFICATE_PATH
+                    value: "/etc/mtls/client.crt"
+                  - name: DELEGATE_CLIENT_CERTIFICATE_KEY_PATH
+                    value: "/etc/mtls/client.key"
+
+# --- example 2 ---
+                  volumeMounts:
+                    - mountPath: /etc/mtls
+                      name: client-certificate
+                      readOnly: true
+
+# --- example 3 ---
+                volumes:
+                  - name: client-certificate
+                    secret:
+                      secretName: client-certificate
+                      defaultMode: 400
+
+# --- example 4 ---
+              clientCertificateFilePath: /etc/mtls/client.crt
+              clientCertificateKeyFilePath: /etc/mtls/client.key
+
+# --- example 5 ---
+                        - name: client-certificate
+                          mountPath: /etc/mtls
+                          readOnly: true
+
+# --- example 6 ---
+                      - name: client-certificate
+                        secret:
+                          secretName: client-certificate

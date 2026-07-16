@@ -1,0 +1,27 @@
+# source: docs/continuous-delivery/get-started/tutorials/kubernetes-container-deployments/helm-chart.md  (https://developer.harness.io/docs/continuous-delivery/get-started/tutorials/kubernetes-container-deployments/helm-chart)
+
+# --- example 1 ---
+   kubectl apply -f gitops-agent.yml -n default
+
+# --- example 2 ---
+   kubectl apply -f gitops-agent.yml -n default
+
+# --- example 3 ---
+   service:
+     name: gitopsguestbook
+     identifier: gitopsguestbook
+     serviceDefinition:
+       type: Kubernetes
+       spec: {}
+     gitOpsEnabled: true
+
+# --- example 4 ---
+   environment:
+     name: gitopsenv
+     identifier: gitopsenv
+     description: ""
+     tags: {}
+     type: PreProduction
+     orgIdentifier: default
+     projectIdentifier: default_project
+     variables: []

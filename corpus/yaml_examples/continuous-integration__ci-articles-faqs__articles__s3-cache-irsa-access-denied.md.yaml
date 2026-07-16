@@ -1,0 +1,16 @@
+# source: docs/continuous-integration/ci-articles-faqs/articles/s3-cache-irsa-access-denied.md  (https://developer.harness.io/docs/continuous-integration/ci-articles-faqs/articles/s3-cache-irsa-access-denied)
+
+# --- example 1 ---
+infrastructure:
+  type: KubernetesDirect
+  spec:
+    connectorRef: your-k8s-connector
+    namespace: your-namespace
+    serviceAccountName: harness-worker
+    automountServiceAccountToken: true
+    nodeSelector: {}
+    os: Linux
+
+# --- example 2 ---
+   annotations:
+     eks.amazonaws.com/role-arn: arn:aws:iam::<account-id>:role/<role-name>

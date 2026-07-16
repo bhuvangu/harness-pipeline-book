@@ -1,0 +1,86 @@
+# source: docs/platform/variables-and-expressions/expression-v2.md  (https://developer.harness.io/docs/platform/variables-and-expressions/expression-v2)
+
+# --- example 1 ---
+   - name: INIT_SCRIPT
+   value: |
+    apt install software-properties-common -y
+    apt install python-software-properties -y
+    add-apt-repository ppa:rmescandon/yq
+    apt update
+    apt install yq -y
+    apt-get install jq -y
+
+# --- example 2 ---
+pipeline:
+  name: JsonSupportExample1
+  identifier: JsonSupportExample1
+  projectIdentifier: DoNotDelete_Sahil
+  orgIdentifier: default
+  description: Pipeline to fetch the current status of all stages under matrix.
+  tags: {}
+  stages:
+  - stage:
+        name: stepWithMatrix
+        identifier: stepWithMatrix
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  timeout: 10m
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "My number is: <+strategy.iteration>"
+                    environmentVariables: []
+                    outputVariables: []
+                  strategy:
+                    matrix:
+                      name:
+                        - john
+                        - doe
+                        - nick
+        tags: {}
+        when:
+          pipelineStatus: All
+    - stage:
+        name: stageWithMatrix
+        identifier: stageWithMatrix
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: ShellScript
+                  name: ShellScript_1
+                  identifier: ShellScript_1
+                  timeout: 10m
+                  spec:
+                    shell: Bash
+                    onDelegate: true
+                    source:
+                      type: Inline
+                      spec:
+                        script: |
+                          echo "My number is: <+strategy.iteration>"
+                    environmentVariables: []
+                    outputVariables: []
+        tags: {}
+        when:
+          pipelineStatus: All
+        strategy:
+          matrix:
+            name:
+              - john
+              - doe
+              - nick
+        tags: {}

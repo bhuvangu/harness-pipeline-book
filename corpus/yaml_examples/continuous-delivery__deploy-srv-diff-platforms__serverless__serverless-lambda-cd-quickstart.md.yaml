@@ -1,0 +1,326 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/serverless/serverless-lambda-cd-quickstart.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/serverless/serverless-lambda-cd-quickstart)
+
+# --- example 1 ---
+service: <+service.name>
+frameworkVersion: "2 || 3"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - httpApi:
+          path: /tello
+          method: get
+package:
+  artifact: <+artifact.path>
+plugins:
+  - serverless-deployment-bucket@latest
+
+# --- example 2 ---
+service: {{.Values.serviceName}}
+frameworkVersion: "2 || 3"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - httpApi:
+          path: /tello
+          method: get
+package:
+  artifact: {{.Values.artifact.path}}
+plugins:
+  - serverless-deployment-bucket@latest
+
+# --- example 3 ---
+serviceName: goldenpipeline
+artifact: 
+  path: /my-artifact
+
+# --- example 4 ---
+   ...
+   		- name: INIT_SCRIPT
+   		value: ""
+   ...
+
+# --- example 5 ---
+   ...
+       - name: INIT_SCRIPT
+       value: |-
+           #!/bin/bash
+
+           # Install Node.js and npm on the Red Hat UBI image using Microdnf
+           microdnf install -y nodejs
+
+           # Install the Serverless Framework using npm
+           npm install -g serverless@2.50.0
+   ...
+
+# --- example 6 ---
+   ...
+       - name: INIT_SCRIPT
+       value: |-
+           #!/bin/bash
+
+           # Install Node.js and npm on the Red Hat UBI image
+           yum install -y nodejs
+
+           # Install the Serverless Framework using npm
+           npm install -g serverless@2.50.0
+   ...
+
+# --- example 7 ---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CloudFormation template for provisioning Serverless Framework infrastructure
+
+Parameters:
+  StageName:
+    Type: String
+    Default: dev
+    Description: The stage name for the Serverless deployment
+
+Resources:
+  ServerlessDeploymentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${AWS::StackName}-deployment-bucket"
+      AccessControl: Private
+
+  ServerlessDeploymentApplication:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location:
+        ApplicationId: arn:aws:serverlessrepo:us-east-1:112758395563:applications/awslabs/serverless-application-model
+        SemanticVersion: 1.1.0
+      Parameters:
+        BucketName: !Ref ServerlessDeploymentBucket
+        ObjectVersion: !Ref ServerlessDeploymentVersion
+        AutoPublishAlias: !Ref StageName
+
+  ServerlessDeploymentVersion:
+    Type: AWS::S3::BucketVersioning
+    Properties:
+      BucketName: !Ref ServerlessDeploymentBucket
+
+Outputs:
+  region_name:
+    Value: !Ref AWS::Region
+    Description: AWS region where the Serverless Framework application is deployed
+
+  stage_name:
+    Value: !Ref StageName
+    Description: The stage name for the Serverless deployment
+
+# --- example 8 ---
+[DEBUG] setting default home directory
++ git init
+hint: Using 'master' as the name for the initial branch. This default branch name
+hint: is subject to change. To configure the initial branch name to use in all
+hint: of your new repositories, which will suppress this warning, call:
+hint:
+hint: 	git config --global init.defaultBranch <name>
+hint:
+hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+hint: 'development'. The just-created branch can be renamed via this command:
+hint:
+hint: 	git branch -m <name>
+Initialized empty Git repository in /harness/iden/.git/
++ git remote add origin https://github.com/**************/manifest.git
++ set +x
++ git fetch --depth=50 origin +refs/heads/main:
+From https://github.com/**************/manifest
+ * branch            main       -> FETCH_HEAD
+ * [new branch]      main       -> origin/main
++ git checkout -b main origin/main
+Switched to a new branch 'main'
+branch 'main' set up to track 'origin/main'.
++ exit 0
+
+# --- example 9 ---
+Found package.json in directory :
+/harness/iden
+Doing npm install -C /harness/iden
+npm WARN read-shrinkwrap This version of npm is compatible with lockfileVersion@1, but package-lock.json was generated for lockfileVersion@2. I'll try to do my best with it!
+updated 1 package and audited 1 package in 8.694s
+found 0 vulnerabilities
+
+Framework Core: 3.30.1
+Plugin: 6.2.3
+SDK: 4.3.2
+
+Populating manifest with artifact values
+Setting up AWS config credentials..
+
+✔ Profile "default" has been configured
+Config Credential command executed successfully..
+Skipping downloading artifact step as it is not needed..
+Serverless Package Starting..
+
+
+serverless package --stage stage1 --region us-east-1
+
+
+Packaging newcheckstrynew for stage stage1 (us-east-1)
+
+✔ Service packaged (1s)
+Serverless Package Command succeeded
+
+# --- example 10 ---
+Framework Core: 3.30.1
+Plugin: 6.2.3
+SDK: 4.3.2
+
+Setting up AWS config credentials..
+
+✔ Profile "default" has been configured
+Config Credential command executed successfully..
+Serverless Deployment Starting..
+
+
+serverless deploy --stage stage1 --region us-east-1
+
+
+Deploying newcheckstrynew to stage stage1 (us-east-1)
+
+✔ Service deployed to stack newcheckstrynew-stage1 (104s)
+
+endpoints:
+  GET - https://wfnsukmwh4.execute-api.us-east-1.amazonaws.com/time
+  GET - https://wfnsukmwh4.execute-api.us-east-1.amazonaws.com/time1
+functions:
+  currentTime54: newcheckstrynew-stage1-currentTime54
+  currentTime55: newcheckstrynew-stage1-currentTime55
+Serverless Deployment succeeded
+
+# --- example 11 ---
+service: <+service.name>
+frameworkVersion: "2 || 3"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - httpApi:
+          path: /tello
+          method: get
+package:
+  artifact: <+artifact.path>
+plugins:
+  - serverless-deployment-bucket@latest
+
+# --- example 12 ---
+service: {{.Values.serviceName}}
+frameworkVersion: "2 || 3"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - httpApi:
+          path: /tello
+          method: get
+package:
+  artifact: {{.Values.artifact.path}}
+plugins:
+  - serverless-deployment-bucket@latest
+
+# --- example 13 ---
+serviceName: <+service.name>
+artifact:
+  path: <+artifact.path>
+
+# --- example 14 ---
+---
+functions:
+  hello:
+    image: <+artifact.image>
+  hello1:
+    image: <+artifacts.sidecars.mysidecar>
+
+# --- example 15 ---
+service: my-project-134fadsaez
+frameworkVersion: "2.35.0"
+
+provider:
+  name: aws
+  runtime: java8
+
+package:
+  artifact: <+artifact.path>
+
+functions:
+  currentTime:
+    handler: com.serverless.Handler
+    events:
+      - httpApi:
+          path: /time
+          method: get
+    layers:
+      # Ref name is generated by TitleCasing the layer name & appending LambdaLayer
+      - { Ref: CommonLibsLambdaLayer }
+
+layers:
+  commonLibs:
+    package:
+      artifact: <+artifacts.sidecars.mysidecar>
+
+# --- example 16 ---
+service: <+service.name>
+frameworkVersion: "2 || 3"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - httpApi:
+          path: /tello
+          method: get
+package:
+  artifact: <+artifact.path>
+plugins:
+  - serverless-deployment-bucket@latest
+
+# --- example 17 ---
+service: example-service
+frameworkVersion: "2 || 3"
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+functions:
+  hello:
+    handler: handler.hello
+    events:
+      - httpApi:
+          path: /tello
+          method: get
+package:
+  artifact: <+artifact.path>          
+plugins:
+  - serverless-deployment-bucket@latest
+
+# --- example 18 ---
+service: example-service
+frameworkVersion: "2 || 3"
+
+provider:
+  name: aws
+
+functions:
+  hello:
+    image: <+artifact.image>

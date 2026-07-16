@@ -1,0 +1,41 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/kubernetes-rollback.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/cd-k8s-ref/kubernetes-rollback)
+
+# --- example 1 ---
+service:
+  name: nginx
+  identifier: K8s
+  tags:
+    harness: "app"
+    sample: "demo"
+  serviceDefinition:
+    spec:
+      artifacts:
+        primary: {}
+      manifests:
+        - manifest:
+            identifier: dev
+            type: K8sManifest
+            spec:
+              store:
+                type: Harness
+                spec:
+                  files:
+                    - /Sample Manifest Onboarding
+              valuesPaths:
+                - /values.yaml
+              skipResourceVersioning: false
+              enableDeclarativeRollback: true
+      variables:
+        - name: replica
+          type: String
+          description: ""
+          value: "1"
+        - name: cpu
+          type: String
+          description: "nginx cpu"
+          value: "0.25"
+        - name: memory
+          type: String
+          description: "nginx memory"
+          value: 1Gb
+    type: Kubernetes

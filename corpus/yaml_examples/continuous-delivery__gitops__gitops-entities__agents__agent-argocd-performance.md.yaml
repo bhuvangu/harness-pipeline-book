@@ -1,0 +1,43 @@
+# source: docs/continuous-delivery/gitops/gitops-entities/agents/agent-argocd-performance.md  (https://developer.harness.io/docs/continuous-delivery/gitops/gitops-entities/agents/agent-argocd-performance)
+
+# --- example 1 ---
+          data:
+            controller.self.heal.timeout.seconds: "2"          # Initial delay between self-heal attempts (in seconds)
+            controller.self.heal.backoff.factor: "3"           # Multiplier for exponential backoff
+            controller.self.heal.backoff.cap.seconds: "300"    # Maximum delay cap (in seconds)
+
+# --- example 2 ---
+        apiVersion: apps/v1
+        kind: StatefulSet
+        metadata:
+          name: argocd-application-controller
+        spec:
+          template:
+            spec:
+              containers:
+                - name: application-controller
+                  env:
+                    # Setting for changing the client qps
+                    - name: ARGOCD_K8S_CLIENT_QPS
+                      value: "50"
+                    # Setting for changing the burst qps
+                    - name: ARGOCD_K8S_CLIENT_BURST
+                      value: "100"
+
+# --- example 3 ---
+   spec:
+     maxReplicas: 5
+     metrics:
+     - resource:
+         name: memory
+         target:
+           averageUtilization: 50
+           type: Utilization
+       type: Resource
+     - resource:
+         name: cpu
+         target:
+           averageUtilization: 50
+           type: Utilization
+       type: Resource
+     minReplicas: 1

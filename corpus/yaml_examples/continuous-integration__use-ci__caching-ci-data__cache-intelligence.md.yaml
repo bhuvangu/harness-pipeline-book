@@ -1,0 +1,176 @@
+# source: docs/continuous-integration/use-ci/caching-ci-data/cache-intelligence.md  (https://developer.harness.io/docs/continuous-integration/use-ci/caching-ci-data/cache-intelligence)
+
+# --- example 1 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        paths:
+          - /harness/node_modules
+      cloneCodebase: true
+
+# --- example 2 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        paths: # All custom cache paths.
+          - /harness/node_modules # Custom cache path within /harness directory.
+          - /my_cache_directory/module_cache1 # Custom cache path outside /harness directory.
+      cloneCodebase: true
+      platform:
+        os: Linux
+        arch: Amd64
+      runtime:
+        type: Cloud
+        spec: {}
+      sharedPaths: # All shared paths outside /harness directory. These can be cache paths or other shared paths for your pipeline.
+        - /my_cache_directory/module_cache1 # Custom cache path outside /harness directory.
+
+# --- example 3 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        key: <+input> # This example uses runtime input so that the user specifies the cache key at runtime.
+      cloneCodebase: true
+
+# --- example 4 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      cloneCodebase: true
+      caching:
+        enabled: true
+        override: true
+        key: cache-{{ checksum "build.gradle" }}-<+matrix.javaVersion>
+
+# --- example 5 ---
+  stages:
+    - stage:
+        name: buildStage1
+        identifier: buildstage1
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          caching:
+            enabled: true
+            policy: pull # Define cache policy.
+          execution:
+            steps:
+              ...
+    - stage:
+        name: buildStage2
+        identifier: buildstage2
+        description: ""
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          caching:
+            enabled: true
+            policy: push # Define cache policy.
+          execution:
+            steps:
+              ...
+
+# --- example 6 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        override: false # Define cache override.
+      cloneCodebase: true
+
+# --- example 7 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        connectorRef: azure_connector
+        region: eastus
+        bucket_name: my-cache-bucket
+      cloneCodebase: true
+
+# --- example 8 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        runAsUser: 0
+      cloneCodebase: true
+
+# --- example 9 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 400m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+      cloneCodebase: true
+
+# --- example 10 ---
+- stage:
+    name: Build
+    identifier: Build
+    type: CI
+    spec:
+      caching:
+        enabled: true
+        override: true
+        paths:
+          - /harness/node_modules
+        key: cache-{{ checksum "package-lock.json" }}
+        policy: pull-push
+        connectorRef: my_connector
+        region: us-west-2
+        bucket_name: my-cache-bucket
+        runAsUser: 0
+        resources:
+          requests:
+            memory: 512Mi
+            cpu: 400m
+          limits:
+            memory: 2Gi
+            cpu: 1000m
+      cloneCodebase: true

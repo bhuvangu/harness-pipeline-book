@@ -1,0 +1,26 @@
+# source: docs/continuous-integration/use-ci/codebase-configuration/built-in-cie-codebase-variables-reference.md  (https://developer.harness.io/docs/continuous-integration/use-ci/codebase-configuration/built-in-cie-codebase-variables-reference)
+
+# --- example 1 ---
+        payloadConditions:
+          - key: <+trigger.payload.ref>
+            operator: StartsWith
+            value: refs/tags/
+
+# --- example 2 ---
+              - step:
+                  type: Run
+                  name: echo codebase
+                  identifier: echo_codebase
+                  spec:
+                    shell: Sh
+                    command: |-
+                      echo <+codebase.repoUrl>
+                      echo <+codebase.prNumber>
+                      echo <+codebase.prTitle>
+                      echo <+codebase.pullRequestLink>
+                      echo <+codebase.targetBranch>
+                      echo <+codebase.sourceBranch>
+                      echo <+codebase.commitSha>
+                      echo <+codebase.gitUserId>
+                      echo <+codebase.gitUserEmail>
+                      echo <+codebase.state>

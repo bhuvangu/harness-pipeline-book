@@ -1,0 +1,11 @@
+# source: docs/platform/triggers/schedule-pipelines-using-cron-triggers.md  (https://developer.harness.io/docs/platform/triggers/schedule-pipelines-using-cron-triggers)
+
+# --- example 1 ---
+  source:
+    type: Scheduled
+    spec:
+      type: Cron
+      spec:
+        expression: 0/5 * * * *
+        type: UNIX
+        timezone: America/New_York

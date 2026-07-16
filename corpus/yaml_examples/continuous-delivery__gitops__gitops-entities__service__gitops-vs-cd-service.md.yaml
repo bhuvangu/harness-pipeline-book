@@ -1,0 +1,59 @@
+# source: docs/continuous-delivery/gitops/gitops-entities/service/gitops-vs-cd-service.md  (https://developer.harness.io/docs/continuous-delivery/gitops/gitops-entities/service/gitops-vs-cd-service)
+
+# --- example 1 ---
+artifacts:
+  primary:
+    sources:
+      - identifier: myapp
+        type: DockerRegistry
+        spec:
+          imagePath: myorg/myapp
+          tag: <+input>
+
+# --- example 2 ---
+manifests:
+  - manifest:
+      type: ReleaseRepo
+      spec:
+        store:
+          spec:
+            paths:
+              - cluster-config/prod/config.json
+
+# --- example 3 ---
+execution:
+  steps:
+    - step:
+        type: K8sRollingDeploy
+        name: Rolling Deployment
+        spec:
+          skipDryRun: false
+    - step:
+        type: K8sApply
+        name: Apply ConfigMap
+        spec:
+          filePaths:
+            - configmap.yaml
+
+# --- example 4 ---
+execution:
+  steps:
+    - step:
+        type: UpdateReleaseRepo
+        name: Update Config
+        spec:
+          variables:
+            - name: imageTag
+              value: "v2.1.0"
+            - name: replicas
+              value: "5"
+    - step:
+        type: MergePR
+        name: Merge Changes
+        spec:
+          mergeStrategy: squash
+        identifier: MergePR_1
+        timeout: 10m
+    - step:
+        type: FetchLinkedApps
+        name: Get Applications

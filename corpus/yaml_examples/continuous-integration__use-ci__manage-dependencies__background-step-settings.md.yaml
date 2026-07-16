@@ -1,0 +1,51 @@
+# source: docs/continuous-integration/use-ci/manage-dependencies/background-step-settings.md  (https://developer.harness.io/docs/continuous-integration/use-ci/manage-dependencies/background-step-settings)
+
+# --- example 1 ---
+entrypoint:
+  - dockerd-entrypoint.sh
+  - "--mtu=1450"
+
+# --- example 2 ---
+              - step:
+                  ...
+                  spec:
+                    shell: Bash
+                    command: |-
+                      JAVA_VER=$(java -version 2>&1 | head -1 | cut -d'"' -f2 | sed '/^1\./s///' | cut -d'.' -f1)
+                      if [[ $JAVA_VER == 17 ]]; then
+                        echo successfully installed $JAVA_VER
+                      else
+                        exit 1
+                      fi
+
+# --- example 3 ---
+              - step:
+                  ...
+                  spec:
+                    shell: Powershell
+                    command: Wait-Event -SourceIdentifier "ProcessStarted"
+
+# --- example 4 ---
+              - step:
+                  ...
+                  spec:
+                    shell: Pwsh
+                    command: |-
+                      $Events = Get-EventLog -LogName System -Newest 1000
+                      $events | ForEach-Object -Begin {Get-Date} -Process {Out-File -FilePath Events.txt -Append -InputObject $_.Message} -End {Get-Date}
+
+# --- example 5 ---
+              - step:
+                  ...
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: python:latest
+                    shell: Sh
+                    command: |-
+                      echo "Welcome to Harness CI"
+                      uname -a
+                      pip install pytest
+                      pip install pytest-cov
+                      pip install -r requirements.txt
+
+                      pytest -v --cov --junitxml="result.xml" test_api.py test_api_2.py test_api_3.py

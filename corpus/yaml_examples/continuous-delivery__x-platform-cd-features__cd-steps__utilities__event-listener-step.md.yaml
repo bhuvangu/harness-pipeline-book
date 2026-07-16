@@ -1,0 +1,28 @@
+# source: docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/event-listener-step.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/cd-steps/utilities/event-listener-step)
+
+# --- example 1 ---
+pipeline:
+  name: Event-Listener
+  identifier: EventListener
+  projectIdentifier: projectIdentifier
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: stage1
+        identifier: stage1
+        description: ""
+        type: Custom
+        spec:
+          execution:
+            steps:
+              - step:
+                  type: EventListener
+                  name: EventListener_1
+                  identifier: EventListener_1
+                  spec:
+                    webhookIdentifier: Event_listener
+                    successCriteria: <+event.payload.action>=="SUCCESS"
+                    failureCriteria: <+event.payload.action>=="FAILURE"
+                  timeout: 10m
+        tags: {}

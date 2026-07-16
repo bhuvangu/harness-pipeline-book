@@ -1,0 +1,53 @@
+# source: docs/continuous-delivery/deploy-srv-diff-platforms/helm/deploy-helm-charts.md  (https://developer.harness.io/docs/continuous-delivery/deploy-srv-diff-platforms/helm/deploy-helm-charts)
+
+# --- example 1 ---
+---
+containers:
+  - name: nginx
+    image: docker.io/bitnami/nginx:1.21.1-debian-10-r0
+
+# --- example 2 ---
+---
+image: <+artifact.image>
+pullPolicy: IfNotPresent
+dockercfg: <+artifact.imagePullSecret>
+
+# --- example 3 ---
+      manifests:
+        - manifest:
+            identifier: test
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: account.gitconnector
+                  gitFetchType: Branch
+                  paths:
+                    - path_to_manifest
+                  repoName: test
+                  branch: test
+              skipResourceVersioning: false
+              enableDeclarativeRollback: false
+              optionalValuesYaml: true
+
+# --- example 4 ---
+---
+image: <+artifact.image>
+pullPolicy: IfNotPresent
+dockercfg: <+artifact.imagePullSecret>
+
+# --- example 5 ---
+- manifest:
+            identifier: values_test
+            type: Values
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: account.github_connector
+                  gitFetchType: Branch
+                  paths:
+                    - path_to_file
+                  branch: main
+              optionalValuesYaml: true

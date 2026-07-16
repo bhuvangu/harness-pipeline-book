@@ -1,0 +1,1053 @@
+---
+title: Terragrunt
+description: Learn about the Terragrunt steps you can use in your CD stage, and how these steps are commonly used together.
+sidebar_position: 5
+sidebar_label: Terragrunt Provisioning
+keywords:
+  - terragrunt
+  - terraform
+  - iacm
+  - cd
+  - provisioning
+  - infrastructure
+tags:
+  - continuous-delivery
+  - infrastructure
+---
+
+import DocImage from '@site/src/components/DocImage';
+import { Troubleshoot } from '@site/src/components/AdaptiveAIContent';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Tabs2 from '@theme/Tabs';
+import TabItem2 from '@theme/TabItem';
+
+Harness has first-class support for [Terragrunt](https://terragrunt.gruntwork.io/docs/) as an infrastructure provisioner. You can use Terragrunt Plan, Apply, Destroy, and Rollback steps in CD stages to provision infrastructure as part of your deployment pipelines.
+
+---
+
+## Before you begin
+
+- **Harness account with Continuous Delivery enabled:** You need a Harness account with the CD module enabled. Go to [Getting started with Harness Platform](/docs/platform/get-started/onboarding-guide) to create an account or request access.
+
+    :::info Contact Harness support
+
+    If Continuous Delivery does not appear in your account, contact your account administrator or [Harness Support](mailto:support@harness.io).
+
+    :::
+
+- **Pipeline permissions:** You need **View**, **Create/Edit**, and **Execute** permissions for [Pipelines](/docs/platform/role-based-access-control/permissions-reference#pipelines), plus **View** and **Access** permissions for [Environments](/docs/platform/role-based-access-control/permissions-reference#environments). An administrator must assign you a role that includes these permissions. Go to [RBAC in Harness](/docs/platform/role-based-access-control/rbac-in-harness) and [Manage roles](/docs/platform/role-based-access-control/add-manage-roles) to configure roles.
+- **Connector permissions:** You need **View** and **Create/Edit** permissions for [Connectors](/docs/platform/role-based-access-control/permissions-reference#connectors). Go to [RBAC in Harness](/docs/platform/role-based-access-control/rbac-in-harness) to configure connector permissions.
+- **Terraform and Terragrunt installed on delegates:** Terraform and Terragrunt must be installed on the Harness Delegates used for deployment. Go to [Install Terraform and Terragrunt on delegates](#install-terraform-and-terragrunt-on-delegates) below for installation instructions.
+- **Terragrunt knowledge:** Familiarity with [Terragrunt](https://terragrunt.gruntwork.io/docs/) and [Terraform](https://www.terraform.io/docs) concepts. Go to [Terragrunt documentation](https://terragrunt.gruntwork.io/docs/getting-started/quick-start/) to learn Terragrunt basics.
+
+---
+
+## Terragrunt provisioning overview
+
+Harness provisioning is categorized into the following use cases:
+
+- **Ad hoc provisioning:** Temporary and on-demand provisioning of resources for specific tasks or purposes.
+- **Dynamic infrastructure provisioning:** Provision the target deployment environment as part of the same deployment process. Typically, dynamic infrastructure provisioning is for temporary pre-production environments, such as dev, test, and qa. Production environments are usually pre-existing.
+
+Go to [Provisioning overview](/docs/continuous-delivery/cd-infrastructure/provisioning-overview) to learn about Harness provisioning approaches.
+
+Harness can provision any resource that is supported by Terragrunt and the related Terraform Provider or plugin.
+
+If you want to use Terraform without Terragrunt, Harness supports that too. Go to [Terraform how-tos](./terraform-infra/terraform-how-tos) to configure Terraform provisioning without Terragrunt.
+
+We support using Terragrunt provisioning with an **OIDC-enabled AWS connector**, but it requires Delegate version `854xx` or later. Go to [AWS OIDC connector reference](/docs/platform/connectors/cloud-providers/ref-cloud-providers/aws-connector-settings-reference) to configure OIDC authentication.
+
+---
+
+## Dynamic provisioning steps for different deployment types
+
+Each of the deployment types Harness supports (Kubernetes, AWS ECS, etc.) require that you map different Terragrunt script outputs to the Harness infrastructure settings in the pipeline stage.
+
+Go to the following pages to configure dynamic provisioning for each deployment type:
+
+- [Kubernetes infrastructure](/docs/continuous-delivery/deploy-srv-diff-platforms/kubernetes/define-your-kubernetes-target-infrastructure)
+  - The Kubernetes infrastructure is also used for Helm, Native Helm, and Kustomize deployment types.
+- [Azure Web Apps](/docs/continuous-delivery/deploy-srv-diff-platforms/azure/azure-web-apps-tutorial)
+- [AWS ECS](/docs/continuous-delivery/deploy-srv-diff-platforms/aws/ecs/ecs-deployment-tutorial)
+- [AWS Lambda](/docs/continuous-delivery/deploy-srv-diff-platforms/aws/aws-lambda-deployments)
+- [Spot Elastigroup](/docs/continuous-delivery/deploy-srv-diff-platforms/aws/spot/spot-deployment)
+- [Google Cloud Functions](/docs/continuous-delivery/deploy-srv-diff-platforms/google-cloud-functions/google-functions.md)
+- [Serverless.com framework for AWS Lambda](/docs/continuous-delivery/deploy-srv-diff-platforms/serverless/serverless-lambda-cd-quickstart)
+- [Tanzu Application Services](/docs/continuous-delivery/deploy-srv-diff-platforms/tanzu/tanzu-app-services-quickstart)
+- [VM deployments using SSH](/docs/continuous-delivery/deploy-srv-diff-platforms/traditional/ssh-ng)	
+- [Windows VM deployments using WinRM](/docs/continuous-delivery/deploy-srv-diff-platforms/traditional/win-rm-tutorial)
+
+
+---
+
+### Dynamic provisioning steps
+
+When you enable dynamic provisioning in a CD Deploy stage's **Environment** settings, Harness automatically adds the necessary Harness Terragrunt steps:
+
+- **Terragrunt Plan step**: the Terragrunt Plan step connects Harness to your repo and pulls your Terraform scripts.
+- **Approval step**: Harness adds a Manual Approval step between the Terragrunt Plan and Terragrunt Apply steps. You can remove this step or follow the steps in [Using Manual Harness Approval Steps in CD Stages](/docs/continuous-delivery/x-platform-cd-features/cd-steps/approvals/using-harness-approval-steps-in-cd-stages) to configure the step.
+  - You can also use a [Jira or ServiceNow Approval](/docs/continuous-delivery/x-platform-cd-features/cd-steps/approvals/using-jira-and-service-now-approval-steps-in-cd-stages) step.
+- **Terragrunt Apply step**: the Terragrunt Apply step simply inherits its configuration from the Terragrunt Plan step you already configured and applies it.
+
+:::important
+
+You must use the same **Provisioner Identifier** in the Terragrunt Plan and Terragrunt Apply steps.
+
+:::
+
+For details on configuring the Terragrunt steps, go to [Terragrunt steps](#terragrunt-steps) below.
+
+---
+
+## Install Terraform and Terragrunt on delegates
+
+Terraform and Terragrunt must be installed on the Harness Delegates used for deployment. You can install Terraform and Terragrunt manually or use the `INIT_SCRIPT` environment variable in the Delegate YAML.
+
+Go to [Build custom delegate images with third-party tools](/docs/platform/delegates/install-delegates/build-custom-delegate-images-with-third-party-tools) to configure the `INIT_SCRIPT` environment variable.
+
+Here is an example of the installation script to install Terraform and Terragrunt:
+
+```bash
+## Terraform installation (current 1.x stable version)
+set +x  
+apt-get update  
+apt-get install wget  
+apt-get -y install git  
+wget https://releases.hashicorp.com/terraform/1.9.0/terraform_1.9.0_linux_amd64.zip
+apt-get install unzip  
+unzip terraform_1.9.0_linux_amd64.zip  
+cp terraform /usr/bin/  
+terraform --version  
+
+## Terragrunt installation (latest supported version)
+wget https://github.com/gruntwork-io/terragrunt/releases/download/v0.66.9/terragrunt_linux_amd64  
+mv terragrunt_linux_amd64 terragrunt  
+chmod u+x terragrunt  
+mv terragrunt /usr/local/bin/terragrunt  
+terragrunt --version
+```
+
+:::info Check for latest versions
+
+The example above uses Terraform 1.9.0 and Terragrunt 0.66.9. Go to [Terraform releases](https://releases.hashicorp.com/terraform/) and [Terragrunt releases](https://github.com/gruntwork-io/terragrunt/releases) to check for the latest supported versions.
+
+:::
+
+---
+
+### Supported Terragrunt and Terraform versions
+
+In Harness, Terragrunt is fully supported up to version 0.66.9.
+
+:::warning Breaking changes in Terragrunt 0.67.0 and later
+
+**Terragrunt 0.67.0+**: Terragrunt introduced a breaking change in version 0.67.0 that affects logging format. See [Terragrunt 0.67.0 breaking change](https://github.com/gruntwork-io/terragrunt/releases/tag/v0.67.0).
+
+If you are using Terragrunt 0.67.0 or higher, you need to enable the environment variable `TERRAGRUNT_FORWARD_TF_STDOUT` to maintain the previous logging behavior. This ensures that Terragrunt preserves its standard logging format, preventing disruptions in Harness pipelines.
+
+**Terragrunt 0.78.0+**: Starting from version 0.78.0, Terragrunt introduced significant breaking changes in command formats. See [Release v0.78.0](https://github.com/gruntwork-io/terragrunt/releases/tag/v0.78.0) for details. 
+
+Key command format changes include:
+- `run-all` subcommand replaced with `--all` flag (e.g., `terragrunt run-all plan` → `terragrunt plan --all`)
+- `--terragrunt-non-interactive` flag replaced with `--non-interactive`
+- Workspace commands now use `terragrunt run` wrapper structure
+- `terragrunt terragrunt-info` changed to `terragrunt info print`
+
+Harness has implemented support for these changes via the `CDS_ENABLE_TERRAGRUNT_V1_SUPPORT` feature flag. When this flag is enabled, Harness automatically detects the Terragrunt version and uses the appropriate command format. The system falls back to legacy commands for versions below 0.78.0.
+
+**Upcoming Terragrunt 1.0**: Terragrunt is planning to release their first major 1.0 version, which will include additional breaking changes that may affect Harness integration. For more information on the deprecation schedule and planned breaking changes, refer to the [Road to 1.0 Deprecated Feature Removal Schedule](https://github.com/gruntwork-io/terragrunt/issues/3535).
+
+**Recommendation**: 
+- For Terragrunt versions up to 0.66.9: Fully supported without feature flags
+- For Terragrunt 0.78.0+: Contact Harness support to enable the `CDS_ENABLE_TERRAGRUNT_V1_SUPPORT` feature flag for your account
+
+:::
+
+Terragrunt maintains a Terraform version compatibility table to help ensure that you have the correct versions of Terragrunt and Terraform running together.
+
+Go to [Terraform Version Compatibility Table](https://terragrunt.gruntwork.io/docs/getting-started/supported-versions/) to check which Terraform versions are supported by your Terragrunt version.
+
+---
+
+### Permissions
+
+The Harness Delegate requires permissions according to the deployment platform and the operations of the Terragrunt and Terraform scripts.
+
+In some cases, access keys, secrets, and SSH keys are needed. You can add these in [Harness secrets management](/docs/category/secrets-management). You can then select them in the Terragrunt Provisioner step.
+
+---
+
+## Terragrunt steps
+
+:::note 
+Terragrunt steps are available in Deploy and Custom stages only.
+:::
+
+You can add Terragrunt steps anywhere in your CD stage's **Execution**. The most common order is Terragrunt Plan -> Terragrunt Apply -> Terragrunt Destroy. 
+
+You add the Terragrunt Rollback step in the stage **Rollback** section.
+
+The following sections describe how to set up each of the Terragrunt steps in your CD stage. To add a Terragrunt step, do the following:
+
+1. [Add a Deploy or Custom stage](/docs/platform/pipelines/add-a-stage/) to your pipeline if you have not done so already.
+2. If you are setting up a Deploy stage, add a [service](/docs/category/services) and [environment](/docs/continuous-delivery/x-platform-cd-features/environments/create-environments/).
+3. In the **Execution** tab (or **Rollback** section for the Terragrunt Rollback step), click **Add Step**, and then select the Terragrunt step type you want to add.
+
+
+<Tabs>
+  <TabItem value="Terragrunt Plan" label="Terragrunt Plan" default>
+
+
+Configure the following Terragrunt Plan settings.
+
+#### Name
+
+* In **Name**, enter a name for the step. Use a name that describes the infrastructure the step plans to provision.
+
+#### Timeout
+
+* Enter how long you want Harness to try to complete the step before failing and initiating the stage or step [failure strategy](/docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps).
+
+   You can use:
+
+   - `w` for weeks.
+   - `d` for days.
+   - `h` for hours.
+   - `m` for minutes.
+   - `s` for seconds.
+   - `ms` for milliseconds.
+
+   The maximum is `53w`.
+
+   Timeouts can be set at the pipeline-level also, **Advanced Options**.
+
+Provisioning can be time-consuming so use at least `5m`.
+
+#### Command
+
+The **Command** setting indicates how this plan will be used later in the stage. 
+
+There are two options:
+- **Apply**. Select this option if you will apply the plan with a subsequent Terragrunt Apply step.
+- **Destroy**. Select this option if you will destroy the plan with a subsequent Terragrunt Destroy step.
+
+:::info
+
+  Terragrunt Apply and Destroy steps do not support inheriting from a Terragrunt Plan step when **All Modules** is selected in the Terragrunt Plan step's **Module Configuration**.
+
+:::
+
+#### Provisioner Identifier
+
+You use the **Provisioner Identifier** in subsequent steps to refer to the plan run in this step.
+
+* Enter a unique value in Provisioner Identifier.
+
+The most common use of **Provisioner Identifier** is between the Terragrunt Plan and Terragrunt Apply or Terragrunt Destroy steps. 
+
+For the Terragrunt Apply step to apply the plan from the Terragrunt Plan step, it uses the same **Provisioner Identifier**.
+
+For the Terragrunt Destroy step to destroy the plan from the Terragrunt Plan step, it uses the same **Provisioner Identifier**.
+
+Here is an example of how the **Provisioner Identifier** is used across steps:
+
+<DocImage path={require('./static/2161eed44e5b1ef3369542d40747af39160c7a25b71f03f160ce1e29329c6bab.png')} alt="Provisioner Identifier used across Terragrunt Plan, Apply, Destroy, and Rollback steps" title="Click to view full size" />
+
+##### Provisioner Identifier scope
+
+The **Provisioner Identifier** is a project-wide setting. You can reference it across pipelines in the same project.
+
+For this reason, it's important that all your project members know the provisioner identifiers. Sharing this information will prevent one member building a pipeline from accidentally impacting the provisioning of another member's pipeline.
+
+#### Secret Manager
+
+* Select a Harness [secrets manager](/docs/platform/secrets/secrets-management/harness-secret-manager-overview) to use for encrypting/decrypting and saving the Terragrunt plan file.
+
+A Terragrunt plan is a sensitive file that could be misused to alter resources if someone has access to it. Harness avoids this issue by never passing the Terragrunt plan file as plain text.
+
+Harness only passes the Terragrunt plan between the Harness Manager and delegate as an encrypted file using a secrets manager.
+
+Some third-party secret managers, such as HashiCorp Vault, Azure Key Vault, and AWS Secrets Manager, have a maximum secret size limitation. If the size of the secret you want to store exceeds this limit, an error will be thrown by the corresponding third-party system. Therefore, it's crucial to check the maximum secret size supported by your chosen secret manager and ensure that your secrets are within the size limit.
+
+In contrast, key management services like Google Cloud KMS or AWS KMS do not have the same limitation as they are primarily designed for managing encryption keys, not arbitrary secret data. However, it's still essential to check the specific limitations of your chosen key management service and ensure that your secrets meet their requirements.
+
+When designing your secret management strategy and selecting a secret management solution, consider the maximum secret size limit and other limitations that may affect your use case. You may need to choose a secret manager that can handle larger secret sizes or find alternative strategies for managing secrets that exceed the maximum size limit of your chosen secret manager.
+
+When the `terragrunt plan` command runs on the Harness Delegate, the delegate encrypts the plan and saves it to the secrets manager you selected. The encrypted data is passed to the Harness Manager.
+
+When the plan is applied, the Harness manager passes the encrypted data to the delegate.
+
+The delegate decrypts the encrypted plan and runs it.
+
+Your Terragrunt Plan step is now ready. 
+
+You can now configure a Terragrunt Apply, Destroy, or Rollback step to use the Terragrunt script from this Terragrunt Plan step.
+
+
+</TabItem>
+  <TabItem value="Terragrunt Apply" label="Terragrunt Apply">
+
+
+Configure the following Terragrunt Apply settings.
+
+#### Name
+
+* In **Name**, enter a name for the step. Use a name that describes the infrastructure the step plans to provision.
+
+#### Timeout
+
+* Enter how long you want Harness to try to complete the step before failing and initiating the stage or step [failure strategy](/docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps).
+
+   You can use:
+
+   - `w` for weeks.
+   - `d` for days.
+   - `h` for hours.
+   - `m` for minutes.
+   - `s` for seconds.
+   - `ms` for milliseconds.
+
+   The maximum is `53w`.
+
+   Timeouts can be set at the pipeline-level also, **Advanced Options**.
+
+Provisioning can be time-consuming. Use at least `5m`.
+
+#### Configuration Type
+
+This setting determines whether you want to apply a Terragrunt plan from a previous Terragrunt Plan step or run a separate Terragrunt script.
+
+There are two options:
+
+- **Inline**.
+  - Select this option to add your Terragrunt script and apply it.
+- **Inherit From Plan**.
+  - Select this option to apply the Terragrunt plan implemented in a previous Terragrunt Plan step.
+  - To identify the plan used in a previous Terragrunt Plan step, use the same **Provisioner Identifier** as that previous Terragrunt Plan step.
+
+
+:::info
+
+  Terragrunt Apply and Destroy steps do not support inheriting from a Terragrunt Plan step when **All Modules** is selected in the Terragrunt Plan step's **Module Configuration**.
+
+:::
+
+#### Provisioner Identifier
+
+The **Provisioner Identifier** identifies the provisioning performed in this step.
+
+* Enter a unique value in **Provisioner Identifier**.
+
+The **Provisioner Identifier** can be used with other steps to perform common Terragrunt tasks:
+
+- Apply a Terragrunt plan:
+  - Use the same **Provisioner Identifier** from a previous Terraform Plan step.
+  - Set **Configuration Type** in this Terraform Apply step to **Inherit From Plan**. 
+- Destroy resources provisioned by this Terragrunt Apply step:
+  - Use the same **Provisioner Identifier** in this Terragrunt Apply step and a subsequent Terragrunt Destroy step.
+- Roll back the provisioning performed by this Terragrunt Apply step:
+  - Use the same **Provisioner Identifier** in this Terragrunt Apply step and a Terragrunt Rollback step (in the **Rollback** section of **Execution**).
+
+
+Here is an example of how the **Provisioner Identifier** is used across steps:
+
+<DocImage path={require('./static/2161eed44e5b1ef3369542d40747af39160c7a25b71f03f160ce1e29329c6bab.png')} />
+
+##### Provisioner Identifier Scope
+
+The **Provisioner Identifier** is a project-wide setting. You can reference it across pipelines in the same project.
+
+For this reason, it's important that all your project members know the provisioner identifiers. Sharing this information will prevent one member building a pipeline from accidentally impacting the provisioning of another member's pipeline.
+
+#### Configuration File Repository
+
+**Configuration File Repository** is where the Terragrunt script and files you want to use are located.
+
+Here, you'll add a connection to the Terragrunt script repo.
+
+1. Click **Specify Config File** or click the edit icon. The **Terragrunt Config File Store** settings appear.
+2. Click the provider where your files are hosted.
+    
+    ![picture 4](../cd-advanced/terragrunt/static/2c7889d9dbae6966e8899d90310b0564b4552af33f2fffb553d30d11d96298d7.png
+3. Select or create a [Git connector](/docs/platform/connectors/code-repositories/connect-to-code-repo) for your repo.
+4. Once you have selected a connector, click **Continue**.
+5. In **Config File Details**, provide the Git repo details.
+6. In **Git Fetch Type**, select **Latest from Branch** or **Specific Commit Id**.
+   
+   When you run the Pipeline, Harness will fetch the script from the repo.
+   
+   **Specific Commit Id** also supports Git tags. If you think the script might change often, you might want to use **Specific Commit Id**. For example, if you are going to be fetching the script multiple times in your pipeline, Harness will fetch the script each time. If you select **Latest from Branch** and the branch changes between fetches, different scripts are run.
+7. In **Branch**, enter the name of the branch to use.
+8. In **File Path**, enter the path from the root of the repo to the file containing the script.
+9. Click **Submit**.
+
+Your Terragrunt Apply step is now ready. 
+
+You can now configure a Terragrunt Destroy or Rollback step to use the Terragrunt provisioning from this Terragrunt Apply step.
+
+
+</TabItem>
+  <TabItem value="Terragrunt Destroy" label="Terragrunt Destroy">
+
+
+Configure the following Terragrunt Destroy settings.
+
+#### Name
+
+* In Name, enter a name for the step. Use a name that describes the infrastructure the step plans to provision.
+
+#### Timeout
+
+* Enter how long you want Harness to try to complete the step before failing and initiating the stage or step [failure strategy](/docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps).
+
+   You can use:
+
+   - `w` for weeks.
+   - `d` for days.
+   - `h` for hours.
+   - `m` for minutes.
+   - `s` for seconds.
+   - `ms` for milliseconds.
+
+   The maximum is `53w`.
+
+   Timeouts can be set at the pipeline-level also, **Advanced Options**.
+
+Destroying resources can be time-consuming. Use at least `5m`.
+
+#### Configuration Type
+
+You can add a Terragrunt Destroy step to remove any provisioned infrastructure, just like running the `terragrunt run-all destroy` command. See [destroy](https://terragrunt.gruntwork.io/docs/features/execute-terraform-commands-on-multiple-modules-at-once/#the-run-all-command) from Terragrunt.
+
+* In **Configuration Type**, select how you want to destroy resources:
+
+    - **Inherit From Plan**. Destroy the resources from a Terraform Plan step.
+        - Using the Terragrunt Destroy step with a previous Terragrunt Plan step is the same as using the `terragrunt plan` command with the `-destroy` flag.
+        - To use this Terraform Destroy step with a Terraform Plan step, you must select **Destroy** in the **Command** setting of the **Terraform Plan** step.
+     - **Inherit From Apply**. Destroy the resources from a Terraform Apply step.
+        - Using the Terragrunt Destroy step with a previous Terragrunt Apply step is the same as using the `terragrunt apply` command with the `-destroy` flag.
+    - **Inline**. Destroy any resources using a Terragrunt script.
+
+#### Provisioner Identifier
+
+There are two options for **Provisioner Identifier**:
+
+- If you are destroying the resources from a previous Terragrunt Plan or Terragrunt Apply step, enter the **Provisioner Identifier** from that step in **Provisioner Identifier** in this Terragrunt Destroy step.
+- If you are using the **Inline** option in **Configuration Type**, enter a unique value in **Provisioner Identifier**.
+
+The most common use of **Provisioner Identifier** is to destroy resources from a Terragrunt Plan or Terragrunt Apply step. 
+
+Here is an example of how the **Provisioner Identifier** is used across steps:
+
+<DocImage path={require('./static/2161eed44e5b1ef3369542d40747af39160c7a25b71f03f160ce1e29329c6bab.png')} alt="Provisioner Identifier used across Terragrunt Plan, Apply, Destroy, and Rollback steps" title="Click to view full size" />
+
+##### Provisioner Identifier scope
+
+The **Provisioner Identifier** is a project-wide setting. You can reference it across pipelines in the same project.
+
+For this reason, it's important that all your project members know the provisioner identifiers. Sharing this information will prevent one member building a pipeline from accidentally impacting the provisioning of another member's pipeline.
+
+
+</TabItem>
+  <TabItem value="Terragrunt Rollback" label="Terragrunt Rollback">
+
+
+Configure the following Terragrunt Rollback settings.
+
+#### Name
+
+* In **Name**, enter a name for the step. Use a name that describes the infrastructure the step plans to roll back.
+
+#### Timeout
+
+* Enter how long you want Harness to try to complete the step before failing and initiating the stage or step [failure strategy](/docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps).
+
+   You can use:
+
+   - `w` for weeks.
+   - `d` for days.
+   - `h` for hours.
+   - `m` for minutes.
+   - `s` for seconds.
+   - `ms` for milliseconds.
+
+   The maximum is `53w`.
+
+   Timeouts can be set at the pipeline-level also, **Advanced Options**.
+
+Provisioning can be time-consuming so use at least `5m`.
+
+#### Provisioner Identifier
+
+* Enter the **Provisioner Identifier** from a previous Terragrunt Plan or Apply step to roll back its provisioning.
+
+Here is an example of how the **Provisioner Identifier** is used across steps:
+
+<DocImage path={require('./static/2161eed44e5b1ef3369542d40747af39160c7a25b71f03f160ce1e29329c6bab.png')} alt="Provisioner Identifier used across Terragrunt Plan, Apply, Destroy, and Rollback steps" title="Click to view full size" />
+
+##### Provisioner Identifier scope
+
+The **Provisioner Identifier** is a project-wide setting. You can reference it across pipelines in the same project.
+
+For this reason, it's important that all your project members know the provisioner identifiers. Sharing this information will prevent one member building a pipeline from accidentally impacting the provisioning of another member's pipeline.
+
+#### Notes
+
+The following notes discuss Terragrunt rollback scenarios.
+
+- Deployment rollback.
+  - If you have successfully deployed Terraform modules and on the next deployment there is an error that initiates a rollback, Harness will roll back the provisioned infrastructure to the previous, successful version of the Terraform state.
+  - Harness will not increment the serial in the state, but perform a hard rollback to the exact version of the state provided.
+- Rollback limitations.
+  - If you deployed two modules successfully already, module1 and module2, and then attempted to deploy module3, but failed, Harness will roll back to the successful state of module1 and module2.
+  - However, let's look at the situation where module3 succeeds and now you have module1, module2, and module3 deployed. If the next deployment fails, the rollback will only roll back to the Terraform state with module3 deployed. Module1 and module2 were not in the previous Terraform state, so the rollback excludes them.
+
+
+</TabItem>    
+</Tabs>
+
+---
+
+## Settings common to all steps
+
+The following settings are common to the Terragrunt Plan, Apply, and Destroy steps.
+
+These settings are always available in the Terragrunt Plan step, and available in the Apply and Destroy steps when **Inline** is selected in **Configuration Type**.
+
+---
+
+### Configuration File Repository
+
+**Configuration File Repository** is where you add a connection to the Terragrunt script repo hosting the scripts and files for this step.
+
+The **Configuration File Repository** setting is available in the Terragrunt Plan step. It is available in the Terragrunt Apply and Destroy steps when **Inline** is selected in **Configuration Type**. 
+
+1. Click **Specify Config File** or click the edit icon. The **Terragrunt Config File Store** settings appear.
+2. Click the provider where your files are hosted.
+    
+    ![picture 4](./static/2c7889d9dbae6966e8899d90310b0564b4552af33f2fffb553d30d11d96298d7.png)
+3. Select or create a [Git connector](/docs/platform/connectors/code-repositories/connect-to-code-repo) for your repo.
+4. Once you have selected a connector, click **Continue**.
+   
+   In **Config File Details**, provide the Git repo details.
+5. In **Git Fetch Type**, select **Latest from Branch** or **Specific Commit Id**.
+   
+   When you run the Pipeline, Harness will fetch the script from the repo.
+   
+   **Specific Commit Id** also supports Git tags. If you think the script might change often, you might want to use **Specific Commit Id**. For example, if you are going to be fetching the script multiple times in your pipeline, Harness will fetch the script each time. If you select **Latest from Branch** and the branch changes between fetches, different scripts are run.
+6. In **Branch**, enter the name of the branch to use.
+7. In **File Path**, enter the path from the root of the repo to the file containing the script.
+8. Click **Submit**.
+
+#### Source Module
+
+When you set up the file repo in **Configuration File Repository**, you use a Harness Connector to connect to the repo where the Terraform scripts are located.
+
+Some scripts will reference module sources in other repos and Harness will pull the source code for the desired child module at runtime (during `terraform init`).
+
+In **Source Module**, you can select **Use Connector credentials** to have Harness use the credentials of the Connector to pull the source code for the desired child module(s).
+
+If you do not select **Use Connector credentials**, Terraform will use the credentials that have been set up in the system.
+
+The **Use Connector credentials** setting allows Harness Git Connectors using SSH and HTTPS authentication with a token.
+
+When configuring the SSH key for the connector, exporting an SSH key with a passphrase for the module source is not supported. Configure an SSH Key without the passphrase.
+
+Here is a syntax example to reference the Terraform module using the SSH protocol:
+
+```bash
+source = "git@github.com:your-username/your-private-module.git"
+```
+
+Here is a syntax example to reference the Terraform module using the HTTPS protocol:
+
+```bash
+source = "git::https://github.com/your-organization/your-private-module.git"
+```
+:::tip
+
+The ability to authenticate with HTTPS is new! The Minimum required delegate version is: 83401. Here is a demo on its functionality:
+
+<DocVideo src="https://www.loom.com/share/bb8b9e4996f14bf0a16839849b0b72e4?sid=3befc405-7c4d-4f21-afe0-c36e2962b566" />
+
+:::
+
+---
+
+### Module Configuration
+
+Use this setting to specify the Terraform modules you want Terragrunt to use.
+
+In **Module Configuration**, you are telling Harness where to locate your [terragrunt.hcl file](https://terragrunt.gruntwork.io/docs/getting-started/configuration/). The terragrunt.hcl itself will point to a Terraform module using the source parameter like this:
+
+```
+locals {  
+}  
+  
+terraform {  
+//  source = "git::git@github.com:Tathagat-289/terraformResources.git//module3"  
+  source = "github.com/Tathagat-289/terraformResources//module3"  
+}  
+```
+
+# Include all settings from the root terragrunt.hcl file  
+
+```
+include {  
+  path = find_in_parent_folders()  
+}  
+  
+inputs = {  
+  tfmodule3 = "tfmodule4"  
+  slmodule3 = "sleepmodule4"  
+  tfv = "tfversion1"  
+  sl = "sl1"  
+}
+```
+
+You have two options:
+
+- **All Modules**. Harness will use all of the terragrunt.hcl files starting from the *folder* you specify in **Path**.
+  
+  If you select **All Modules**, you might want to use **Backend Configuration** to store your state file. Harness will not sync with the current state when **All Modules** is selected. Instead, Harness simply applies the terragrunt.hcl files.
+
+  :::info
+  
+   - When **All Modules** is selected, the **Export JSON representation of Terragrunt Plan** option is not supported.
+   - Terragrunt Apply and Destroy steps do not support inheriting from a Terragrunt Plan step when **All Modules** is selected in the Terragrunt Plan step's **Module Configuration**.
+  
+  :::
+
+- **Specific Module**. Harness will use a single terragrunt.hcl file in the folder you specify in **Path**.
+
+The **Path** setting supports [fixed values, runtime inputs, and expressions](/docs/platform/variables-and-expressions/runtime-inputs/).
+
+---
+
+### Workspace
+
+Harness supports Terraform workspaces.
+
+A Terraform workspace allows you to maintain separate state files for different environments, such as dev, staging, and production. This way, you can run Terraform commands for each environment without impacting the state of the other environments.
+
+When you use Terragrunt with Terraform workspaces, Terragrunt automatically creates and switches between the workspaces for each environment based on the configuration specified in the terragrunt.hcl file.
+
+Workspaces are useful when testing changes before moving to a production infrastructure. To test the changes, you create separate workspaces for Dev and Production.
+
+A workspace is really a different state file. Each workspace isolates its state from other workspaces. For more information, see [When to use Multiple Workspaces](https://www.terraform.io/docs/state/workspaces.html#when-to-use-multiple-workspaces) from Hashicorp.
+
+Here is an example script where a local value names two workspaces, default and production, and associates different instance counts with each:
+
+```
+locals {  
+  counts = {  
+      "default"=1  
+      "production"=3  
+  }  
+}  
+  
+resource "aws_instance" "my_service" {  
+  ami="ami-7b4d7900"  
+  instance_type="t2.micro"  
+  count="${lookup(local.counts, terraform.workspace, 2)}"  
+  tags {  
+         Name = "${terraform.workspace}"  
+    }  
+}
+```
+
+In the workspace interpolation sequence you can see the count is assigned by applying it to the workspace variable (`terraform.workspace`) and that the tag is applied using the variable also.
+
+* In **Workspace**, enter the name of the workspace to use.
+
+    Terraform will pass the workspace name you provide to the `terraform.workspace` variable, thus determining the count. This is the same as the `terraform workspace select` command.
+    
+    Using the example above, if you provide the name `production`, the count will be 3.
+
+    You can also set **Workspace** as a [runtime inputs or expression](/docs/platform/variables-and-expressions/runtime-inputs/) and use a different workspace name each time the pipeline is run.
+
+---
+
+### Terraform Var Files
+
+* In **Terraform Var Files**, provide values for the Terraform input variables in the Terraform module (config.tf) that your Terragrunt config file uses.
+
+For example, here's a Terraform config.tf file with variables for access and secret key:
+
+```
+variable "access_key" {}
+variable "secret_key" {}  
+  
+provider "aws" {  
+  access_key = var.access_key  
+  secret_key = var.secret_key  
+  region = "us-east-1"  
+}  
+...
+```
+
+You can use inline or remote tfvar settings.
+
+If you use inline, you can paste in the input variables, like this:
+
+```
+count_of_null_resources = "7"
+file_message = "testing tvar"
+```
+
+You can use Harness [variable](/docs/platform/variables-and-expressions/harness-variables) and [secret](/docs/category/secrets) expressions in the inputs also.
+
+---
+
+### Backend Configuration
+
+Depending on which platform you store your remote state data, Terragrunt and Terraform allow you to pass many different credentials and configuration settings, such as access and secret keys. 
+
+For example, if your terragrunt.hcl file has the following backend:
+
+```json
+ remote_state {
+   backend = "azurerm"
+   config = {
+     key = "${path_relative_to_include()}/terraform.tfstate"
+     subscription_id = "abcdefg123456"
+     resource_group_name  = "tfResourceGroup"
+     storage_account_name = "terraformremotebackend"
+     container_name       = "azure-backend"
+   }
+   generate = {
+     path      = "_backend.tf"
+     if_exists = "overwrite"
+   }
+ }
+ ```
+
+
+In **Backend Configuration**, for this case you provide the required configuration variables for that backend type.
+For remote backend-configuration the variables should be in .tfvars file.
+
+Example:
+```
+subscription_id = "abcdefg123456"
+resource_group_name  = "tfResourceGroup"
+storage_account_name = "myterraformremotebackend"
+container_name       = "azure-backend"
+```
+In your terragrunt .hcl config file it would require to have only the rest of the terraform remote state:
+
+```json
+ remote_state {
+   backend = "azurerm"
+   config = {
+     key = "${path_relative_to_include()}/terraform.tfstate"
+   }
+   generate = {
+     path      = "_backend.tf"
+     if_exists = "overwrite"
+   }
+ }
+ ```
+
+Go to [AWS S3 backend configuration](https://www.terraform.io/docs/backends/types/s3.html#configuration) in the Terraform documentation and [Keep your remote state configuration DRY](https://terragrunt.gruntwork.io/docs/features/keep-your-remote-state-configuration-dry/) in the Terragrunt documentation to see configuration examples.
+
+* In **Backend Configuration**, enter values for each backend config (remote state variable) in the Terragrunt config (.hcl) or Terraform script (config.tf) file.
+
+---
+
+### Targets
+
+* In **Target**, target one or more specific modules in your Terraform script, just like using the `terraform plan -target`, `terraform apply -target`, or `terraform destroy -target` commands. Go to [Resource Targeting](https://www.terraform.io/docs/commands/plan.html#resource-targeting) in the Terraform documentation to learn about targeting specific resources.
+
+  If you have multiple modules in your script and you do not select one in **Targets**, all modules are used.
+
+  You can also use [runtime inputs or expressions](/docs/platform/variables-and-expressions/runtime-inputs/) for your targets. 
+
+  For example, you can create a stage variable named `module` and then enter the variable `<+stage.variables.module>` in **Targets**.
+
+---
+
+### Environment Variables
+
+In **Environment Variables**, you can reference additional environment variables in the Terraform script ultimately used by the Terragrunt plan. These are in addition to any variables already in the script.
+
+* Click **Add** and enter a name and value for the environment variable.
+    
+    For example, the name `TF_LOG` and the value `TRACE`, or the name `ARM_CLIENT_ID` and the value `<+secrets.getValue("account.tg_azure_client_id")>`.
+
+You can use Harness variables and secrets for the name and value.
+
+Environment variables can also be deleted using the Terragrunt Destroy step.
+
+---
+
+## Use Terragrunt steps together
+
+The Terragrunt steps can be used independently or you can connect them by using the same **Provisioner Identifier** in all of the steps.
+
+Here is how to use all the steps together:
+
+1. Terragrunt Plan step:
+   1. Add the Terragrunt Plan step and define the Terragrunt script for it to use.
+   2. Select **Apply** in **Command**. 
+   3. Enter a **Provisioner Identifier**.
+2. Terragrunt Apply step:
+   1. Select **Inherit from Plan** in **Configuration Type**.
+   2. Reference the Terragrunt Plan step using the same **Provisioner Identifier**.
+3. Terragrunt Destroy step:
+   1. Select **Inherit from Apply** or **Inherit from Plan** in **Configuration Type**.
+   1. Reference the Terragrunt Apply or Plan step using the same **Provisioner Identifier**.
+4. Terragrunt Rollback step:
+   1. Reference the Terragrunt Apply or Plan step using the same **Provisioner Identifier**.
+
+<DocImage path={require('./static/2161eed44e5b1ef3369542d40747af39160c7a25b71f03f160ce1e29329c6bab.png')} />
+
+Each of these steps is described in [Terragrunt steps](#terragrunt-steps).
+
+---
+
+### Export JSON representation of Terragrunt Plan
+
+:::info
+
+When **All Modules** is selected in **Module Configuration**, the **Export JSON representation of Terragrunt Plan** option is not supported.
+
+:::
+
+Enable this setting to use a JSON representation of the plan implemented in this step.
+
+In subsequent **Execution** steps, such as a Shell Script step, you can reference the plan using this expression format:
+
+```
+<+execution.steps.[Terragrunt step Id].plan.jsonFilePath>
+```
+
+For example, if you had a Terragrunt Plan step with the Id `Plan_Step`, you could use the expression in a Shell Script step like this:
+
+```
+cat "<+execution.steps.Plan_Step.plan.jsonFilePath>"
+```
+JSON representation of Terraform plan can be accessed across different stages as well.
+
+For example, if the Terragrunt Plan step with the Id `TgPlan` is in the **Execution** steps of a stage with the Id `TgStage`, then the expression is like this:
+
+`<+pipeline.stages.TgStage.spec.execution.steps.TgPlan.plan.jsonFilePath>`
+
+When Terragrunt plan is present in a step group, then the expression to access jsonFilePath is like this:
+
+`<+pipeline.stages.[stage name].spec.execution.steps.[step group name].steps.[step name].plan.jsonFilePath>`
+
+##### Scope of expression
+
+**Export JSON representation of the Terragrunt Plan** is available only between the Terragrunt Plan step and subsequent Terragrunt Apply or Destroy steps. The expression will fail to resolve if used after the Terragrunt Apply or Destroy steps.
+
+If used across stages, the Terragrunt Plan step can be used in one stage and the Terragrunt Apply or Destroy step can be used in a subsequent stage. The expression will resolve successfully in this case.
+
+The JSON of the Terragrunt Plan step is not available after rollback.
+
+---
+
+## Advanced settings
+
+In **Advanced**, you can use the following options:
+
+* [Delegate Selector](/docs/platform/delegates/manage-delegates/select-delegates-with-selectors)
+* [Conditional Execution](/docs/platform/pipelines/step-skip-condition-settings)
+* [Failure Strategy](/docs/platform/pipelines/failure-handling/define-a-failure-strategy-on-stages-and-steps)
+* [Looping Strategy](/docs/platform/pipelines/looping-strategies/looping-strategies-matrix-repeat-and-parallelism)
+
+---
+
+## Command line options
+
+This setting allows you to set the Terragrunt CLI options for Terragrunt commands depending on the Terragrunt step type. For example: `-lock=false`, `-lock-timeout=0s`.
+
+---
+
+## YAML examples
+
+The following YAML examples show you how to quickly add Terragrunt steps into your CD stages.
+
+
+<Tabs2>
+  <TabItem2 value="Terragrunt Plan" label="Terragrunt Plan" default>
+
+
+Here is an example of the YAML for a Terragrunt Plan step:
+
+```yaml
+              - step:
+                  type: TerragruntPlan
+                  name: Terragrunt Plan_1
+                  identifier: TerragruntPlan_1
+                  spec:
+                    configuration:
+                      command: Apply
+                      configFiles:
+                        store:
+                          type: Github
+                          spec:
+                            gitFetchType: Branch
+                            connectorRef: vlprerequisites
+                            branch: main
+                            folderPath: terragrunt/
+                      moduleConfig:
+                        terragruntRunType: RunModule
+                        path: qa/local-file-resource
+                      secretManagerRef: harnessSecretManager
+                      backendConfig:
+                        type: Inline
+                        spec:
+                          content: |-
+                            resource_group_name  = "tfResourceGroup"
+                            storage_account_name = "vlicaterraformremoteback"
+                            container_name       = "azure-backend"
+                      environmentVariables:
+                        - name: ARM_CLIENT_ID
+                          value: <+secrets.getValue("account.vl_tg_azure_client_id")>
+                          type: String
+                        - name: ARM_CLIENT_SECRET
+                          value: <+secrets.getValue("account.vl_tg_azure_client_secret")>
+                          type: String
+                        - name: ARM_TENANT_ID
+                          value: <+secrets.getValue("account.vl_tg_azure_tenant_id")>
+                          type: String
+                      varFiles:
+                        - varFile:
+                            identifier: vasd12312311
+                            spec:
+                              content: |-
+                                count_of_null_resources = "7"
+                                file_message = "testing inherit 111"
+                            type: Inline
+                    provisionerIdentifier: planinherit123aa1
+                  timeout: 10m
+```
+
+
+  </TabItem2>
+  <TabItem2 value="Terragrunt Apply" label="Terragrunt Apply">
+
+
+Here is an example of the YAML for a Terragrunt Apply step that inherits from the previous Terragrunt Plan step:
+
+```yaml
+              - step:
+                  type: TerragruntApply
+                  name: Terragrunt Apply_1
+                  identifier: TerragruntApply_1
+                  spec:
+                    configuration:
+                      type: InheritFromPlan
+                    provisionerIdentifier: planinherit123aa1
+                  timeout: 10m
+```
+
+
+  </TabItem2>
+  <TabItem2 value="Terragrunt Destroy" label="Terragrunt Destroy">
+
+
+Here is an example of the YAML for a Terragrunt Destroy step that inherits from the previous Terragrunt Apply step:
+
+```yaml
+              - step:
+                  type: TerragruntDestroy
+                  name: Terragrunt Destroy_1
+                  identifier: TerragruntDestroy_1
+                  spec:
+                    provisionerIdentifier: planinherit123aa1
+                    configuration:
+                      type: InheritFromApply
+                  timeout: 10m
+```
+
+
+  </TabItem2>
+  <TabItem2 value="Terragrunt Rollback" label="Terragrunt Rollback">
+
+
+Here is an example of the YAML for a Terragrunt Rollback step:
+
+```yaml
+            rollbackSteps:
+              - step:
+                  type: TerragruntRollback
+                  name: Terragrunt Rollback_1
+                  identifier: TerragruntRollback_1
+                  spec:
+                    provisionerIdentifier: abc123abc
+                    delegateSelectors: []
+                  timeout: 10m
+```
+
+
+
+  </TabItem2>
+
+</Tabs2>
+
+---
+
+## Terraform logs
+
+All logs produced by Terraform are printed in Harness step execution logs.
+
+Logs that are coming from `stdout` will be printed as they are, and logs from `stderr` will be printed in red.
+
+The option to skip stderr logs coloring is behind the feature flag `CDS_TF_TG_SKIP_ERROR_LOGS_COLORING`.
+
+---
+
+## Troubleshooting
+
+<Troubleshoot
+  issue="Terragrunt Plan step fails with 'Backend not initialized' error when running with specific module"
+  mode="docs"
+  fallback="When using specific module configuration, Terraform init is not triggered directly. Instead, Harness uses the Terragrunt terragrunt-info command. To initialize the backend properly, select 'All modules' in Module Configuration to trigger automatic backend initialization."
+/>
+
+<Troubleshoot
+  issue="Error acquiring the state lock in Harness Terragrunt pipeline with remote backend"
+  mode="docs"
+  fallback="Ensure no other process is holding a lock on the Terraform state file. Lock retries are handled automatically by Terraform and Terragrunt. If the issue persists, check your backend configuration for concurrent access settings."
+/>
+
+<Troubleshoot
+  issue="Terragrunt Apply step times out during large infrastructure provisioning"
+  mode="general"
+  fallback="Increase the Timeout setting in the step configuration. Provisioning large infrastructure can take 10 or more minutes. Set the timeout to at least 10m for complex provisioning tasks."
+/>
+
+<Troubleshoot
+  issue="Provisioner Identifier mismatch between Terragrunt Plan and Apply steps"
+  mode="docs"
+  fallback="Ensure the Provisioner Identifier value is exactly the same in both the Terragrunt Plan and Terragrunt Apply steps. The identifier is case-sensitive and must match character-for-character."
+/>
+
+<Troubleshoot
+  issue="Docker delegate managed by ECS returns NoCredentialProviders error with Terragrunt"
+  mode="general"
+  fallback="When your Docker delegate is managed by ECS and set to assume an IAM role, ensure the delegate has permissions to assume the role. If using a proxy, ensure the proxy instance also has permissions to assume the role and set HTTP_PROXY and HTTPS_PROXY environment variables in the Terragrunt step. If using AWS_CONTAINER_CREDENTIALS_RELATIVE_URI, ensure your delegate has access to all required AWS services (STS, Metadata Service, etc.)."
+/>
+
+<Troubleshoot
+  issue="Terragrunt plan returns 'fork/exec /usr/bin/terraform: argument list too long' error"
+  mode="general"
+  fallback="The 'argument list too long' error is typically related to how you are passing variables and configurations to Terraform and Terragrunt. Use configuration files instead of inline variables to reduce the number of command-line arguments. Go to the Terragrunt GitHub issue #2132 for additional details."
+/>
+
+---
+
+## Next steps
+
+You have configured Terragrunt provisioning in your CD pipeline. You can now provision infrastructure dynamically as part of your deployments.
+
+- Go to [Provisioning overview](/docs/continuous-delivery/cd-infrastructure/provisioning-overview) to learn about other provisioning options in Harness.
+- Go to [Terraform how-tos](./terraform-infra/terraform-how-tos) to configure Terraform provisioning without Terragrunt.
+- Go to [Dynamic infrastructure provisioning](/docs/continuous-delivery/cd-infrastructure/provisioning-overview#dynamic-infrastructure-provisioning) to learn how to provision target environments as part of your deployments.
+
+
+
+
+

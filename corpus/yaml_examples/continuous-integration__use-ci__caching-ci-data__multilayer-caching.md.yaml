@@ -1,0 +1,244 @@
+# source: docs/continuous-integration/use-ci/caching-ci-data/multilayer-caching.md  (https://developer.harness.io/docs/continuous-integration/use-ci/caching-ci-data/multilayer-caching)
+
+# --- example 1 ---
+                 - step:
+                     type: RestoreCacheGCS
+                     name: L1 Caching
+                     identifier: L1_Caching
+                     spec:
+                       connectorRef: YOUR_GCP_CONNECTOR
+                       bucket: YOUR_GCS_BUCKET_NAME
+                       key: harness-cache-{{ checksum "pom.xml" }}
+                       archiveFormat: Tar
+                 - step:
+                     type: RestoreCacheGCS
+                     name: L2 Cache
+                     identifier: L2_Cache
+                     spec:
+                       connectorRef: YOUR_GCP_CONNECTOR
+                       bucket: YOUR_GCS_BUCKET_NAME
+                       key: harness-cache-l2
+                       archiveFormat: Tar
+
+# --- example 2 ---
+                 - step:
+                     type: RestoreCacheGCS
+                     ...
+                     spec:
+                       ...
+                       failIfKeyNotFound: true
+                     failureStrategies:
+                       - onFailure:
+                           errors:
+                             - AllErrors
+                           action:
+                             type: Ignore
+
+# --- example 3 ---
+                 - step:
+                     type: RestoreCacheGCS
+                     name: L1 Caching
+                     identifier: L1_Caching
+                     spec:
+                       connectorRef: YOUR_GCP_CONNECTOR
+                       bucket: YOUR_GCS_BUCKET_NAME
+                       key: harness-cache-{{ checksum "pom.xml" }}
+                       archiveFormat: Tar
+                       failIfKeyNotFound: true
+                     failureStrategies:
+                       - onFailure:
+                           errors:
+                             - AllErrors
+                           action:
+                             type: Ignore
+                 - step:
+                     type: RestoreCacheGCS
+                     name: L2 Cache
+                     identifier: L2_Cache
+                     spec:
+                       connectorRef: YOUR_GCP_CONNECTOR
+                       bucket: YOUR_GCS_BUCKET_NAME
+                       key: harness-cache-l2
+                       archiveFormat: Tar
+
+# --- example 4 ---
+                 - step:
+                     type: RestoreCacheGCS
+                     ...
+                     when:
+                       stageStatus: Success
+                       condition: <+execution.steps.L1_Caching.status> == "IGNORE_FAILED"
+
+# --- example 5 ---
+                 - step:
+                     type: RestoreCacheGCS
+                     name: L1 Caching
+                     identifier: L1_Caching
+                     spec:
+                       connectorRef: YOUR_GCP_CONNECTOR
+                       bucket: YOUR_GCS_BUCKET_NAME
+                       key: harness-cache-{{ checksum "pom.xml" }}
+                       archiveFormat: Tar
+                       failIfKeyNotFound: true
+                     failureStrategies:
+                       - onFailure:
+                           errors:
+                             - AllErrors
+                           action:
+                             type: Ignore
+                 - step:
+                     type: RestoreCacheGCS
+                     name: L2 Cache
+                     identifier: L2_Cache
+                     spec:
+                       connectorRef: YOUR_GCP_CONNECTOR
+                       bucket: YOUR_GCS_BUCKET_NAME
+                       key: harness-cache-l2
+                       archiveFormat: Tar
+                     when:
+                       stageStatus: Success
+                       condition: <+execution.steps.L1_Caching.status> == "IGNORE_FAILED"
+
+# --- example 6 ---
+       - stage:
+           name: build
+           identifier: build
+           type: CI
+           spec:
+             ...
+             execution:
+               steps:
+               ...
+               - step:
+                   type: SaveCacheGCS
+                   name: Save L2 Cache
+                   identifier: Save_L2_Cache
+                   spec:
+                     connectorRef: YOUR_GCP_CONNECTOR
+                     bucket: YOUR_GCS_BUCKET_NAME
+                     key: harness-cache-l2
+                     sourcePaths:
+                       - /.m2/repository/
+                     archiveFormat: Tar
+               - step:
+                   type: SaveCacheGCS
+                   name: Save L1 Cache
+                   identifier: Save_L1_Cache
+                   spec:
+                     connectorRef: YOUR_GCP_CONNECTOR
+                     bucket: YOUR_GCS_BUCKET_NAME
+                     key: harness-cache-{{ checksum "pom.xml" }}
+                      sourcePaths:
+                        - /.m2/repository/
+                     archiveFormat: Tar
+             sharedPaths:
+               - /.m2/repository/
+
+# --- example 7 ---
+       - stage:
+           name: build
+           identifier: build
+           type: CI
+           spec:
+             ...
+             execution:
+               steps:
+               ...
+                 - parallel: ## This tells the pipeline to run the following steps in parallel.
+                     - step:
+                         type: SaveCacheGCS
+                         ...
+                     - step:
+                         type: SaveCacheGCS
+                         ...
+             sharedPaths:
+               - /.m2/repository/
+
+# --- example 8 ---
+pipeline:
+  name: Cache Multilayer
+  identifier: Cache_Multilayer
+  projectIdentifier: default
+  orgIdentifier: default
+  tags: {}
+  stages:
+    - stage:
+        name: build
+        identifier: build
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          execution:
+            steps:
+              - step:
+                  type: RestoreCacheGCS
+                  name: L1 Caching
+                  identifier: L1_Caching
+                  spec:
+                    connectorRef: YOUR_GCP_CONNECTOR
+                    bucket: YOUR_GCS_BUCKET_NAME
+                    key: harness-cache-{{ checksum "pom.xml" }}
+                    archiveFormat: Tar
+                    failIfKeyNotFound: true
+                  failureStrategies:
+                    - onFailure:
+                        errors:
+                          - AllErrors
+                        action:
+                          type: Ignore
+              - step:
+                  type: RestoreCacheGCS
+                  name: L2 Cache
+                  identifier: L2_Cache
+                  spec:
+                    connectorRef: YOUR_GCP_CONNECTOR
+                    bucket: YOUR_GCS_BUCKET_NAME
+                    key: harness-cache-l2
+                    archiveFormat: Tar
+                  when:
+                    stageStatus: Success
+                    condition: <+execution.steps.L1_Caching.status> == "IGNORE_FAILED"
+              - step: ## Between the Restore and Save Cache steps, add steps to build code, run tests, publish images, and so on.
+                  type: Run
+                  name: Run_1
+                  identifier: Run_1
+                  spec:
+                    shell: Sh
+                    command: |-
+                      mvn clean install
+              - parallel: ## This tells the pipeline to run the following two Save Cache steps in parallel.
+                  - step:
+                      type: SaveCacheGCS
+                      name: Save L2 Cache
+                      identifier: Save_L2_Cache
+                      spec:
+                        connectorRef: YOUR_GCP_CONNECTOR
+                        bucket: YOUR_GCS_BUCKET_NAME
+                        key: harness-cache-l2
+                        sourcePaths:
+                          - /.m2/repository/
+                        archiveFormat: Tar
+                  - step:
+                      type: SaveCacheGCS
+                      name: Save L1 Cache
+                      identifier: Save_L1_Cache
+                      spec:
+                        connectorRef: YOUR_GCP_CONNECTOR
+                        bucket: YOUR_GCS_BUCKET_NAME
+                        key: harness-cache-{{ checksum "pom.xml" }}
+                        sourcePaths:
+                          - /.m2/repository/
+                        archiveFormat: Tar
+          sharedPaths: ## This setting shares directories that are outside the default workspace directory (/harness).
+            - /.m2/repository/
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODE_REPO_CONNECTOR_ID
+        build: <+input>

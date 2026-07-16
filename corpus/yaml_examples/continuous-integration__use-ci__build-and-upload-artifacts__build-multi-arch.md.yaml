@@ -1,0 +1,135 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/build-multi-arch.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/build-multi-arch)
+
+# --- example 1 ---
+pipeline:
+  allowStageExecutions: true
+  projectIdentifier: default
+  orgIdentifier: default
+  identifier: CI_MultiArch
+  name: CI_MultiArch
+  tags:
+    CI: ""
+  properties:
+    ci:
+      codebase:
+        connectorRef: YOUR_CODEBASE_CONNECTOR_ID
+        repoName: YOUR_REPO_NAME
+        build: <+input>
+  stages:
+    - stage:
+        name: K8
+        identifier: upload
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: k8Linux
+              namespace: <+input>
+              runAsUser: ""
+              automountServiceAccountToken: true
+              nodeSelector: {}
+              containerSecurityContext:
+                runAsUser: ""
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: CreateDockerFile
+                  identifier: CreateDockerFile
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: alpine:latest
+                    command: |-
+                      touch harnessDockerfileui
+                      cat > harnessDockerfileui <<- EOM
+                      FROM alpine:latest AS dev-env
+                      ARG foo
+                      RUN echo "$foo bar"
+                      ENTRYPOINT ["pwd"]
+
+                      FROM alpine:latest AS release-env
+                      ARG hello
+                      RUN echo "$hello world"
+                      ENTRYPOINT ["ls"]
+                      EOM
+                      cat harnessDockerfileui
+                    resources:
+                      limits:
+                        memory: 100M
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: DockerPushStep
+                  identifier: DockerPushStep
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    repo: my-repo/ci-demo
+                    tags:
+                      - "1.0-linux-amd64"
+                    dockerfile: harnessDockerfileui
+                    target: dev-env
+                    resources:
+                      limits:
+                        memory: 100M
+    - stage:
+        name: K8s Linux arm
+        identifier: CI_Golden_ARM
+        type: CI
+        spec:
+          cloneCodebase: true
+          infrastructure:
+            type: KubernetesDirect
+            spec:
+              connectorRef: k8sarm
+              namespace: ci-gold-arm-delegate
+              automountServiceAccountToken: true
+              tolerations:
+                - effect: NoSchedule
+                  key: kubernetes.io/arch
+                  operator: Equal
+                  value: arm64
+              nodeSelector:
+                kubernetes.io/arch: arm64
+              os: Linux
+          execution:
+            steps:
+              - step:
+                  type: Run
+                  name: CreateDockerFile
+                  identifier: CreateDockerFile
+                  spec:
+                    connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                    image: alpine:latest
+                    command: |-
+                      touch harnessDockerfileui
+                      cat > harnessDockerfileui <<- EOM
+                      FROM alpine:latest AS dev-env
+                      ARG foo
+                      RUN echo "$foo bar"
+                      ENTRYPOINT ["pwd"]
+
+                      FROM alpine:latest AS release-env
+                      ARG hello
+                      RUN echo "$hello world"
+                      ENTRYPOINT ["ls"]
+                      EOM
+                      cat harnessDockerfileui
+                    resources:
+                      limits:
+                        memory: 100M
+              - step:
+                  type: BuildAndPushDockerRegistry
+                  name: DockerPushStep
+                  identifier: DockerPushStep
+                  spec:
+                    connectorRef: YOUR_DOCKER_CONNECTOR_ID
+                    repo: my-repo/ci-demo
+                    tags:
+                      - "1.0-linux-arm64"
+                    dockerfile: harnessDockerfileui
+                    target: dev-env
+                    resources:
+                      limits:
+                        memory: 100M

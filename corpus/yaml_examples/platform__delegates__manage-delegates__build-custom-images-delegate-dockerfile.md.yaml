@@ -1,0 +1,12 @@
+# source: docs/platform/delegates/manage-delegates/build-custom-images-delegate-dockerfile.md  (https://developer.harness.io/docs/platform/delegates/manage-delegates/build-custom-images-delegate-dockerfile)
+
+# --- example 1 ---
+   USER root
+
+   RUN curl -s -L -o delegate.jar $BASEURL/$DELEGATEVERSION/delegate.jar
+
+   COPY <PATH_TO_LOCAL_CERTS_DIRECTORY> <PATH_TO_DIRECTORY_OF_CERTS_IN_THE_CONTAINER>
+
+   RUN bash -c "/opt/harness-delegate/load_certificates.sh <PATH_TO_DIRECTORY_OF_CERTS_IN_THE_CONTAINER>"
+
+   USER 1001

@@ -1,0 +1,13 @@
+# source: docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push/build-and-push-to-acr.md  (https://developer.harness.io/docs/continuous-integration/use-ci/build-and-upload-artifacts/build-and-push/build-and-push-to-acr)
+
+# --- example 1 ---
+- step:
+    type: BuildAndPushACR
+    name: BuildAndPushACR_1
+    identifier: BuildAndPushACR_1
+    spec:
+      connectorRef: YOUR_AZURE_CONNECTOR_ID
+      repository: CONTAINER-REGISTRY-NAME.azurecr.io/IMAGE-NAME
+      caching: true
+      tags:
+        - <+pipeline.sequenceId>

@@ -1,0 +1,9 @@
+# source: docs/platform/delegates/manage-delegates/select-delegates-with-selectors.md  (https://developer.harness.io/docs/platform/delegates/manage-delegates/select-delegates-with-selectors)
+
+# --- example 1 ---
+...
+    env:
+    ....
+    - name: DELEGATE_TAGS
+      value: "tag1,tag2"
+...

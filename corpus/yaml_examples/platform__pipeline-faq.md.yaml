@@ -1,0 +1,27 @@
+# source: docs/platform/pipeline-faq.md  (https://developer.harness.io/docs/platform/pipeline-faq)
+
+# --- example 1 ---
+<+pipeline.stages.STAGE_ID.spec.execution.steps.STEP_ID.status>
+<+pipeline.stages.STAGE_ID.status>
+<+execution.steps.STEP_ID.status>
+
+# --- example 2 ---
+# Step 1
+name: select_delegate
+identifier: select_delegate
+spec:
+  spec:
+    script: |
+      HOST_SELECTOR=$HOSTNAME
+  ...
+  outputVariables:
+    - name: HOST_SELECTOR
+      type: String
+      value: HOST_SELECTOR
+# Step 2
+name: use delegate
+identifier: use_delegate
+spec:
+  ...
+  delegateSelectors:
+    - <+execution.steps.select_delegate.output.outputVariables.HOST_SELECTOR>

@@ -1,0 +1,9 @@
+# source: docs/platform/pipelines/failure-handling/define-a-failure-strategy-for-pipelines.md  (https://developer.harness.io/docs/platform/pipelines/failure-handling/define-a-failure-strategy-for-pipelines)
+
+# --- example 1 ---
+failureStrategies:
+  - onFailure:
+      errors:
+         - AllErrors
+      action:
+         type: PipelineRollback

@@ -1,0 +1,84 @@
+# source: docs/continuous-delivery/gitops/security/sops.md  (https://developer.harness.io/docs/continuous-delivery/gitops/security/sops)
+
+# --- example 1 ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: argocd-repo-server
+    spec:
+      template:
+        spec:
+          containers:
+            - name: argocd-repo-server
+              env:
+                - name: HELM_PLUGINS
+                value: /helm-sops-tools/helm-plugins/
+                - name: HELM_SECRETS_CURL_PATH
+                value: /helm-sops-tools/curl
+                - name: HELM_SECRETS_SOPS_PATH
+                value: /helm-sops-tools/sops
+                - name: HELM_SECRETS_KUBECTL_PATH
+                value: /helm-sops-tools/kubectl
+                - name: HELM_SECRETS_BACKEND
+                value: sops
+                - name: HELM_SECRETS_VALUES_ALLOW_SYMLINKS
+                value: "false"
+                - name: HELM_SECRETS_VALUES_ALLOW_ABSOLUTE_PATH
+                value: "true"
+                - name: HELM_SECRETS_VALUES_ALLOW_PATH_TRAVERSAL
+                value: "true"
+                - name: HELM_SECRETS_WRAPPER_ENABLED
+                value: "true"
+                - name: HELM_SECRETS_HELM_PATH
+                value: /usr/local/bin/helm
+              volumeMounts:
+                - mountPath: /helm-sops-tools
+                name: helm-sops-tools
+                - mountPath: /usr/local/sbin/helm
+                subPath: helm
+                name: helm-sops-tools
+          initContainers:
+            - name: sops-helm-secrets-tool
+              image: docker.io/harness/gitops-agent-installer-helper:v0.0.1
+              imagePullPolicy: IfNotPresent
+              command: [ sh, -ec ]
+              args:
+                - |
+                  cp -r /custom-tools/. /helm-sops-tools
+                  cp /helm-sops-tools/helm-plugins/helm-secrets/scripts/wrapper/helm.sh /helm-sops-tools/helm
+                  chmod +x /helm-sops-tools/*
+              volumeMounts:
+                - mountPath: /helm-sops-tools
+                  name: helm-sops-tools
+          serviceAccountName: argocd-repo-server
+          volumes:
+              - name: helm-sops-tools
+              emptyDir: {}
+
+# --- example 2 ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: argocd-cm
+    data:
+      helm.valuesFileSchemes: >-
+          secrets+gpg-import, secrets+gpg-import-kubernetes,
+          secrets+age-import, secrets+age-import-kubernetes,
+          secrets,secrets+literal,
+          https
+
+# --- example 3 ---
+    repoServer:
+      volumes:
+          - name: dev-private-key
+          secret:
+              secretName: dev-private-key
+
+      volumeMounts:
+          - mountPath: /dev-private-key/
+          name: dev-private-key
+
+# --- example 4 ---
+                creation_rules:
+                  - path_regex: 'environment/secrets/dev/(.*).yaml'
+                      age: 'my-public-key'

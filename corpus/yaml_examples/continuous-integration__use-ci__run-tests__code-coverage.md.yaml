@@ -1,0 +1,166 @@
+# source: docs/continuous-integration/use-ci/run-tests/code-coverage.md  (https://developer.harness.io/docs/continuous-integration/use-ci/run-tests/code-coverage)
+
+# --- example 1 ---
+                 - step:
+                     type: Run
+                     identifier: test
+                     name: Test
+                     spec:
+                       shell: Sh
+                       command: |-
+                         go test -cover -coverprofile=c.out
+                         go tool cover -html=c.out -o coverage.html
+
+# --- example 2 ---
+                   - step:
+                     type: Run
+                     name: run test
+                     identifier: run_test
+                     spec:
+                       shell: Sh
+                       command: |-
+                         mvn test
+                       reports:
+                         type: JUnit
+                         spec:
+                           paths:
+                             - target/surefire-reports/*.xml
+
+# --- example 3 ---
+                 - step:
+                     type: Run
+                     name: Run Jest Tests
+                     identifier: run_jest_tests
+                     spec:
+                       shell: Sh
+                       command: |-
+                         yarn add --dev jest-junit
+                         jest --ci --runInBand --reporters=default --reporters=jest-junit --collectCoverage=true
+                       envVariables:
+                         JEST_JUNIT_OUTPUT_DIR: "/harness/reports"
+                       reports:
+                         type: JUnit
+                         spec:
+                           paths:
+                             - "/harness/reports/*.xml"
+
+# --- example 4 ---
+                 - step:
+                     type: Run
+                     identifier: test
+                     name: Test
+                     spec:
+                       shell: Sh
+                       command: |-
+                         mkdir -p /harness/phpunit
+                         phpunit --log-junit /harness/phpunit/junit.xml tests
+                         phpdbg -qrr vendor/bin/phpunit --coverage-html build/coverage-report
+                       reports:
+                         type: JUnit
+                         spec:
+                           paths:
+                             - /harness/phpunit/junit.xml
+
+# --- example 5 ---
+                - step:
+                 type: Run
+                 identifier: installdependencies
+                 name: Install dependencies
+                 spec:
+                   command: |
+                     python3 -m pip install --upgrade pip
+                     pip install -r requirements.txt
+                     pip install pytest
+                     python3 -m pip install coverage
+
+# --- example 6 ---
+             - step:
+                 type: Run
+                 identifier: run pytest
+                 name: Run pytest
+                 spec:
+                   command: |
+                     coverage run -m pytest --junit-xml=report.xml
+                     coverage report
+                     coverage html
+
+# --- example 7 ---
+- step:
+    type: Run
+    name: Pytest code coverage
+    identifier: pytest_code_coverage
+    spec:
+      connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR 
+      image: python:latest ## Specify an image, if required for your build infrastructure.
+      shell: Sh
+      command: |-
+        # Prepare test environment.
+        echo "set up to run tests"
+        uname -a
+        pip install pytest
+        pip install pytest-cov
+        pip install -r requirements.txt
+
+        # Run tests with code coverage.
+        pytest -v --cov --junitxml="result.xml" test_api.py test_api_2.py test_api_3.py
+
+        # Download Codecov uploader and run it. Uses CODECOV_TOKEN envVariable.
+        curl -Os https://uploader.codecov.io/latest/linux/codecov
+        chmod +x codecov
+        ./codecov -t ${CODECOV_TOKEN}
+      reports: ## Specify one or more report paths.
+        type: JUnit
+        spec:
+          paths:
+            - "**/*.xml"
+      envVariables:
+        CODECOV_TOKEN: <+secrets.getValue("my_codecov_upload_token")> ## Reference your CodeCov Upload Token secret in an environment variable.
+
+# --- example 8 ---
+              - step:
+                  type: Run
+                  name: npm test
+                  identifier: npm_test
+                  spec:
+                    shell: Sh
+                    command: |-
+                      npm install
+                      npm run build --if-present
+                      npm test
+                    reports:
+                      type: JUnit
+                      spec:
+                        paths:
+                          - report.xml
+                    envVariables:
+                      COVERALLS_REPO_TOKEN: <+secrets.getValue("YOUR_COVERALLS_SECRET_ID")>
+
+# --- example 9 ---
+                  - step:
+                     type: Plugin
+                     name: publish artifact metadata
+                     identifier: publish_artifact_metadata
+                     spec:
+                       connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                       image: plugins/artifact-metadata-publisher
+                       settings:
+                         file_urls: ## Provide the URL to the code coverage artifact that was uploaded in the Upload Artifacts step. If you uploaded multiple artifacts, you can provide a list of URLs.
+                         artifact_file: artifact.txt ## Provide any '.txt' file name. Harness uses this to store the artifact URL and display it on the Artifacts tab. This value is not the name of your uploaded artifact, and it has no relationship to the artifact object itself.
+
+# --- example 10 ---
+                 - step:
+                     type: Plugin
+                     name: s3-upload-publish
+                     identifier: custom_plugin
+                     spec:
+                       connectorRef: YOUR_IMAGE_REGISTRY_CONNECTOR
+                       image: harnesscommunity/drone-s3-upload-publish
+                       settings:
+                         aws_access_key_id: <+pipeline.variables.AWS_ACCESS> ## Reference your AWS access ID.
+                         aws_secret_access_key: <+pipeline.variables.AWS_SECRET> ## Reference to your AWS access key.
+                         aws_default_region: ap-southeast-2 ## Set to your default AWS region.
+                         aws_bucket: bucket-name ## The target S3 bucket.
+                         artifact_file: artifact.txt ## Provide any '.txt' file name. Harness uses this to store the artifact URL and display it on the Artifacts tab. This value is not the name of your uploaded artifact, and it has no relationship to the artifact object itself.
+                         source: path/to/target/artifact.xml ## Provide the path to the file or directory that you want to upload.
+                         target: <+pipeline.name>/<+pipeline.sequenceId> ## Optional. Provide a path, relative to the 'aws_bucket', where you want to store the artifact. Do not include the bucket name. If unspecified, Harness uploads the artifact to the bucket's main directory.
+                       imagePullPolicy: IfNotPresent

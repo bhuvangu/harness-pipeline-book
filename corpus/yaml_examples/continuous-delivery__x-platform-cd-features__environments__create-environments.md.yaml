@@ -1,0 +1,13 @@
+# source: docs/continuous-delivery/x-platform-cd-features/environments/create-environments.md  (https://developer.harness.io/docs/continuous-delivery/x-platform-cd-features/environments/create-environments)
+
+# --- example 1 ---
+environment:
+  useFromStage:
+    stage: s1
+  infrastructureDefinitions:
+    - identifier: infra_1
+      inputs:
+        identifier: infra_1
+        type: KubernetesDirect
+        spec:
+          connectorRef: <+input>

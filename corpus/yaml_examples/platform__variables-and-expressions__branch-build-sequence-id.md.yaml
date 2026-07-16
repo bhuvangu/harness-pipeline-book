@@ -1,0 +1,73 @@
+# source: docs/platform/variables-and-expressions/branch-build-sequence-id.md  (https://developer.harness.io/docs/platform/variables-and-expressions/branch-build-sequence-id)
+
+# --- example 1 ---
+- step:
+    type: Run
+    name: Build Info
+    identifier: build_info
+    spec:
+      shell: Sh
+      command: |
+        echo "Pipeline: <+pipeline.name>"
+        echo "Global Build #: <+pipeline.sequenceId>"
+        echo "Branch: <+codebase.branch>"
+        echo "Branch Build #: <+pipeline.branchSeqId>"
+
+# --- example 2 ---
+- step:
+    type: BuildAndPushDockerRegistry
+    name: Build Image
+    identifier: build_image
+    spec:
+      connectorRef: dockerhub
+      repo: myorg/myapp
+      tags:
+        - <+codebase.branch>-<+pipeline.branchSeqId>
+        - <+codebase.branch>-latest
+
+# --- example 3 ---
+- step:
+    type: Run
+    name: Set Version
+    identifier: set_version
+    spec:
+      shell: Sh
+      command: |
+        BRANCH="<+codebase.branch>"
+        BUILD_NUM="<+pipeline.branchSeqId>"
+
+        if [[ "$BRANCH" == "main" ]]; then
+          VERSION="1.0.${BUILD_NUM}"
+        elif [[ "$BRANCH" == release/* ]]; then
+          RELEASE_VER="${BRANCH#release/}"
+          VERSION="${RELEASE_VER}.${BUILD_NUM}"
+        else
+          # Feature branches
+          SAFE_BRANCH=$(echo "$BRANCH" | tr '/' '-')
+          VERSION="0.0.0-${SAFE_BRANCH}.${BUILD_NUM}"
+        fi
+
+        echo "Version: $VERSION"
+      outputVariables:
+        - name: VERSION
+
+# --- example 4 ---
+- step:
+    type: Run
+    name: Generate Version
+    identifier: generate_version
+    spec:
+      shell: Sh
+      command: |
+        BRANCH_SEQ="<+pipeline.branchSeqId>"
+
+        # When branchSeqId is null, the expression resolves to "null" string
+        if [[ -n "$BRANCH_SEQ" && "$BRANCH_SEQ" != "null" ]]; then
+          echo "Branch build #${BRANCH_SEQ}"
+          VERSION="<+codebase.branch>-${BRANCH_SEQ}"
+        else
+          echo "Non-branch build (tag or commit)"
+          VERSION="<+codebase.tag>-<+pipeline.sequenceId>"
+        fi
+
+        echo "Using version: $VERSION"
